@@ -1,0 +1,24 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+*.env
+
+# Application runtime outputs
+report_images/
+reports/
+runs/
+temp/
+
+# Virtual environments
+venv/
+.venv/
+
+# System and IDE
+.DS_Store
+.cache/
+.idea/
+.vscode/

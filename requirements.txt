@@ -1,0 +1,26 @@
+# Core Deep Learning & Computer Vision
+torch>=2.2.0
+torchvision>=0.17.0
+ultralytics>=8.3.0
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# Web Application & Data Processing
+streamlit>=1.35.0
+pandas>=2.0.0
+arabic-reshaper>=3.0.0
+python-bidi>=0.4.2
+streamlit-arabic-support-wrapper>=0.1.0
+fpdf2>=2.8.0
+lap>=0.5.12
+
+# Google Gemini Multimodal LLM & Environment Configuration
+# Note: google-genai is Google's current unified SDK (google-generativeai is deprecated)
+google-genai>=1.0.0
+python-dotenv>=1.0.0
+
+# Testing & Code Quality
+pytest>=8.0.0
+ruff>=0.4.0
+
