@@ -1,14 +1,27 @@
-import { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+} from '@tanstack/react-table'
+import {
   FileSpreadsheet,
   Download,
-  Filter,
   Eye,
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Search,
+  X,
+  Calendar,
+  RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,31 +33,73 @@ export const IncidentsPage: React.FC = () => {
   const { t, i18n } = useTranslation()
   const isArabic = i18n.language === 'ar'
 
-  // Filter & Pagination States
+  // Pagination & Sorting States
   const [page, setPage] = useState<number>(1)
-  const [pageSize] = useState<number>(10)
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'created_at', desc: true },
+  ])
+
+  // Filters & Search
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [filterClass, setFilterClass] = useState<string>('')
   const [filterSeverity, setFilterSeverity] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<string>('')
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
 
   // Drawer inspection state
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
 
-  // Query Incidents
-  const { data, isLoading } = useQuery({
-    queryKey: ['incidents', page, pageSize, filterClass, filterSeverity, filterStatus],
+  // Derive sort_by and order for API query
+  const sortBy = sorting[0]?.id || 'created_at'
+  const sortOrder = sorting[0]?.desc ? 'desc' : 'asc'
+
+  // Query Incidents with server-side pagination, sorting, and filters
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: [
+      'incidents',
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      filterClass,
+      filterSeverity,
+      filterStatus,
+      startDate,
+      endDate,
+    ],
     queryFn: () =>
       api.getIncidents({
         page,
         page_size: pageSize,
+        sort_by: sortBy,
+        order: sortOrder,
         class: filterClass || null,
         severity: filterSeverity || null,
         status: filterStatus || null,
-        sort_by: 'created_at',
-        order: 'desc',
+        start_date: startDate || null,
+        end_date: endDate || null,
       }),
   })
 
+  // Filter items by client-side search query if user searches by text
+  const filteredItems = useMemo(() => {
+    if (!data?.items) return []
+    if (!searchQuery.trim()) return data.items
+
+    const q = searchQuery.toLowerCase().trim()
+    return data.items.filter(
+      (item) =>
+        item.incident_id.toLowerCase().includes(q) ||
+        item.class_name.toLowerCase().includes(q) ||
+        item.reviewer_name?.toLowerCase().includes(q) ||
+        item.severity.toLowerCase().includes(q) ||
+        item.status.toLowerCase().includes(q)
+    )
+  }, [data?.items, searchQuery])
+
+  // Helper Badge styles
   const getSeverityBadgeVariant = (severity: string) => {
     switch (severity?.toLowerCase()) {
       case 'high':
@@ -69,6 +124,241 @@ export const IncidentsPage: React.FC = () => {
     }
   }
 
+  // TanStack Table Column Definitions
+  const columns = useMemo<ColumnDef<IncidentResponse>[]>(
+    () => [
+      {
+        id: 'keyframe',
+        header: () => <span>{t('live.keyframe')}</span>,
+        cell: ({ row }) => (
+          <div className="h-12 w-20 rounded-md overflow-hidden border border-border bg-black/60 shrink-0">
+            {row.original.keyframe_url ? (
+              <img
+                src={row.original.keyframe_url}
+                alt={row.original.incident_id}
+                className="h-full w-full object-cover select-none"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-[10px] text-muted-foreground font-mono">
+                N/A
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'incident_id',
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted()
+          return (
+            <button
+              type="button"
+              onClick={() => column.toggleSorting(isSorted === 'asc')}
+              className="flex items-center gap-1.5 font-mono text-xs uppercase hover:text-foreground transition-colors"
+            >
+              <span>{t('incidents.table_id')}</span>
+              {isSorted === 'asc' ? (
+                <ArrowUp className="h-3.5 w-3.5 text-primary" />
+              ) : isSorted === 'desc' ? (
+                <ArrowDown className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+              )}
+            </button>
+          )
+        },
+        cell: ({ getValue }) => (
+          <span className="font-mono font-bold text-xs text-foreground">
+            {getValue<string>()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'start_timestamp',
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted()
+          return (
+            <button
+              type="button"
+              onClick={() => column.toggleSorting(isSorted === 'asc')}
+              className="flex items-center gap-1.5 font-mono text-xs uppercase hover:text-foreground transition-colors"
+            >
+              <span>{t('incidents.table_time')}</span>
+              {isSorted === 'asc' ? (
+                <ArrowUp className="h-3.5 w-3.5 text-primary" />
+              ) : isSorted === 'desc' ? (
+                <ArrowDown className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+              )}
+            </button>
+          )
+        },
+        cell: ({ getValue }) => (
+          <span className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+            {getValue<string>()?.replace('T', ' ') || '—'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'class_name',
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted()
+          return (
+            <button
+              type="button"
+              onClick={() => column.toggleSorting(isSorted === 'asc')}
+              className="flex items-center gap-1.5 font-mono text-xs uppercase hover:text-foreground transition-colors"
+            >
+              <span>{t('incidents.table_class')}</span>
+              {isSorted === 'asc' ? (
+                <ArrowUp className="h-3.5 w-3.5 text-primary" />
+              ) : isSorted === 'desc' ? (
+                <ArrowDown className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+              )}
+            </button>
+          )
+        },
+        cell: ({ getValue }) => {
+          const raw = getValue<string>()
+          return (
+            <span className="font-semibold text-foreground text-xs whitespace-nowrap">
+              {t(`classes.${raw}`, raw)}
+            </span>
+          )
+        },
+      },
+      {
+        accessorKey: 'max_confidence',
+        header: ({ column }) => {
+          const isSorted = column.getIsSorted()
+          return (
+            <button
+              type="button"
+              onClick={() => column.toggleSorting(isSorted === 'asc')}
+              className="flex items-center gap-1.5 font-mono text-xs uppercase hover:text-foreground transition-colors"
+            >
+              <span>{t('incidents.table_conf')}</span>
+              {isSorted === 'asc' ? (
+                <ArrowUp className="h-3.5 w-3.5 text-primary" />
+              ) : isSorted === 'desc' ? (
+                <ArrowDown className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+              )}
+            </button>
+          )
+        },
+        cell: ({ getValue }) => {
+          const val = getValue<number>() || 0
+          return (
+            <div className="space-y-1 w-24">
+              <span className="font-mono text-xs font-semibold text-cyan-400">
+                {(val * 100).toFixed(0)}%
+              </span>
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-cyan-400 rounded-full"
+                  style={{ width: `${Math.round(val * 100)}%` }}
+                />
+              </div>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'duration',
+        header: () => <span>Duration</span>,
+        cell: ({ getValue }) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {(getValue<number>() || 0).toFixed(1)}s
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'severity',
+        header: () => <span>{t('incidents.table_severity')}</span>,
+        cell: ({ getValue }) => {
+          const sev = getValue<string>()
+          return (
+            <Badge
+              variant={getSeverityBadgeVariant(sev) as any}
+              className="text-[10px] uppercase font-mono"
+            >
+              {t(`incidents.severity_${sev}`, sev)}
+            </Badge>
+          )
+        },
+      },
+      {
+        accessorKey: 'status',
+        header: () => <span>{t('incidents.table_status')}</span>,
+        cell: ({ getValue }) => {
+          const st = getValue<string>()
+          return (
+            <Badge
+              variant={getStatusBadgeVariant(st) as any}
+              className="text-[10px] uppercase font-mono"
+            >
+              {t(`incidents.status_${st}`, st)}
+            </Badge>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: () => <span className="text-end">{t('incidents.table_actions')}</span>,
+        cell: ({ row }) => (
+          <div className="text-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedIncidentId(row.original.incident_id)
+              }}
+              className="h-8 gap-1.5 text-xs text-primary hover:text-primary hover:bg-primary/10"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span>{t('incidents.view_details')}</span>
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [t]
+  )
+
+  // TanStack Table Instance
+  const table = useReactTable({
+    data: filteredItems,
+    columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    manualSorting: true,
+    manualPagination: true,
+    pageCount: data?.total_pages ?? -1,
+  })
+
+  // Reset Filters handler
+  const handleResetFilters = () => {
+    setFilterClass('')
+    setFilterSeverity('')
+    setFilterStatus('')
+    setStartDate('')
+    setEndDate('')
+    setSearchQuery('')
+    setPage(1)
+  }
+
+  const isFiltered =
+    Boolean(filterClass || filterSeverity || filterStatus || startDate || endDate || searchQuery)
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -83,28 +373,47 @@ export const IncidentsPage: React.FC = () => {
           </p>
         </div>
 
-        {/* CSV Export Button */}
+        {/* Bulk CSV Export Button */}
         <div className="flex items-center gap-2">
           <a
             href={api.getExportCsvUrl()}
-            download="incidents.csv"
+            download="incidents_master.csv"
             className="inline-flex"
           >
-            <Button variant="outline" className="gap-2 text-xs font-semibold border-border shadow-sm">
-              <Download className="h-4 w-4" />
+            <Button
+              variant="outline"
+              className="gap-2 text-xs font-semibold border-border shadow-xs hover:border-primary/50"
+            >
+              <Download className="h-4 w-4 text-primary" />
               {t('incidents.export_csv')}
             </Button>
           </a>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <Card className="border-border bg-card/60">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <Filter className="h-3.5 w-3.5" />
-              <span>{t('incidents.filter_class')}:</span>
+      {/* Filter and Search Bar */}
+      <Card className="border-border bg-card/70 backdrop-blur-md">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute start-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search incident ID, reviewer, or class..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full ps-9 pe-8 py-1.5 rounded-lg border border-border bg-background text-xs font-mono text-foreground focus:ring-1 focus:ring-primary outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute end-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Class Filter */}
@@ -114,7 +423,7 @@ export const IncidentsPage: React.FC = () => {
                 setFilterClass(e.target.value)
                 setPage(1)
               }}
-              className="px-3 py-1.5 rounded-md border border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
+              className="px-3 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="">{t('incidents.all_classes')}</option>
               <option value="car_car_accident">{t('classes.car_car_accident')}</option>
@@ -133,7 +442,7 @@ export const IncidentsPage: React.FC = () => {
                 setFilterSeverity(e.target.value)
                 setPage(1)
               }}
-              className="px-3 py-1.5 rounded-md border border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
+              className="px-3 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="">{t('incidents.all_severities')}</option>
               <option value="high">{t('incidents.severity_high')}</option>
@@ -148,7 +457,7 @@ export const IncidentsPage: React.FC = () => {
                 setFilterStatus(e.target.value)
                 setPage(1)
               }}
-              className="px-3 py-1.5 rounded-md border border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
+              className="px-3 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="">{t('incidents.all_statuses')}</option>
               <option value="pending">{t('incidents.status_pending')}</option>
@@ -157,114 +466,132 @@ export const IncidentsPage: React.FC = () => {
               <option value="rejected">{t('incidents.status_rejected')}</option>
             </select>
           </div>
+
+          {/* Date Range Row */}
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/60 text-xs">
+            <span className="text-muted-foreground font-semibold flex items-center gap-1.5 font-mono">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              Date Range:
+            </span>
+
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value)
+                setPage(1)
+              }}
+              className="px-2.5 py-1 rounded-md border border-border bg-background text-xs font-mono text-foreground focus:ring-1 focus:ring-primary outline-none"
+            />
+            <span className="text-muted-foreground font-mono">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value)
+                setPage(1)
+              }}
+              className="px-2.5 py-1 rounded-md border border-border bg-background text-xs font-mono text-foreground focus:ring-1 focus:ring-primary outline-none"
+            />
+
+            {isFiltered && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFilters}
+                className="h-7 px-2.5 gap-1.5 text-xs text-muted-foreground hover:text-foreground ms-auto"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Reset Filters</span>
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Incidents Table */}
-      <Card className="border-border overflow-hidden shadow-sm">
+      {/* TanStack Table Card */}
+      <Card className="border-border overflow-hidden shadow-sm bg-card/90">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-start">
             <thead className="bg-muted/50 border-b border-border text-xs uppercase text-muted-foreground font-mono">
-              <tr>
-                <th className="px-4 py-3 text-start">{t('live.keyframe')}</th>
-                <th className="px-4 py-3 text-start">{t('incidents.table_id')}</th>
-                <th className="px-4 py-3 text-start">{t('incidents.table_time')}</th>
-                <th className="px-4 py-3 text-start">{t('incidents.table_class')}</th>
-                <th className="px-4 py-3 text-start">{t('incidents.table_conf')}</th>
-                <th className="px-4 py-3 text-start">{t('incidents.table_severity')}</th>
-                <th className="px-4 py-3 text-start">{t('incidents.table_status')}</th>
-                <th className="px-4 py-3 text-end">{t('incidents.table_actions')}</th>
-              </tr>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      className="px-4 py-3 text-start font-semibold"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
             </thead>
+
             <tbody className="divide-y divide-border">
               {isLoading ? (
+                // SKELETON LOADERS
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <tr key={`skeleton-${idx}`} className="animate-pulse">
+                    <td className="px-4 py-3">
+                      <div className="h-12 w-20 bg-muted/60 rounded-md" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 w-24 bg-muted/60 rounded" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 w-32 bg-muted/60 rounded" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 w-28 bg-muted/60 rounded" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 w-16 bg-muted/60 rounded" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 w-12 bg-muted/60 rounded" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-5 w-16 bg-muted/60 rounded-full" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-5 w-20 bg-muted/60 rounded-full" />
+                    </td>
+                    <td className="px-4 py-3 text-end">
+                      <div className="h-7 w-20 bg-muted/60 rounded ms-auto" />
+                    </td>
+                  </tr>
+                ))
+              ) : table.getRowModel().rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-muted-foreground text-sm">
-                    Loading incidents...
-                  </td>
-                </tr>
-              ) : !data || data.items.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">
-                    <ShieldAlert className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                    {t('incidents.empty')}
+                  <td
+                    colSpan={columns.length}
+                    className="py-14 text-center text-muted-foreground text-sm"
+                  >
+                    <ShieldAlert className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
+                    <p>{t('incidents.empty')}</p>
                   </td>
                 </tr>
               ) : (
-                data.items.map((inc: IncidentResponse) => (
+                table.getRowModel().rows.map((row) => (
                   <tr
-                    key={inc.incident_id}
-                    className="hover:bg-accent/40 transition-colors"
+                    key={row.id}
+                    onClick={() => setSelectedIncidentId(row.original.incident_id)}
+                    className="hover:bg-accent/40 transition-colors cursor-pointer"
                   >
-                    {/* Keyframe thumbnail */}
-                    <td className="px-4 py-3">
-                      <div className="h-12 w-20 rounded overflow-hidden border border-border bg-black/60 shrink-0">
-                        {inc.keyframe_url ? (
-                          <img
-                            src={inc.keyframe_url}
-                            alt={inc.incident_id}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center text-[10px] text-muted-foreground">
-                            N/A
-                          </div>
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-3">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
                         )}
-                      </div>
-                    </td>
-
-                    {/* ID */}
-                    <td className="px-4 py-3 font-mono font-bold text-xs text-foreground">
-                      {inc.incident_id}
-                    </td>
-
-                    {/* Timestamp */}
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                      {inc.start_timestamp.replace('T', ' ')}
-                    </td>
-
-                    {/* Class */}
-                    <td className="px-4 py-3 font-semibold text-foreground text-xs">
-                      {t(`classes.${inc.class_name}`, inc.class_name)}
-                    </td>
-
-                    {/* Confidence */}
-                    <td className="px-4 py-3 font-mono text-xs font-semibold text-cyan-400">
-                      {(inc.max_confidence * 100).toFixed(0)}%
-                    </td>
-
-                    {/* Severity */}
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={getSeverityBadgeVariant(inc.severity) as any}
-                        className="text-[10px] uppercase font-mono"
-                      >
-                        {t(`incidents.severity_${inc.severity}`, inc.severity)}
-                      </Badge>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={getStatusBadgeVariant(inc.status) as any}
-                        className="text-[10px] uppercase font-mono"
-                      >
-                        {t(`incidents.status_${inc.status}`, inc.status)}
-                      </Badge>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-4 py-3 text-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedIncidentId(inc.incident_id)}
-                        className="h-8 gap-1.5 text-xs text-primary hover:text-primary hover:bg-primary/10"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>{t('incidents.view_details')}</span>
-                      </Button>
-                    </td>
+                      </td>
+                    ))}
                   </tr>
                 ))
               )}
@@ -272,17 +599,40 @@ export const IncidentsPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Pagination Bar */}
-        {data && data.total_pages > 1 && (
-          <div className="p-4 border-t border-border flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-mono">
-              Page {data.page} of {data.total_pages} ({data.total} total)
-            </span>
+        {/* Server-Side Pagination Bar */}
+        {data && (
+          <div className="p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
+              <span>
+                Showing {filteredItems.length} of {data.total} incidents
+              </span>
+              <span className="text-border">|</span>
+              <div className="flex items-center gap-1.5">
+                <span>Rows:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value))
+                    setPage(1)
+                  }}
+                  className="px-2 py-0.5 rounded border border-border bg-background text-xs font-mono text-foreground outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-mono me-2">
+                Page {data.page} of {Math.max(1, data.total_pages)}
+              </span>
+
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page <= 1}
+                disabled={page <= 1 || isFetching}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className="h-8 px-2.5 text-xs border-border"
               >
@@ -291,7 +641,7 @@ export const IncidentsPage: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page >= data.total_pages}
+                disabled={page >= data.total_pages || isFetching}
                 onClick={() => setPage((p) => p + 1)}
                 className="h-8 px-2.5 text-xs border-border"
               >
