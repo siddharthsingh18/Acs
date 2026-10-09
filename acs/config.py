@@ -51,6 +51,24 @@ def auto_detect_device() -> str:
     return "cpu"
 
 
+def scan_available_models(directory: str = ".") -> List[str]:
+    """Scans the given directory for available YOLO .pt weights files.
+
+    Args:
+        directory: Directory path to scan (defaults to current working directory).
+
+    Returns:
+        List[str]: Sorted list of available .pt filenames.
+    """
+    models: List[str] = []
+    if os.path.exists(directory):
+        for item in sorted(os.listdir(directory)):
+            full_path = os.path.join(directory, item)
+            if item.endswith(".pt") and os.path.isfile(full_path) and not item.startswith("."):
+                models.append(item)
+    return models or ["best.pt"]
+
+
 @dataclass
 class AppConfig:
     """Application configuration container supporting environment variable overrides."""

@@ -1,0 +1,120 @@
+import React from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  Cpu,
+  Globe,
+  Moon,
+  Sun,
+  Menu,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { useAppStore } from '@/store/appStore'
+
+export const TopBar: React.FC = () => {
+  const { t, i18n } = useTranslation()
+  const {
+    theme,
+    toggleTheme,
+    toggleSidebar,
+    isConnected,
+    device,
+    activeModel,
+  } = useAppStore()
+
+  const currentLang = i18n.language || 'en'
+  const isArabic = currentLang === 'ar'
+
+  const toggleLanguage = () => {
+    const nextLang = isArabic ? 'en' : 'ar'
+    i18n.changeLanguage(nextLang)
+  }
+
+  return (
+    <header className="h-16 border-b border-border bg-card/60 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 transition-colors">
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          aria-label={t('nav.collapse')}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse hidden sm:block" />
+          <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground hidden sm:block">
+            {t('app.control_room')}
+          </h2>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Active Model Indicator */}
+        {activeModel && (
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-background/50 text-xs font-mono text-muted-foreground">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+              {t('topbar.active_model')}:
+            </span>
+            <span className="text-foreground font-semibold">{activeModel}</span>
+          </div>
+        )}
+
+        {/* Compute Device Badge */}
+        <Badge
+          variant="outline"
+          className="bg-card/80 border-border px-2.5 py-1 text-xs font-mono font-medium flex items-center gap-1.5 shadow-sm"
+        >
+          <Cpu className="h-3.5 w-3.5 text-primary" />
+          <span className="uppercase text-[11px] tracking-wider text-foreground">
+            {device || 'MPS'}
+          </span>
+        </Badge>
+
+        {/* Live Backend Connection Dot */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border bg-background/60 text-xs font-mono">
+          <span
+            className={`h-2 w-2 rounded-full transition-colors ${
+              isConnected
+                ? 'bg-[var(--status-ok)] shadow-[0_0_8px_rgba(16,185,129,0.7)] animate-pulse'
+                : 'bg-[var(--status-alert)] shadow-[0_0_8px_rgba(239,68,68,0.7)]'
+            }`}
+          />
+          <span className="text-xs text-muted-foreground font-medium hidden lg:inline">
+            {isConnected ? t('app.connected') : t('app.disconnected')}
+          </span>
+        </div>
+
+        {/* Language Switch */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleLanguage}
+          className="h-8 px-2.5 gap-1.5 text-xs font-medium border-border hover:border-primary/50"
+        >
+          <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="font-sans font-semibold">
+            {isArabic ? 'English' : 'العربية'}
+          </span>
+        </Button>
+
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? t('topbar.theme_light') : t('topbar.theme_dark')}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-4 w-4 text-amber-400 hover:rotate-45 transition-transform" />
+          ) : (
+            <Moon className="h-4 w-4 text-slate-700 hover:-rotate-12 transition-transform" />
+          )}
+        </Button>
+      </div>
+    </header>
+  )
+}

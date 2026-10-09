@@ -19,7 +19,7 @@ import cv2
 import streamlit as st
 
 from acs.alerts import send_incident_alert, send_test_alert
-from acs.config import ACCIDENT_CLASSES, CLASS_NAMES, config
+from acs.config import ACCIDENT_CLASSES, CLASS_NAMES, config, scan_available_models
 from acs.detector import AccidentDetector, AccidentEventManager, AccidentIncident
 from acs.i18n import t, translate_class_name
 from acs.llm import generate_dispatch_report, render_dispatch_text
@@ -50,11 +50,7 @@ def scan_model_weights() -> List[str]:
     Returns:
         List[str]: Sorted list of relative paths to existing .pt files.
     """
-    models = []
-    for item in sorted(os.listdir(".")):
-        if item.endswith(".pt") and os.path.isfile(item) and not item.startswith("."):
-            models.append(item)
-    return models or ["best.pt"]
+    return scan_available_models(".")
 
 
 @st.cache_resource(show_spinner=False)

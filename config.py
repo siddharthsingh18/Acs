@@ -8,6 +8,7 @@ from acs.config import (
     CLASS_NAMES,
     ACCIDENT_CLASSES,
     auto_detect_device,
+    scan_available_models,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "CLASS_NAMES",
     "ACCIDENT_CLASSES",
     "auto_detect_device",
+    "scan_available_models",
 ]

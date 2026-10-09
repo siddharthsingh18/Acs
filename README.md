@@ -52,13 +52,38 @@ This project is a CCTV accident detection application using the YOLO model, Stre
 
 ## Running the Application
 
-1. **Start the Streamlit app:**
-    ```bash
-    streamlit run app.py
-    ```
+### 1. Running the FastAPI Backend (REST & WebSocket API)
+Start the backend development server using Uvicorn:
+```bash
+uvicorn backend.app.main:app --reload --port 8000
+```
+- **Interactive API Documentation (Swagger UI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Alternative Docs (ReDoc)**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- **Health Check**: `GET http://localhost:8000/api/health`
+- **System Configuration**: `GET http://localhost:8000/api/config`
+- **Video Analysis Jobs**:
+  - `POST http://localhost:8000/api/jobs`: Start job with `{"source": "sample"}` or multipart video upload.
+  - `GET ws://localhost:8000/api/jobs/{id}/stream`: WebSocket streaming annotated frames (max 960px, max 15 FPS), incidents, and completion summary.
+  - `POST http://localhost:8000/api/jobs/{id}/cancel`: Stop active background inference.
+  - `GET http://localhost:8000/media/keyframes/{filename}`: Static keyframe image delivery.
+- **Incident Management & Persistence (SQLite)**:
+  - `GET http://localhost:8000/api/incidents`: Paginated list of incidents with filters (class, date, severity, status) and sorting.
+  - `GET http://localhost:8000/api/incidents/{id}`: Full incident record with keyframe URL and review metadata.
+  - `POST http://localhost:8000/api/incidents/{id}/status`: Human-in-the-loop review (`approved`, `rejected`, `dispatched`) with reviewer name and timestamp.
+  - `POST http://localhost:8000/api/incidents/{id}/dispatch-report`: Generates and caches Gemini multimodal dispatch assessment in SQLite.
+  - `GET http://localhost:8000/api/incidents/{id}/pdf`: Downloads vector PDF accident report.
+  - `GET http://localhost:8000/api/incidents/export.csv`: Exports master incident records as CSV.
+- **Emergency Alerts & System KPIs**:
+  - `POST http://localhost:8000/api/alerts/test`: Verify Telegram and SMTP notification channels.
+  - `GET / PUT http://localhost:8000/api/alerts/settings`: Inspect or update alert toggles and simulation mode.
+  - `GET http://localhost:8000/api/stats`: Real-time incident analytics (incidents today, class distribution, average confidence, average review time).
 
-2. **Navigate to the app:**
-   Open your browser and go to `http://localhost:8501`.
+### 2. Running the Streamlit Dashboard
+Start the original Streamlit application:
+```bash
+streamlit run app.py
+```
+Open your browser and go to `http://localhost:8501`.
 
 ## Usage
 

@@ -1,0 +1,1586 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ACS - CCTV Accident Detection API",
+    "description": "Enterprise Automated Surveillance, Tracking & Emergency Dispatch API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Get Health",
+        "description": "Returns application health status and UTC timestamp.",
+        "operationId": "get_health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "Get Config Endpoint",
+        "description": "Returns available models, device capabilities, class listings, and defaults.",
+        "operationId": "get_config_endpoint_api_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Create Job Endpoint",
+        "description": "Creates and starts a background video analysis job.\n\nSupports:\n- JSON payload: {\"source\": \"sample\", \"model_name\": \"best.pt\", \"confidence\": 0.5, \"use_injury_model\": false}\n- Multipart form: file upload with optional fields 'source', 'model_name', 'confidence', 'use_injury_model'\n\nRaises:\n    HTTPException 409: If an analysis job is already active.\n    HTTPException 400: If video source is invalid or missing.",
+        "operationId": "create_job_endpoint_api_jobs_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreatedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Cancel Job Endpoint",
+        "description": "Cancels a currently executing video analysis job.",
+        "operationId": "cancel_job_endpoint_api_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCancelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Get Job Status Endpoint",
+        "description": "Retrieves current execution status, incidents, and summary for a job.",
+        "operationId": "get_job_status_endpoint_api_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents": {
+      "get": {
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "List Incidents Endpoint",
+        "description": "Returns paginated, filtered, and sorted incidents list.",
+        "operationId": "list_incidents_endpoint_api_incidents_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "1-based page number"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "class",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by collision class",
+              "title": "Class"
+            },
+            "description": "Filter by collision class"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter incidents starting on/after date",
+              "title": "Start Date"
+            },
+            "description": "Filter incidents starting on/after date"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter incidents starting on/before date",
+              "title": "End Date"
+            },
+            "description": "Filter incidents starting on/before date"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by severity ('low', 'medium', 'high')",
+              "title": "Severity"
+            },
+            "description": "Filter by severity ('low', 'medium', 'high')"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by review status ('pending', 'approved', 'rejected', 'dispatched')",
+              "title": "Status"
+            },
+            "description": "Filter by review status ('pending', 'approved', 'rejected', 'dispatched')"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Field to sort by ('created_at', 'start_timestamp', 'max_confidence', 'class_name')",
+              "default": "created_at",
+              "title": "Sort By"
+            },
+            "description": "Field to sort by ('created_at', 'start_timestamp', 'max_confidence', 'class_name')"
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(asc|desc)$",
+              "description": "Sort order ('asc' or 'desc')",
+              "default": "desc",
+              "title": "Order"
+            },
+            "description": "Sort order ('asc' or 'desc')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/export.csv": {
+      "get": {
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Export Incidents Csv Endpoint",
+        "description": "Exports all incidents as a downloadable CSV file.",
+        "operationId": "export_incidents_csv_endpoint_api_incidents_export_csv_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/{incident_id}": {
+      "get": {
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Get Incident Endpoint",
+        "description": "Retrieves full details for a single incident by ID.",
+        "operationId": "get_incident_endpoint_api_incidents__incident_id__get",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Incident Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/{incident_id}/dispatch-report": {
+      "post": {
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Generate Dispatch Report Endpoint",
+        "description": "Generates structured Gemini dispatch report and caches it in SQLite.",
+        "operationId": "generate_dispatch_report_endpoint_api_incidents__incident_id__dispatch_report_post",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Incident Id"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Target report language ('en' or 'ar')",
+              "default": "en",
+              "title": "Lang"
+            },
+            "description": "Target report language ('en' or 'ar')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Generate Dispatch Report Endpoint Api Incidents  Incident Id  Dispatch Report Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/{incident_id}/pdf": {
+      "get": {
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Get Incident Pdf Endpoint",
+        "description": "Generates and returns an official PDF incident report.",
+        "operationId": "get_incident_pdf_endpoint_api_incidents__incident_id__pdf_get",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Incident Id"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Language for generated PDF ('en' or 'ar')",
+              "default": "en",
+              "title": "Lang"
+            },
+            "description": "Language for generated PDF ('en' or 'ar')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/{incident_id}/status": {
+      "post": {
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Update Incident Status Endpoint",
+        "description": "Updates human-in-the-loop review status (approved, rejected, or dispatched).",
+        "operationId": "update_incident_status_endpoint_api_incidents__incident_id__status_post",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Incident Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentStatusUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/test": {
+      "post": {
+        "tags": [
+          "Alerts"
+        ],
+        "summary": "Send Test Alert Endpoint",
+        "description": "Dispatches a test emergency alert to verify Telegram and SMTP connectivity.",
+        "operationId": "send_test_alert_endpoint_api_alerts_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertTestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/settings": {
+      "get": {
+        "tags": [
+          "Alerts"
+        ],
+        "summary": "Get Alert Settings Endpoint",
+        "description": "Returns active emergency alert settings and available delivery channels.",
+        "operationId": "get_alert_settings_endpoint_api_alerts_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Alerts"
+        ],
+        "summary": "Update Alert Settings Endpoint",
+        "description": "Updates emergency alert configuration (enabled flag and dry_run mode).",
+        "operationId": "update_alert_settings_endpoint_api_alerts_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertSettingsUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertSettingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "summary": "Get Stats Endpoint",
+        "description": "Returns aggregated incident analytics (incidents today, class distribution, confidence, review time).",
+        "operationId": "get_stats_endpoint_api_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlertSettingsResponse": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Channels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "dry_run",
+          "channels"
+        ],
+        "title": "AlertSettingsResponse",
+        "description": "Current emergency alert system configuration."
+      },
+      "AlertSettingsUpdateRequest": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run"
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels"
+          }
+        },
+        "type": "object",
+        "title": "AlertSettingsUpdateRequest",
+        "description": "Payload to update emergency alert configuration."
+      },
+      "AlertTestRequest": {
+        "properties": {
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run",
+            "default": false
+          },
+          "lang": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lang",
+            "default": "en"
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels"
+          }
+        },
+        "type": "object",
+        "title": "AlertTestRequest",
+        "description": "Payload to trigger test alert."
+      },
+      "AlertTestResponse": {
+        "properties": {
+          "results": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Results"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "message"
+        ],
+        "title": "AlertTestResponse",
+        "description": "Delivery status results for test alert."
+      },
+      "ClassItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Raw class label name in YOLO model"
+          },
+          "name_ar": {
+            "type": "string",
+            "title": "Name Ar",
+            "description": "Localized Arabic class name"
+          },
+          "is_accident": {
+            "type": "boolean",
+            "title": "Is Accident",
+            "description": "True if designated as an accident class, False for normal traffic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "name_ar",
+          "is_accident"
+        ],
+        "title": "ClassItem",
+        "description": "Model class item with localized translation and collision designation."
+      },
+      "ConfigDefaults": {
+        "properties": {
+          "model_path": {
+            "type": "string",
+            "title": "Model Path",
+            "description": "Default primary YOLO weights file"
+          },
+          "injury_model_path": {
+            "type": "string",
+            "title": "Injury Model Path",
+            "description": "Configured secondary injury model file"
+          },
+          "injury_model_available": {
+            "type": "boolean",
+            "title": "Injury Model Available",
+            "description": "True if injury model file exists on disk"
+          },
+          "confidence_threshold": {
+            "type": "number",
+            "title": "Confidence Threshold",
+            "description": "Detection confidence threshold"
+          },
+          "injury_confidence_threshold": {
+            "type": "number",
+            "title": "Injury Confidence Threshold",
+            "description": "Injury detection threshold"
+          },
+          "cooldown_seconds": {
+            "type": "number",
+            "title": "Cooldown Seconds",
+            "description": "Cooldown delay between incidents in seconds"
+          },
+          "gemini_model_name": {
+            "type": "string",
+            "title": "Gemini Model Name",
+            "description": "Gemini multimodal model name"
+          },
+          "alerts_enabled": {
+            "type": "boolean",
+            "title": "Alerts Enabled",
+            "description": "Whether emergency alert dispatch is active"
+          },
+          "alerts_dry_run": {
+            "type": "boolean",
+            "title": "Alerts Dry Run",
+            "description": "Whether alert dispatch is in simulation mode"
+          },
+          "reports_dir": {
+            "type": "string",
+            "title": "Reports Dir",
+            "description": "Directory storing incident CSV reports"
+          },
+          "report_images_dir": {
+            "type": "string",
+            "title": "Report Images Dir",
+            "description": "Directory storing incident keyframes"
+          },
+          "temp_dir": {
+            "type": "string",
+            "title": "Temp Dir",
+            "description": "Directory storing temporary uploads"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_path",
+          "injury_model_path",
+          "injury_model_available",
+          "confidence_threshold",
+          "injury_confidence_threshold",
+          "cooldown_seconds",
+          "gemini_model_name",
+          "alerts_enabled",
+          "alerts_dry_run",
+          "reports_dir",
+          "report_images_dir",
+          "temp_dir"
+        ],
+        "title": "ConfigDefaults",
+        "description": "Current application default configuration values."
+      },
+      "DeviceInfo": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "description": "Active compute device identifier (e.g. mps, cuda:0, cpu)"
+          },
+          "cuda_available": {
+            "type": "boolean",
+            "title": "Cuda Available",
+            "description": "Whether CUDA acceleration is available"
+          },
+          "mps_available": {
+            "type": "boolean",
+            "title": "Mps Available",
+            "description": "Whether Apple Silicon MPS is available"
+          },
+          "device_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Name",
+            "description": "Human-readable device name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "cuda_available",
+          "mps_available"
+        ],
+        "title": "DeviceInfo",
+        "description": "Compute device information."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Health status string",
+            "default": "ok"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service",
+            "description": "Backend service name",
+            "default": "acs-backend"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "API version",
+            "default": "1.0.0"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO 8601 UTC timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp"
+        ],
+        "title": "HealthResponse",
+        "description": "Health check status response."
+      },
+      "IncidentItem": {
+        "properties": {
+          "incident_id": {
+            "type": "string",
+            "title": "Incident Id"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "max_confidence": {
+            "type": "number",
+            "title": "Max Confidence"
+          },
+          "start_timestamp": {
+            "type": "string",
+            "title": "Start Timestamp"
+          },
+          "end_timestamp": {
+            "type": "string",
+            "title": "End Timestamp"
+          },
+          "start_time": {
+            "type": "number",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "number",
+            "title": "End Time"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          },
+          "keyframe_url": {
+            "type": "string",
+            "title": "Keyframe Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "incident_id",
+          "class_name",
+          "max_confidence",
+          "start_timestamp",
+          "end_timestamp",
+          "start_time",
+          "end_time",
+          "duration",
+          "keyframe_url"
+        ],
+        "title": "IncidentItem",
+        "description": "Structured incident record emitted during streaming."
+      },
+      "IncidentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IncidentResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total_pages": {
+            "type": "integer",
+            "title": "Total Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "total_pages"
+        ],
+        "title": "IncidentListResponse",
+        "description": "Paginated list of incidents."
+      },
+      "IncidentResponse": {
+        "properties": {
+          "incident_id": {
+            "type": "string",
+            "title": "Incident Id"
+          },
+          "start_timestamp": {
+            "type": "string",
+            "title": "Start Timestamp"
+          },
+          "end_timestamp": {
+            "type": "string",
+            "title": "End Timestamp"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "max_confidence": {
+            "type": "number",
+            "title": "Max Confidence"
+          },
+          "image_path": {
+            "type": "string",
+            "title": "Image Path"
+          },
+          "keyframe_url": {
+            "type": "string",
+            "title": "Keyframe Url"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reviewer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Name"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "dispatch_report": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch Report"
+          },
+          "dispatch_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch Text"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "incident_id",
+          "start_timestamp",
+          "end_timestamp",
+          "class_name",
+          "max_confidence",
+          "image_path",
+          "keyframe_url",
+          "severity",
+          "status",
+          "created_at",
+          "duration"
+        ],
+        "title": "IncidentResponse",
+        "description": "Full incident record for detail and list APIs."
+      },
+      "IncidentStatusUpdateRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "pattern": "^(approved|rejected|dispatched)$",
+            "title": "Status",
+            "description": "Updated status ('approved', 'rejected', or 'dispatched')"
+          },
+          "reviewer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Name",
+            "description": "Name or badge number of reviewer",
+            "default": "Reviewing Officer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "IncidentStatusUpdateRequest",
+        "description": "Human-in-the-loop review status update."
+      },
+      "JobCancelResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Updated job status ('cancelled')"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "message"
+        ],
+        "title": "JobCancelResponse",
+        "description": "Response returned upon cancelling an analysis job."
+      },
+      "JobCreatedResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Unique identifier for the analysis job"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Initial job status ('pending')",
+            "default": "pending"
+          },
+          "video_source": {
+            "type": "string",
+            "title": "Video Source",
+            "description": "Source identifier or video filename"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name",
+            "description": "Selected YOLO model weights"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "description": "Detection confidence threshold used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "video_source",
+          "model_name",
+          "confidence"
+        ],
+        "title": "JobCreatedResponse",
+        "description": "Response returned upon successfully queuing a video analysis job."
+      },
+      "JobStatusResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          },
+          "video_source": {
+            "type": "string",
+            "title": "Video Source"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "incidents": {
+            "items": {
+              "$ref": "#/components/schemas/IncidentItem"
+            },
+            "type": "array",
+            "title": "Incidents"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "created_at",
+          "video_source",
+          "model_name",
+          "confidence"
+        ],
+        "title": "JobStatusResponse",
+        "description": "Detailed job status and summary report."
+      },
+      "JobSummary": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "frames_processed": {
+            "type": "integer",
+            "title": "Frames Processed"
+          },
+          "total_frames": {
+            "type": "integer",
+            "title": "Total Frames"
+          },
+          "fps": {
+            "type": "number",
+            "title": "Fps"
+          },
+          "incidents_count": {
+            "type": "integer",
+            "title": "Incidents Count"
+          },
+          "elapsed_seconds": {
+            "type": "number",
+            "title": "Elapsed Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "frames_processed",
+          "total_frames",
+          "fps",
+          "incidents_count",
+          "elapsed_seconds"
+        ],
+        "title": "JobSummary",
+        "description": "Post-analysis execution summary statistics."
+      },
+      "LanguageItem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Language code ('en', 'ar')"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Language display name"
+          },
+          "dir": {
+            "type": "string",
+            "title": "Dir",
+            "description": "Text direction ('ltr' or 'rtl')"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "dir"
+        ],
+        "title": "LanguageItem",
+        "description": "Supported language descriptor."
+      },
+      "StatsResponse": {
+        "properties": {
+          "total_incidents": {
+            "type": "integer",
+            "title": "Total Incidents"
+          },
+          "incidents_today": {
+            "type": "integer",
+            "title": "Incidents Today"
+          },
+          "by_class": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "By Class"
+          },
+          "by_status": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "By Status"
+          },
+          "average_confidence": {
+            "type": "number",
+            "title": "Average Confidence"
+          },
+          "average_review_time_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Review Time Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_incidents",
+          "incidents_today",
+          "by_class",
+          "by_status",
+          "average_confidence"
+        ],
+        "title": "StatsResponse",
+        "description": "Aggregated analytical KPIs across incidents."
+      },
+      "SystemConfigResponse": {
+        "properties": {
+          "available_models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Models",
+            "description": "List of available .pt YOLO checkpoints in repository"
+          },
+          "device_info": {
+            "$ref": "#/components/schemas/DeviceInfo",
+            "description": "Compute hardware status"
+          },
+          "defaults": {
+            "$ref": "#/components/schemas/ConfigDefaults",
+            "description": "Current system configuration defaults"
+          },
+          "supported_languages": {
+            "items": {
+              "$ref": "#/components/schemas/LanguageItem"
+            },
+            "type": "array",
+            "title": "Supported Languages",
+            "description": "Supported localization languages"
+          },
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/ClassItem"
+            },
+            "type": "array",
+            "title": "Classes",
+            "description": "List of all supported classes and collision designations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available_models",
+          "device_info",
+          "defaults",
+          "supported_languages",
+          "classes"
+        ],
+        "title": "SystemConfigResponse",
+        "description": "Complete system configuration response for GET /api/config."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
