@@ -5,7 +5,7 @@ import { Radio } from 'lucide-react'
 import { TopControlBar } from '@/components/live/TopControlBar'
 import { VideoPanel } from '@/components/live/VideoPanel'
 import { LiveIncidentFeed } from '@/components/live/LiveIncidentFeed'
-import { IncidentDetailDrawer } from '@/components/live/IncidentDetailDrawer'
+import { IncidentDrawer } from '@/components/incidents/IncidentDrawer'
 import { TacticalToast } from '@/components/live/TacticalToast'
 import { RunSummaryCards } from '@/components/live/RunSummaryCards'
 import { useJobStream } from '@/hooks/useJobStream'
@@ -138,9 +138,16 @@ export const LivePage: React.FC = () => {
       />
 
       {/* Detail Slide-Over Drawer */}
-      <IncidentDetailDrawer
-        incident={drawerIncident}
+      <IncidentDrawer
+        incidentId={drawerIncident?.incident_id || null}
+        isOpen={Boolean(drawerIncident)}
         onClose={() => setDrawerIncident(null)}
+        incidentList={incidents}
+        onSelectIncident={(id) => {
+          const found = incidents.find((i) => i.incident_id === id)
+          if (found) setDrawerIncident(found)
+        }}
+        initialIncident={drawerIncident}
       />
     </div>
   )

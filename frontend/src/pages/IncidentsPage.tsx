@@ -1,5 +1,4 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -15,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { api, type IncidentResponse } from '@/api/client'
+import { IncidentDrawer } from '@/components/incidents/IncidentDrawer'
 
 export const IncidentsPage: React.FC = () => {
   const { t, i18n } = useTranslation()
@@ -26,6 +26,9 @@ export const IncidentsPage: React.FC = () => {
   const [filterClass, setFilterClass] = useState<string>('')
   const [filterSeverity, setFilterSeverity] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<string>('')
+
+  // Drawer inspection state
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
 
   // Query Incidents
   const { data, isLoading } = useQuery({
@@ -252,16 +255,15 @@ export const IncidentsPage: React.FC = () => {
 
                     {/* Actions */}
                     <td className="px-4 py-3 text-end">
-                      <Link to={`/incidents/${inc.incident_id}`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1.5 text-xs text-primary hover:text-primary hover:bg-primary/10"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          <span>{t('incidents.view_details')}</span>
-                        </Button>
-                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedIncidentId(inc.incident_id)}
+                        className="h-8 gap-1.5 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>{t('incidents.view_details')}</span>
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -299,6 +301,15 @@ export const IncidentsPage: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* Shared Incident Drawer */}
+      <IncidentDrawer
+        incidentId={selectedIncidentId}
+        isOpen={Boolean(selectedIncidentId)}
+        onClose={() => setSelectedIncidentId(null)}
+        incidentList={data?.items || []}
+        onSelectIncident={(id) => setSelectedIncidentId(id)}
+      />
     </div>
   )
 }
