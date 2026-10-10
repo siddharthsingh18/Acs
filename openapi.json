@@ -608,7 +608,7 @@
           "Alerts"
         ],
         "summary": "Get Alert Settings Endpoint",
-        "description": "Returns active emergency alert settings and available delivery channels.",
+        "description": "Returns active emergency alert settings, delivery channels, and credential readiness.",
         "operationId": "get_alert_settings_endpoint_api_alerts_settings_get",
         "responses": {
           "200": {
@@ -628,7 +628,7 @@
           "Alerts"
         ],
         "summary": "Update Alert Settings Endpoint",
-        "description": "Updates emergency alert configuration (enabled flag and dry_run mode).",
+        "description": "Updates emergency alert configuration and detection parameters.",
         "operationId": "update_alert_settings_endpoint_api_alerts_settings_put",
         "requestBody": {
           "content": {
@@ -705,6 +705,21 @@
             },
             "type": "array",
             "title": "Channels"
+          },
+          "channel_status": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/ChannelStatusInfo"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Status",
+            "description": "Configuration readiness per channel without exposing secrets"
           }
         },
         "type": "object",
@@ -753,6 +768,39 @@
               }
             ],
             "title": "Channels"
+          },
+          "model_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Path"
+          },
+          "confidence_threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Threshold"
+          },
+          "cooldown_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cooldown Seconds"
           }
         },
         "type": "object",
@@ -823,6 +871,27 @@
         ],
         "title": "AlertTestResponse",
         "description": "Delivery status results for test alert."
+      },
+      "ChannelStatusInfo": {
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "title": "Configured",
+            "description": "True if all required credentials are set in environment"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Human-readable configuration state"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configured",
+          "description"
+        ],
+        "title": "ChannelStatusInfo",
+        "description": "Configuration status for an alert channel without disclosing credentials."
       },
       "ClassItem": {
         "properties": {

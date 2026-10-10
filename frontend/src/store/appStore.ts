@@ -22,6 +22,10 @@ interface AppState {
 
   currentJobId: string | null
   setCurrentJobId: (jobId: string | null) => void
+
+  isDemoMode: boolean
+  setDemoMode: (isDemoMode: boolean) => void
+  toggleDemoMode: () => void
 }
 
 const getInitialTheme = (): ThemeMode => {
@@ -43,6 +47,10 @@ const applyThemeClass = (theme: ThemeMode) => {
 
 const initialTheme = getInitialTheme()
 applyThemeClass(initialTheme)
+
+const getInitialDemoMode = (): boolean => {
+  return localStorage.getItem('acs_demo_mode') === 'true'
+}
 
 export const useAppStore = create<AppState>((set) => ({
   theme: initialTheme,
@@ -75,4 +83,17 @@ export const useAppStore = create<AppState>((set) => ({
 
   currentJobId: null,
   setCurrentJobId: (currentJobId) => set({ currentJobId }),
+
+  isDemoMode: getInitialDemoMode(),
+  setDemoMode: (isDemoMode) => {
+    localStorage.setItem('acs_demo_mode', String(isDemoMode))
+    set({ isDemoMode })
+  },
+  toggleDemoMode: () => {
+    set((state) => {
+      const nextDemo = !state.isDemoMode
+      localStorage.setItem('acs_demo_mode', String(nextDemo))
+      return { isDemoMode: nextDemo }
+    })
+  },
 }))

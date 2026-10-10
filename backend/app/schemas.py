@@ -209,12 +209,23 @@ class AlertTestResponse(BaseModel):
     message: str
 
 
+class ChannelStatusInfo(BaseModel):
+    """Configuration status for an alert channel without disclosing credentials."""
+
+    configured: bool = Field(description="True if all required credentials are set in environment")
+    description: str = Field(description="Human-readable configuration state")
+
+
 class AlertSettingsResponse(BaseModel):
     """Current emergency alert system configuration."""
 
     enabled: bool
     dry_run: bool
     channels: List[str]
+    channel_status: Optional[dict[str, ChannelStatusInfo]] = Field(
+        default_factory=dict,
+        description="Configuration readiness per channel without exposing secrets",
+    )
 
 
 class AlertSettingsUpdateRequest(BaseModel):
@@ -223,6 +234,9 @@ class AlertSettingsUpdateRequest(BaseModel):
     enabled: Optional[bool] = None
     dry_run: Optional[bool] = None
     channels: Optional[List[str]] = None
+    model_path: Optional[str] = None
+    confidence_threshold: Optional[float] = None
+    cooldown_seconds: Optional[float] = None
 
 
 class StatsResponse(BaseModel):

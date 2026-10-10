@@ -261,12 +261,12 @@ export interface paths {
         };
         /**
          * Get Alert Settings Endpoint
-         * @description Returns active emergency alert settings and available delivery channels.
+         * @description Returns active emergency alert settings, delivery channels, and credential readiness.
          */
         get: operations["get_alert_settings_endpoint_api_alerts_settings_get"];
         /**
          * Update Alert Settings Endpoint
-         * @description Updates emergency alert configuration (enabled flag and dry_run mode).
+         * @description Updates emergency alert configuration and detection parameters.
          */
         put: operations["update_alert_settings_endpoint_api_alerts_settings_put"];
         post?: never;
@@ -311,6 +311,13 @@ export interface components {
             dry_run: boolean;
             /** Channels */
             channels: string[];
+            /**
+             * Channel Status
+             * @description Configuration readiness per channel without exposing secrets
+             */
+            channel_status?: {
+                [key: string]: components["schemas"]["ChannelStatusInfo"];
+            } | null;
         };
         /**
          * AlertSettingsUpdateRequest
@@ -323,6 +330,12 @@ export interface components {
             dry_run?: boolean | null;
             /** Channels */
             channels?: string[] | null;
+            /** Model Path */
+            model_path?: string | null;
+            /** Confidence Threshold */
+            confidence_threshold?: number | null;
+            /** Cooldown Seconds */
+            cooldown_seconds?: number | null;
         };
         /**
          * AlertTestRequest
@@ -353,6 +366,22 @@ export interface components {
             };
             /** Message */
             message: string;
+        };
+        /**
+         * ChannelStatusInfo
+         * @description Configuration status for an alert channel without disclosing credentials.
+         */
+        ChannelStatusInfo: {
+            /**
+             * Configured
+             * @description True if all required credentials are set in environment
+             */
+            configured: boolean;
+            /**
+             * Description
+             * @description Human-readable configuration state
+             */
+            description: string;
         };
         /**
          * ClassItem

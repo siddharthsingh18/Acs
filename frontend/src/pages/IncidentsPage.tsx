@@ -14,7 +14,6 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -28,6 +27,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { api, type IncidentResponse } from '@/api/client'
 import { IncidentDrawer } from '@/components/incidents/IncidentDrawer'
+import { EmptyState } from '@/components/common/EmptyState'
+import { ErrorState } from '@/components/common/ErrorState'
 
 export const IncidentsPage: React.FC = () => {
   const { t, i18n } = useTranslation()
@@ -56,7 +57,7 @@ export const IncidentsPage: React.FC = () => {
   const sortOrder = sorting[0]?.desc ? 'desc' : 'asc'
 
   // Query Incidents with server-side pagination, sorting, and filters
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: [
       'incidents',
       page,
@@ -509,6 +510,14 @@ export const IncidentsPage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {error && (
+        <ErrorState
+          title="Incident Records Unavailable"
+          message="Could not load master incident records from the backend database."
+          onRetry={() => refetch()}
+        />
+      )}
+
       {/* TanStack Table Card */}
       <Card className="border-border overflow-hidden shadow-sm bg-card/90">
         <div className="overflow-x-auto">
@@ -571,10 +580,19 @@ export const IncidentsPage: React.FC = () => {
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="py-14 text-center text-muted-foreground text-sm"
+                    className="p-6 text-center"
                   >
-                    <ShieldAlert className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
-                    <p>{t('incidents.empty')}</p>
+                    <EmptyState
+                      variant={isFiltered ? 'search' : 'radar'}
+                      title={isFiltered ? 'No Incidents Match Search Criteria' : t('incidents.empty')}
+                      description={
+                        isFiltered
+                          ? 'Try clearing active filters, dates, or search keywords to view logged incidents.'
+                          : 'As traffic surveillance runs, automated AI collision events will populate this master directory.'
+                      }
+                      actionLabel={isFiltered ? 'Reset Filters' : undefined}
+                      onAction={isFiltered ? handleResetFilters : undefined}
+                    />
                   </td>
                 </tr>
               ) : (

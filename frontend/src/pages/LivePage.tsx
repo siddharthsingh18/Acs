@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Radio } from 'lucide-react'
@@ -58,6 +58,44 @@ export const LivePage: React.FC = () => {
     })
   }
 
+  // Keyboard shortcuts on /live: Space to start/stop, I to open latest incident
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Do not trigger if user is typing in an input/select/textarea
+      const target = e.target as HTMLElement
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) {
+        return
+      }
+
+      // Space to Start/Stop stream
+      if (e.code === 'Space') {
+        e.preventDefault()
+        if (status === 'streaming') {
+          cancelJob()
+        } else if (status !== 'starting') {
+          handleStart()
+        }
+      }
+
+      // 'I' or 'i' to open latest incident
+      if (e.key.toLowerCase() === 'i' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        const targetInc = latestIncident || (incidents.length > 0 ? incidents[0] : null)
+        if (targetInc) {
+          setDrawerIncident(targetInc)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [status, latestIncident, incidents, cancelJob, sourceType, selectedFile, selectedModel, confidence, useInjuryModel])
+
   // Active toast object (suppressed if user explicitly dismissed it)
   const activeToast =
     latestIncident && latestIncident.incident_id !== toastDismissedId
@@ -66,15 +104,35 @@ export const LivePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Title & Subtitle */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
-          <Radio className="h-7 w-7 text-primary animate-pulse" />
-          {t('live.header')}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t('live.subtitle')}
-        </p>
+      {/* Page Title & Subtitle + Shortcut Legend */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
+            <Radio className="h-7 w-7 text-primary animate-pulse" />
+            {t('live.header')}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t('live.subtitle')}
+          </p>
+        </div>
+
+        {/* Tactical Keyboard Shortcuts Badge */}
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-card/60 text-xs font-mono text-muted-foreground">
+          <span className="text-[10px] uppercase font-bold text-primary">Shortcuts:</span>
+          <div className="flex items-center gap-1.5">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] border border-border text-foreground font-bold">
+              Space
+            </kbd>
+            <span>Start/Stop</span>
+          </div>
+          <span className="text-border">|</span>
+          <div className="flex items-center gap-1.5">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] border border-border text-foreground font-bold">
+              I
+            </kbd>
+            <span>Latest Incident</span>
+          </div>
+        </div>
       </div>
 
       {/* Top Control Bar */}

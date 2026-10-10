@@ -6,6 +6,8 @@ import {
   type StreamDoneMessage,
   type StreamErrorMessage,
 } from '@/api/client'
+import { runDemoSimulation } from '@/lib/demoSimulation'
+import { useAppStore } from '@/store/appStore'
 
 export type StreamStatus =
   | 'idle'
@@ -94,6 +96,7 @@ export function useJobStream() {
   const lastProgressUpdateRef = useRef<number>(0)
   const incidentTimeoutRef = useRef<any>(null)
   const isMutedRef = useRef(isMuted)
+  const demoCancelRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     isMutedRef.current = isMuted
@@ -126,6 +129,44 @@ export function useJobStream() {
       setIsIncidentActive(false)
       setProgress({ currentFrame: 0, totalFrames: 0, fps: 0 })
       setStatus('starting')
+
+      // Check if Demo Mode is active
+      if (useAppStore.getState().isDemoMode) {
+        setStatus('streaming')
+        setJobId('demo_job_active')
+        activeJobIdRef.current = 'demo_job_active'
+
+        const cancelFn = runDemoSimulation({
+          onFrame: (dataUrl, index, total, fps) => {
+            if (imageRef.current) {
+              imageRef.current.src = dataUrl
+            }
+            setProgress({
+              currentFrame: index,
+              totalFrames: total,
+              fps,
+            })
+          },
+          onIncident: (inc) => {
+            setIncidents((prev) => [inc, ...prev])
+            triggerIncidentAlert(inc)
+          },
+          onComplete: (doneSummary) => {
+            setSummary(doneSummary)
+            setStatus('completed')
+            setIsIncidentActive(false)
+            demoCancelRef.current = null
+          },
+          onError: (errMsg) => {
+            setError(errMsg)
+            setStatus('error')
+            setIsIncidentActive(false)
+            demoCancelRef.current = null
+          },
+        })
+        demoCancelRef.current = cancelFn
+        return
+      }
 
       try {
         let jobRes
@@ -228,13 +269,18 @@ export function useJobStream() {
   )
 
   const cancelJob = useCallback(async () => {
+    if (demoCancelRef.current) {
+      demoCancelRef.current()
+      demoCancelRef.current = null
+    }
+
     if (socketRef.current) {
       socketRef.current.close()
       socketRef.current = null
     }
 
     const currentId = activeJobIdRef.current
-    if (currentId) {
+    if (currentId && currentId !== 'demo_job_active') {
       try {
         await api.cancelJob(currentId)
       } catch (err) {
@@ -247,6 +293,11 @@ export function useJobStream() {
   }, [])
 
   const reset = useCallback(() => {
+    if (demoCancelRef.current) {
+      demoCancelRef.current()
+      demoCancelRef.current = null
+    }
+
     if (socketRef.current) {
       socketRef.current.close()
       socketRef.current = null
@@ -267,6 +318,10 @@ export function useJobStream() {
   // Clean up socket and timers on unmount
   useEffect(() => {
     return () => {
+      if (demoCancelRef.current) {
+        demoCancelRef.current()
+        demoCancelRef.current = null
+      }
       if (incidentTimeoutRef.current) {
         clearTimeout(incidentTimeoutRef.current)
       }

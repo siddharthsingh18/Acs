@@ -115,6 +115,10 @@ export const api = {
     return data
   },
 
+  testAlert: async (dryRun: boolean = false) => {
+    return api.testAlerts(dryRun)
+  },
+
   getIncidents: async (params?: {
     page?: number
     page_size?: number

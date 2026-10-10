@@ -29,6 +29,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AnimatedCounter } from '@/components/analytics/AnimatedCounter'
+import { ErrorState } from '@/components/common/ErrorState'
 import { api } from '@/api/client'
 import { useAppStore } from '@/store/appStore'
 import { cn } from '@/lib/utils'
@@ -44,13 +45,13 @@ export const AnalyticsPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>('')
 
   // Query high-level stats
-  const { data: stats } = useQuery({
+  const { data: stats, error: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['stats'],
     queryFn: () => api.getStats(),
   })
 
   // Query detailed incident records for time series and hourly analytics
-  const { data: incidentList } = useQuery({
+  const { data: incidentList, error: incidentError, refetch: refetchIncidents } = useQuery({
     queryKey: ['incidents_analytics', startDate, endDate],
     queryFn: () =>
       api.getIncidents({
@@ -302,6 +303,17 @@ export const AnalyticsPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {(statsError || incidentError) && (
+        <ErrorState
+          title="Telemetry Data Communication Interruption"
+          message="Could not load real-time analytics data from the database. Please verify the backend connection."
+          onRetry={() => {
+            refetchStats()
+            refetchIncidents()
+          }}
+        />
+      )}
 
       {/* STAT CARDS WITH ANIMATED COUNTERS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

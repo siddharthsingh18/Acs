@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   AlertTriangle,
   Clock,
-  ShieldCheck,
   ChevronRight,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/common/EmptyState'
 import type { StreamIncidentMessage } from '@/api/client'
 
 interface LiveIncidentFeedProps {
@@ -41,12 +41,12 @@ export const LiveIncidentFeed: React.FC<LiveIncidentFeedProps> = ({
 
       <CardContent className="p-3 flex-1 overflow-y-auto max-h-[640px] space-y-3">
         {incidents.length === 0 ? (
-          <div className="h-48 flex flex-col items-center justify-center text-center text-muted-foreground text-xs p-4 space-y-2">
-            <ShieldCheck className="h-8 w-8 text-muted-foreground/30" />
-            <p className="max-w-[180px] leading-relaxed">
-              {t('live.no_incidents_yet')}
-            </p>
-          </div>
+          <EmptyState
+            variant="shield"
+            title="Stream Surveillance Clear"
+            description={t('live.no_incidents_yet')}
+            className="py-10 border-0 bg-transparent"
+          />
         ) : (
           <AnimatePresence initial={false}>
             {incidents.map((inc) => (

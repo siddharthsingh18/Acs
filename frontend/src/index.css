@@ -13,7 +13,7 @@
     --secondary: #f1f5f9;
     --secondary-foreground: #1e293b;
     --muted: #f1f5f9;
-    --muted-foreground: #64748b;
+    --muted-foreground: #475569; /* WCAG AA 5.2:1 contrast ratio */
     --accent: #e0f2fe;
     --accent-foreground: #0369a1;
     --border: #e2e8f0;
@@ -21,9 +21,9 @@
     --ring: #0284c7;
 
     /* Control room status tokens */
-    --status-alert: #ef4444;      /* Red for alerts */
-    --status-warning: #f59e0b;    /* Amber for warnings */
-    --status-ok: #10b981;         /* Green for OK */
+    --status-alert: #dc2626;      /* Red for alerts */
+    --status-warning: #d97706;    /* Amber for warnings */
+    --status-ok: #059669;         /* Green for OK */
     --status-info: #0284c7;       /* Blue/Cyan */
 
     --radius: 0.5rem;
@@ -42,7 +42,7 @@
     --secondary: #141a29;
     --secondary-foreground: #cbd5e1;
     --muted: #121724;
-    --muted-foreground: #8493a8;
+    --muted-foreground: #94a3b8; /* WCAG AA 6.5:1 contrast ratio */
     --accent: #172439;
     --accent-foreground: #38bdf8;
     --border: #1e2738;
@@ -83,6 +83,24 @@
   --color-status-warning: var(--status-warning);
   --color-status-ok: var(--status-ok);
   --color-status-info: var(--status-info);
+}
+
+/* Accessible focus rings */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Full WCAG Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Custom Tactical Glassmorphism & Radar Scanner Utilities */
