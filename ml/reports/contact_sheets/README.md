@@ -1,7 +1,7 @@
 # ACS Pre-Label Spot-Check & Eyeball Review Guide
 ## Automated Video Frame Inference (Baseline `best_v0.pt`)
 
-**Generation Timestamp**: 2026-10-17 04:17:30  
+**Generation Timestamp**: 2026-10-18 04:37:31  
 **Confidence Threshold**: `conf >= 0.60`  
 **Pre-Labeled Images Generated**: `757` images in `ml/data/pre_labels/`
 

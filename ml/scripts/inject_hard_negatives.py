@@ -21,9 +21,35 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-import imagehash
 import numpy as np
 from PIL import Image
+
+try:
+    import imagehash
+except ImportError:
+    import scipy.fftpack
+
+    class ImageHashWrapper:
+        def __init__(self, hash_array: np.ndarray):
+            self.hash = np.asarray(hash_array, dtype=bool)
+
+        def __sub__(self, other) -> int:
+            return int(np.count_nonzero(self.hash != other.hash))
+
+    class FallbackImageHash:
+        @staticmethod
+        def phash(image: Image.Image, hash_size: int = 8, highfreq_factor: int = 4) -> ImageHashWrapper:
+            img_size = hash_size * highfreq_factor
+            img = image.convert("L").resize((img_size, img_size), Image.Resampling.LANCZOS)
+            pixels = np.asarray(img, dtype=float)
+            dct = scipy.fftpack.dct(scipy.fftpack.dct(pixels, axis=0), axis=1)
+            dctlowfreq = dct[:hash_size, :hash_size]
+            med = np.median(dctlowfreq)
+            diff = dctlowfreq > med
+            return ImageHashWrapper(diff)
+
+    imagehash = FallbackImageHash
+
 
 
 def load_hashes(image_paths: List[Path]) -> Dict[Path, imagehash.ImageHash]:
