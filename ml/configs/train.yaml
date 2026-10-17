@@ -1,0 +1,120 @@
+# ==============================================================================
+# Automated CCTV Accident Detection System (ACS)
+# Model Training Configuration (Experiments A, B, C, D)
+# ==============================================================================
+
+# Global Execution Settings
+global:
+  seed: 42
+  deterministic: true
+  project: "ml/runs"
+  data: "ml/data/merged/data.yaml"
+  device: "auto"          # Auto-resolves to 'cuda' -> 'mps' -> 'cpu'
+  save: true
+  save_period: -1
+  val: true
+  plots: true
+  workers: 4
+
+# Hardware & Timing Safeguards
+hardware:
+  cpu_max_estimated_hours: 6.0  # Warn if estimated CPU training exceeds 6 hours
+
+# Loss Stability & Divergence Detection Guardrails
+divergence:
+  enabled: true
+  max_cls_loss: 5.0             # Absolute ceiling for val/cls_loss (normal ~1.0-1.5)
+  cls_loss_ratio: 3.5           # Max allowable ratio of val/cls_loss to train/cls_loss
+  min_epochs_before_ratio: 3    # Grace period during initial warmup/head adaptation
+
+# ------------------------------------------------------------------------------
+# Experiment A: YOLO11n Two-Phase Fine-Tuning
+# ------------------------------------------------------------------------------
+exp_a:
+  name: "exp_a_yolo11n_twophase"
+  description: "YOLO11n from best_v0.pt weights, 100 epochs, patience 20, imgsz 960, batch auto, cos_lr, freeze=10 for 10 epochs then unfreeze"
+  model: "ml/baseline/best_v0.pt"
+  imgsz: 960
+  batch: -1                     # Auto-batch (-1 triggers optimal batch calculation)
+  cos_lr: true
+  lr0: 0.005
+  optimizer: "AdamW"
+  total_epochs: 100
+  patience: 20
+  phase1:
+    epochs: 10
+    freeze: 10                  # Freeze first 10 layers (backbone) to stabilize head
+    lr0: 0.005
+  phase2:
+    epochs: 90                  # Remaining 90 epochs (total 100)
+    freeze: 0                   # Full backbone & neck unfrozen
+    lr0: 0.005
+
+# ------------------------------------------------------------------------------
+# Experiment B: YOLO11s Two-Phase Training (Capacity & Recall Boost)
+# ------------------------------------------------------------------------------
+exp_b:
+  name: "exp_b_yolo11s_twophase"
+  description: "YOLO11s from yolo11s.pt, same settings as Exp A (testing recall gain on small model)"
+  model: "yolo11s.pt"
+  imgsz: 960
+  batch: -1
+  cos_lr: true
+  lr0: 0.005
+  optimizer: "AdamW"
+  total_epochs: 100
+  patience: 20
+  phase1:
+    epochs: 10
+    freeze: 10
+    lr0: 0.005
+  phase2:
+    epochs: 90
+    freeze: 0
+    lr0: 0.005
+
+# ------------------------------------------------------------------------------
+# Experiment C: Strong Augmentations (Best of A or B)
+# ------------------------------------------------------------------------------
+exp_c:
+  name: "exp_c_strong_aug"
+  description: "Best of A or B with stronger augmentation: mosaic 1.0, mixup 0.1, hsv on, degrees 5, scale 0.5, fliplr 0.5, close_mosaic 10"
+  base_experiment: "auto_best"  # Dynamically selects higher mAP50 between Exp A and Exp B
+  imgsz: 960
+  batch: -1
+  cos_lr: true
+  lr0: 0.005
+  optimizer: "AdamW"
+  total_epochs: 100
+  patience: 20
+  phase1:
+    epochs: 10
+    freeze: 10
+  phase2:
+    epochs: 90
+    freeze: 0
+  augment:
+    mosaic: 1.0
+    mixup: 0.1
+    hsv_h: 0.015
+    hsv_s: 0.7
+    hsv_v: 0.4
+    degrees: 5.0
+    scale: 0.5
+    fliplr: 0.5
+    close_mosaic: 10
+    copy_paste: 0.0             # Skipped (segmentation masks not available)
+
+# ------------------------------------------------------------------------------
+# Experiment D: Class Imbalance Oversampling & Retraining
+# ------------------------------------------------------------------------------
+exp_d:
+  name: "exp_d_oversampled"
+  description: "Class weighting via oversampling for rare accident classes, retrain best config"
+  base_experiment: "auto_best"  # Retrains the best config from A, B, or C
+  oversampling:
+    source_dir: "ml/data/merged"
+    output_dir: "ml/data/oversampled"
+    data_yaml: "ml/data/oversampled/data.yaml"
+    target_min_instances: 1500  # Minimum target box count for rare classes
+    accident_classes_multiplier: 3

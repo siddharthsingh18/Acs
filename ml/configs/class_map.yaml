@@ -1,0 +1,384 @@
+# ==============================================================================
+# Automated CCTV Accident Detection System (ACS)
+# Dataset Class Mapping Configuration
+# ==============================================================================
+# Single Source of Truth Target Classes (10 classes):
+#   0: bike
+#   1: bike_bike_accident
+#   2: bike_object_accident
+#   3: bike_person_accident
+#   4: car
+#   5: car_bike_accident
+#   6: car_car_accident
+#   7: car_object_accident
+#   8: car_person_accident
+#   9: person
+#
+# Rule Protocol:
+# 1. Semantic Purity:
+#    - Only map when the meaning truly matches the target taxonomy.
+#    - Generic "accident" classes map to car_car_accident ONLY if images show pure car-car crashes.
+#    - If visual inspection (20-image sample per generic class) reveals mixed crash modalities
+#      (e.g., rollovers, car-bike, bike-bike, pedestrian collisions, barrier impacts), the generic
+#      class MUST be mapped to "drop" to prevent corrupting fine-grained accident classifiers.
+# 2. Normal-traffic mapping:
+#    - vehicle, car, truck, pickup-truck, bus, van, trailer -> car (ID: 4)
+#    - motorcycle, bike, bicycle -> bike (ID: 0)
+#    - pedestrian, person -> person (ID: 9)
+# 3. Label quality & data integrity:
+#    - Datasets with severe duplication (>15%), cross-split leakage, or corrupted/anomalous boxes
+#      are flagged and rejected from direct merging.
+#    - Supplemental candidate datasets are designated for teacher-model pre-labeling or negative injection.
+# ==============================================================================
+
+version: "1.1.0"
+target_classes:
+  0: bike
+  1: bike_bike_accident
+  2: bike_object_accident
+  3: bike_person_accident
+  4: car
+  5: car_bike_accident
+  6: car_car_accident
+  7: car_object_accident
+  8: car_person_accident
+  9: person
+
+datasets:
+  # ----------------------------------------------------------------------------
+  # 1. aitc2025_traffic_object_detection
+  # Source: https://app.roboflow.com/aitc2025/hossein-2/4
+  # License: Private / Custom
+  # Quality: Excellent (0 corrupt, 0 invalid boxes, clean bounding boxes)
+  # ----------------------------------------------------------------------------
+  aitc2025_traffic_object_detection:
+    status: "approved_normal_traffic"
+    flag: "CLEAN - Excellent for normal traffic background negative training"
+    class_mapping:
+      0:
+        source_name: "Motorcycle"
+        target_name: "bike"
+        target_id: 0
+        action: "map"
+        rationale: "Direct semantic match to 'bike' class (covers motorcycles and bicycles) per ACS guidelines."
+      1:
+        source_name: "bus"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Normal traffic passenger vehicle mapped to 'car' per normal-traffic rules."
+      2:
+        source_name: "car"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Direct semantic match to normal traffic 'car'."
+      3:
+        source_name: "pickup-truck"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Truck variant mapped to normal traffic 'car' per normal-traffic rules."
+      4:
+        source_name: "trailer"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Heavy motor vehicle mapped to normal traffic 'car' per normal-traffic rules."
+      5:
+        source_name: "van"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Utility motor vehicle mapped to normal traffic 'car' per normal-traffic rules."
+
+  # ----------------------------------------------------------------------------
+  # 2. hilmantm_traffic_accident_detection
+  # Source: https://universe.roboflow.com/hilmantm/traffic-accident-detection/dataset/1
+  # License: CC BY 4.0
+  # Quality: Mixed (Vehicle class is high quality; Accident class is heterogeneous)
+  # ----------------------------------------------------------------------------
+  hilmantm_traffic_accident_detection:
+    status: "partially_approved"
+    flag: "SPLIT_MAPPING - vehicle class is high quality; accident class contains mixed crash types"
+    class_mapping:
+      0:
+        source_name: "accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Empirical 20-sample visual audit revealed a heterogeneous mixture: only ~25%
+          represent car-car collisions; ~15% are car-bike collisions (e.g. accidentFrame1851),
+          ~10% are single-car rollovers/barrier impacts (FLIP_CAR series, car_object_accident),
+          and the remainder are ambiguous aftermath. Per ACS rules, generic accident cannot be
+          mapped to car_car_accident unless purely car-car crashes. Dropped to preserve taxonomy purity.
+      1:
+        source_name: "vehicle"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Normal-traffic passenger vehicle mapped to 'car' per normal-traffic rules (2,779 valid boxes)."
+
+  # ----------------------------------------------------------------------------
+  # 3. justjuu_cctv_accident_detection
+  # Source: Hugging Face (justjuu/traffic-accident-cctv-object-detection)
+  # License: CC0 1.0 Universal
+  # Quality: BAD / HIGH RISK (25% duplicates, 46 cross-split leakages, heterogeneous boxes)
+  # ----------------------------------------------------------------------------
+  justjuu_cctv_accident_detection:
+    status: "flagged_defective"
+    flag: "REJECTED_LABELS - 25.0% duplicate images (692 duplicates), 46 cross-split leakages, mixed crash types"
+    class_mapping:
+      0:
+        source_name: "accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Empirical 20-sample visual audit revealed heterogeneous collisions: car-car,
+          bike-bike collisions (cctv_train_00902), obstacle impacts (cctv_train_02069, cctv_train_00026),
+          and pedestrian incidents. Also exhibits anomalous labelling (e.g. cctv_train_01906 has 9
+          accident boxes on non-incident traffic). Dropped to avoid severe model degradation.
+      1:
+        source_name: "non_accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Generic negative background class containing cars, buses, bikes, and pedestrians
+          without distinction. Cannot be mapped to 'car' or 'bike' without introducing false
+          labels. Must be dropped.
+
+  # ----------------------------------------------------------------------------
+  # 4. on_the_roads_traffic_accident
+  # Source: https://universe.roboflow.com/on-the-roads/traffic-accident-vrvx6/dataset/2
+  # License: Public Domain
+  # Quality: Low volume (120 images), mixed crash types, wide bounding boxes
+  # ----------------------------------------------------------------------------
+  on_the_roads_traffic_accident:
+    status: "flagged_low_volume"
+    flag: "REJECTED_LABELS - Low volume (120 images), mixed crash modalities, coarse localization"
+    class_mapping:
+      0:
+        source_name: "Accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Empirical 20-sample visual audit showed mixed collisions: car-car, car-motorcycle
+          strikes (accident_14), and multiple bike/pedestrian incidents (accident_06, accident_07,
+          accident_09). Many bounding boxes enclose wide scene regions or normal traffic. Dropped.
+
+  # ----------------------------------------------------------------------------
+  # 5. accident_candidates/cadp_cctv_frames
+  # Source: CADP (Car Accident Detection and Prediction) video extraction
+  # Status: candidate_auto_label (49 extracted CCTV crash frames)
+  # ----------------------------------------------------------------------------
+  cadp_cctv_frames:
+    status: "candidate_auto_label"
+    flag: "CANDIDATE_FRAMES - Extracted CADP CCTV frames; normal vehicles mapped to car"
+    class_mapping:
+      0:
+        source_name: "car"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Normal traffic car mapped to target 'car' class per normal-traffic rules."
+      1:
+        source_name: "van"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Normal traffic van mapped to target 'car' class per normal-traffic rules."
+
+  # ----------------------------------------------------------------------------
+  # 6. accident_candidates/car_flip_object
+  # Source: latifa-fuirj/car-accident-jp29y
+  # Status: candidate_auto_label (200 images, rare rollover and obstacle collisions)
+  # ----------------------------------------------------------------------------
+  car_flip_object:
+    status: "candidate_auto_label"
+    flag: "HIGH_VALUE_RARE_CLASS - Single car rollovers and tree/pole impacts map to car_object_accident"
+    class_mapping:
+      0:
+        source_name: "Car Flip"
+        target_name: "car_object_accident"
+        target_id: 7
+        action: "map"
+        rationale: >
+          Single-vehicle rollover / barrier strike accurately matches target 'car_object_accident'.
+      1:
+        source_name: "car Accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Generic car accident label with mixed collision types. Dropped per taxonomy purity rules.
+      2:
+        source_name: "car Accident hiting a tree"
+        target_name: "car_object_accident"
+        target_id: 7
+        action: "map"
+        rationale: >
+          Vehicle impacting a stationary tree/pole is a direct semantic match for target 'car_object_accident'.
+
+  # ----------------------------------------------------------------------------
+  # 7. accident_candidates/cctv_accident_frames
+  # Source: vehicle-accident-frame-by-frame/traffic-accident-nwmqo
+  # Status: candidate_auto_label (8,407 frames, sequential accident frames)
+  # ----------------------------------------------------------------------------
+  cctv_accident_frames:
+    status: "candidate_auto_label"
+    flag: "PRE_LABEL_CANDIDATE - Frame-by-frame CCTV footage; generic labels dropped pending teacher re-annotation"
+    class_mapping:
+      0:
+        source_name: "accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Generic coarse accident bounding boxes across video frames mixing car-car, car-barrier,
+          and bike crashes. Dropped from direct mapping; reserved for teacher-model auto-labeling.
+      1:
+        source_name: "non-accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Coarse non-accident background regions without specific vehicle annotations. Dropped.
+
+  # ----------------------------------------------------------------------------
+  # 8. accident_candidates/moto_accident
+  # Source: deep-learning-xnbnl/accident-vcudo
+  # Status: candidate_auto_label (3,360 images, motorcycle collisions)
+  # ----------------------------------------------------------------------------
+  moto_accident:
+    status: "candidate_auto_label"
+    flag: "PRE_LABEL_CANDIDATE - Motorcycle crash footage; generic accident class dropped pending teacher re-annotation"
+    class_mapping:
+      0:
+        source_name: "injury"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Ambiguous medical/casualty injury label that does not map to any ACS bounding box class.
+      1:
+        source_name: "moto_accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Coarse motorcycle accident label conflating bike_bike_accident, car_bike_accident, and
+          bike_object_accident. Dropped from direct merge; reserved for teacher-model auto-labeling.
+
+  # ----------------------------------------------------------------------------
+  # 9. accident_candidates/pedestrian_accident
+  # Source: sliit-kpo3y/pedestrian-accident-detection
+  # Status: candidate_auto_label (941 images, vehicle-pedestrian strikes)
+  # ----------------------------------------------------------------------------
+  pedestrian_accident:
+    status: "candidate_auto_label"
+    flag: "PRE_LABEL_CANDIDATE - Vehicle-pedestrian accident frames; vehicle class mapped to car"
+    class_mapping:
+      0:
+        source_name: "accident"
+        target_name: "drop"
+        target_id: null
+        action: "drop"
+        rationale: >
+          Coarse bounding boxes enclosing entire collision zones with high label noise. Dropped
+          from direct mapping pending fine-grained teacher re-labeling into car_person_accident.
+      1:
+        source_name: "vehicle"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Normal traffic vehicle mapped to 'car' per normal-traffic rules."
+
+  # ----------------------------------------------------------------------------
+  # 10. hard_negatives/traffic_night
+  # Source: univ-kqors/traffic-night
+  # Status: supplemental_hard_negative (13,576 images, nocturnal normal traffic)
+  # ----------------------------------------------------------------------------
+  traffic_night:
+    status: "supplemental_hard_negative"
+    flag: "HARD_NEGATIVE - Nighttime illumination, headlights, and low-light normal traffic"
+    class_mapping:
+      0:
+        source_name: "bus"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Normal passenger bus mapped to 'car' per normal-traffic rules."
+      1:
+        source_name: "car"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Direct semantic match to normal traffic 'car'."
+      2:
+        source_name: "motorcycle"
+        target_name: "bike"
+        target_id: 0
+        action: "map"
+        rationale: "Direct semantic match to 'bike' per ACS normal-traffic rules."
+      3:
+        source_name: "truck"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Commercial transport truck mapped to 'car' per normal-traffic rules."
+
+  # ----------------------------------------------------------------------------
+  # 11. hard_negatives/traffic_jam
+  # Source: ballplayground/traffic-jam-ksie2
+  # Status: supplemental_hard_negative (286 images, traffic congestion & braking)
+  # ----------------------------------------------------------------------------
+  traffic_jam:
+    status: "supplemental_hard_negative"
+    flag: "HARD_NEGATIVE - Congested traffic, dense queues, and brake lights"
+    class_mapping:
+      0:
+        source_name: "car"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Normal traffic cars in congestion queues mapped to 'car' per normal-traffic rules."
+
+  # ----------------------------------------------------------------------------
+  # 12. hard_negatives/parked_cars
+  # Source: jonathans-workspace-7jpdf/wrong-parked
+  # Status: supplemental_hard_negative (329 images, curbside parked vehicles)
+  # ----------------------------------------------------------------------------
+  parked_cars:
+    status: "supplemental_hard_negative"
+    flag: "HARD_NEGATIVE - Stationary and curbside parked vehicles to suppress stationary car false alarms"
+    class_mapping:
+      0:
+        source_name: "Wrong-parked"
+        target_name: "car"
+        target_id: 4
+        action: "map"
+        rationale: "Stationary parked vehicles mapped to 'car' to suppress false alarm accident predictions."
+
+  # ----------------------------------------------------------------------------
+  # 13. hard_negatives/cctv_non_accident
+  # Source: tammy/cctv-non-accident
+  # Status: supplemental_hard_negative (353 pure background negative images, 0 declared classes)
+  # ----------------------------------------------------------------------------
+  cctv_non_accident:
+    status: "supplemental_hard_negative"
+    flag: "HARD_NEGATIVE - Empty background normal CCTV footage without incident annotations"
+    class_mapping: {}
+
+  # ----------------------------------------------------------------------------
+  # 14. hard_negatives/rain_traffic
+  # Source: weather-xduis/rain-kdcqi
+  # Status: supplemental_hard_negative (735 wet asphalt & glare negative images, 0 declared classes)
+  # ----------------------------------------------------------------------------
+  rain_traffic:
+    status: "supplemental_hard_negative"
+    flag: "HARD_NEGATIVE - Inclement weather, wet asphalt, puddle reflections, and lens glare"
+    class_mapping: {}

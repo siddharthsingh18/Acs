@@ -166,3 +166,31 @@ app.include_router(incidents_router.router)
 app.include_router(alerts_router.router)
 app.include_router(stats_router.router)
 
+# -----------------------------------------------------------------------------
+# Mount Frontend Static Build (Production / Docker)
+# -----------------------------------------------------------------------------
+frontend_dist = os.getenv(
+    "FRONTEND_DIST",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "dist"),
+)
+if os.path.exists(frontend_dist):
+    from fastapi import HTTPException
+    from starlette.responses import FileResponse
+
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="static_assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path == "api":
+            raise HTTPException(status_code=404, detail="API route not found")
+        file_path = os.path.join(frontend_dist, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        index_file = os.path.join(frontend_dist, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+
+

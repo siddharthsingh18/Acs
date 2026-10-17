@@ -1,0 +1,94 @@
+# ==============================================================================
+# Automated CCTV Accident Detection System (ACS)
+# Machine Learning Class Definition - Single Source of Truth
+# ==============================================================================
+
+# Total number of classes recognized by YOLO models
+nc: 10
+
+# 0-indexed class ID to class label name mapping (matches YOLO checkpoint weights)
+names:
+  0: bike
+  1: bike_bike_accident
+  2: bike_object_accident
+  3: bike_person_accident
+  4: car
+  5: car_bike_accident
+  6: car_car_accident
+  7: car_object_accident
+  8: car_person_accident
+  9: person
+
+# List format for Ultralytics dataset YAML compliance
+classes:
+  - bike
+  - bike_bike_accident
+  - bike_object_accident
+  - bike_person_accident
+  - car
+  - car_bike_accident
+  - car_car_accident
+  - car_object_accident
+  - car_person_accident
+  - person
+
+# Categorization: Accident event classes vs Normal road entity classes
+accident_classes:
+  - bike_bike_accident
+  - bike_object_accident
+  - bike_person_accident
+  - car_bike_accident
+  - car_car_accident
+  - car_object_accident
+  - car_person_accident
+
+normal_classes:
+  - bike
+  - car
+  - person
+
+# Severity mapping for emergency dispatch triage
+severity_levels:
+  bike_person_accident: critical
+  car_person_accident: critical
+  bike_bike_accident: high
+  car_bike_accident: high
+  car_car_accident: high
+  bike_object_accident: medium
+  car_object_accident: medium
+  bike: normal
+  car: normal
+  person: normal
+
+# Bilingual display labels (English / Arabic)
+display_labels:
+  bike:
+    en: "Bicycle / Motorcycle"
+    ar: "دراجة"
+  bike_bike_accident:
+    en: "Bike-Bike Collision"
+    ar: "حادث دراجة مع دراجة"
+  bike_object_accident:
+    en: "Bike Collision with Obstacle"
+    ar: "اصطدام دراجة بحاجز"
+  bike_person_accident:
+    en: "Bike-Pedestrian Incident"
+    ar: "حادث دهس دراجة لمشاة"
+  car:
+    en: "Car / Vehicle"
+    ar: "سيارة"
+  car_bike_accident:
+    en: "Car-Bike Collision"
+    ar: "حادث سيارة مع دراجة"
+  car_car_accident:
+    en: "Car-Car Collision"
+    ar: "حادث سيارة مع سيارة"
+  car_object_accident:
+    en: "Car Collision with Obstacle"
+    ar: "اصطدام سيارة بجسم ثابت"
+  car_person_accident:
+    en: "Vehicle-Pedestrian Incident"
+    ar: "حادث دهس سيارة لمشاة"
+  person:
+    en: "Pedestrian"
+    ar: "مشاة"

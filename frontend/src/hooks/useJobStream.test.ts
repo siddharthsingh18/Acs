@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useJobStream } from './useJobStream'
 import { api } from '@/api/client'
+import { useAppStore } from '@/store/appStore'
 
 vi.mock('@/api/client', () => ({
   api: {
@@ -14,6 +15,7 @@ vi.mock('@/api/client', () => ({
 describe('useJobStream hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useAppStore.setState({ isDemoMode: false })
   })
 
   it('initializes with idle state and is muted by default', () => {
@@ -89,5 +91,40 @@ describe('useJobStream hook', () => {
 
     expect(result.current.status).toBe('cancelled')
     expect(result.current.isIncidentActive).toBe(false)
+  })
+
+  it('runs demo simulation mode when isDemoMode is enabled', async () => {
+    useAppStore.setState({ isDemoMode: true })
+
+    const { result } = renderHook(() => useJobStream())
+
+    await act(async () => {
+      await result.current.startJob({
+        source: 'sample',
+      })
+    })
+
+    expect(result.current.status).toBe('streaming')
+    expect(result.current.jobId).toBe('demo_job_active')
+
+    // Cancel demo job cleanly
+    await act(async () => {
+      await result.current.cancelJob()
+    })
+
+    expect(result.current.status).toBe('cancelled')
+  })
+
+  it('resets state to idle cleanly', () => {
+    const { result } = renderHook(() => useJobStream())
+
+    act(() => {
+      result.current.reset()
+    })
+
+    expect(result.current.status).toBe('idle')
+    expect(result.current.jobId).toBeNull()
+    expect(result.current.incidents).toEqual([])
+    expect(result.current.error).toBeNull()
   })
 })

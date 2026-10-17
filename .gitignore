@@ -8,10 +8,10 @@ __pycache__/
 *.env
 
 # Application runtime outputs
-report_images/
-reports/
-runs/
-temp/
+/report_images/
+/reports/
+/runs/
+/temp/
 
 # Virtual environments
 venv/
@@ -27,3 +27,11 @@ venv/
 node_modules/
 frontend/node_modules/
 frontend/dist/
+
+# Machine Learning large datasets, checkpoints, and weights
+ml/data/
+ml/runs/
+ml/baseline/*.pt
+datasets/
+yolo11s.pt
+
