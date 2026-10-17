@@ -65,7 +65,7 @@ def resolve_device(requested: str = "auto") -> Tuple[str, bool, str]:
 
 def check_cpu_runtime_warning(n_train_images: int, imgsz: int, epochs: int, threshold_hours: float = 6.0) -> Optional[str]:
     """Calculates estimated CPU training runtime and returns warning if it exceeds threshold."""
-    # Approximate CPU speed for YOLO detection at 960px: ~0.12 - 0.20s per image forward/backward
+    # Approximate CPU speed for YOLO detection at 960px: ~0.15s per image forward/backward
     est_sec_per_img = 0.15
     est_total_sec = n_train_images * est_sec_per_img * epochs
     est_hours = est_total_sec / 3600.0
@@ -77,6 +77,17 @@ def check_cpu_runtime_warning(n_train_images: int, imgsz: int, epochs: int, thre
             f"Recommended: Run on CUDA GPU or Apple Silicon MPS device."
         )
     return None
+
+
+def resolve_model_path(model_str: str) -> str:
+    """Finds the absolute path to a model checkpoint file."""
+    p = Path(model_str)
+    if p.exists():
+        return str(p.resolve())
+    rel = PROJECT_ROOT / model_str
+    if rel.exists():
+        return str(rel.resolve())
+    return model_str
 
 
 class LossDivergenceMonitor:
@@ -110,7 +121,12 @@ class LossDivergenceMonitor:
 
             header = [h.strip() for h in lines[0].split(",")]
             last_row = [v.strip() for v in lines[-1].split(",")]
-            metric_map = {k: float(v) for k, v in zip(header, last_row) if v.replace(".", "", 1).replace("-", "", 1).isdigit()}
+            metric_map = {}
+            for k, v in zip(header, last_row):
+                try:
+                    metric_map[k] = float(v)
+                except ValueError:
+                    pass
 
             epoch = int(metric_map.get("epoch", trainer.epoch + 1))
             val_cls = metric_map.get("val/cls_loss", None)
@@ -119,7 +135,7 @@ class LossDivergenceMonitor:
             if val_cls is None:
                 return
 
-            # Check 1: Absolute ceiling threshold
+            # Check 1: Absolute ceiling threshold (e.g. earlier unfreeze run hit 23 vs 1.35)
             if val_cls > self.max_cls_loss:
                 self.diverged = True
                 self.divergence_details = {
@@ -151,8 +167,7 @@ class LossDivergenceMonitor:
                     print(f"\n🛑 [LOSS DIVERGENCE DETECTED] Epoch {epoch}: {self.divergence_details['trigger']}")
                     return
 
-        except Exception as e:
-            # Silent fallback to not crash training loop on minor parsing anomalies
+        except Exception:
             pass
 
     def _write_report(self):
@@ -207,11 +222,13 @@ def run_training_experiment(
     phase1_epochs = min(exp_cfg.get("phase1", {}).get("epochs", 10), total_epochs)
     phase2_epochs = max(0, total_epochs - phase1_epochs)
 
+    base_model_path = resolve_model_path(exp_cfg["model"])
+
     print("\n" + "=" * 80)
     print(f"🚀 STARTING EXPERIMENT: {exp_name.upper()}")
     print("=" * 80)
     print(f"Description: {exp_cfg.get('description', '')}")
-    print(f"Base Model: {exp_cfg['model']}")
+    print(f"Base Model: {base_model_path}")
     print(f"Target Device: {device.upper()}")
     print(f"Image Size: {imgsz}px | Batch: {batch} | Optimizer: {optimizer} | lr0: {lr0}")
     print(f"Schedule: Total {total_epochs} ep (Phase 1: {phase1_epochs} ep freeze=10 -> Phase 2: {phase2_epochs} ep unfrozen)")
@@ -222,7 +239,7 @@ def run_training_experiment(
     resolved_hp = {
         "experiment": exp_key,
         "name": exp_name,
-        "base_model": exp_cfg["model"],
+        "base_model": str(base_model_path),
         "device": device,
         "imgsz": imgsz,
         "batch": batch,
@@ -249,7 +266,7 @@ def run_training_experiment(
     # --------------------------------------------------------------------------
     print(f"\n[PHASE 1] Initializing {phase1_epochs} epochs with freeze={exp_cfg['phase1']['freeze']} (lr0={lr0})...")
     p1_name = f"{exp_name}_phase1"
-    model = YOLO(exp_cfg["model"])
+    model = YOLO(base_model_path)
 
     monitor_p1 = LossDivergenceMonitor(
         max_cls_loss=div_cfg.get("max_cls_loss", 5.0),
@@ -295,6 +312,7 @@ def run_training_experiment(
         print(f"\n🛑 Experiment halted due to loss divergence in Phase 1.")
         return {
             "experiment": exp_key,
+            "name": exp_name,
             "status": "DIVERGED",
             "divergence_details": monitor_p1.divergence_details,
             "best_pt": None,
@@ -310,7 +328,7 @@ def run_training_experiment(
     # --------------------------------------------------------------------------
     checkpoint_to_load = p1_best if p1_best.exists() else p1_last
     if not checkpoint_to_load or not checkpoint_to_load.exists():
-        checkpoint_to_load = Path(exp_cfg["model"])
+        checkpoint_to_load = Path(base_model_path)
 
     p2_name = f"{exp_name}_phase2"
     final_best_pt = None
@@ -364,6 +382,7 @@ def run_training_experiment(
             print(f"\n🛑 Experiment halted due to loss divergence in Phase 2.")
             return {
                 "experiment": exp_key,
+                "name": exp_name,
                 "status": "DIVERGED",
                 "divergence_details": monitor_p2.divergence_details,
                 "best_pt": str(p1_best),
@@ -392,7 +411,7 @@ def run_training_experiment(
     # --------------------------------------------------------------------------
     best_weight_eval = weights_dir / "best.pt"
     if not best_weight_eval.exists():
-        best_weight_eval = Path(exp_cfg["model"])
+        best_weight_eval = Path(base_model_path)
 
     print(f"\n[VALIDATION EVALUATION] Evaluating best checkpoint: {best_weight_eval} at imgsz={imgsz}...")
     eval_model = YOLO(str(best_weight_eval))
@@ -490,6 +509,7 @@ def main():
             print(f"\n{warn}\n")
 
     executed_results = []
+    project_dir = PROJECT_ROOT / global_cfg.get("project", "ml/runs")
 
     # Run Sequence
     experiments_to_run = ["exp_a", "exp_b", "exp_c", "exp_d"] if args.experiment == "all" else [f"exp_{args.experiment.lower()}"]
@@ -504,14 +524,23 @@ def main():
             executed_results.append(res)
 
         elif exp_key == "exp_c":
-            # Select best of A or B based on mAP50
+            # Select best of A or B based on mAP50 from executed or on-disk runs
             completed_prev = [r for r in executed_results if r.get("status") == "COMPLETED" and r["experiment"] in ["exp_a", "exp_b"]]
             if completed_prev:
                 best_prev = max(completed_prev, key=lambda x: x.get("mAP50", 0.0))
                 best_model_weights = best_prev["best_weights"]
                 print(f"\n[EXP C SELECTION] Dynamically selected {best_prev['name']} as base (mAP50: {best_prev['mAP50']*100:.2f}%)")
             else:
-                best_model_weights = cfg["exp_a"]["model"]
+                exp_a_best = project_dir / "exp_a_yolo11n_twophase" / "weights" / "best.pt"
+                exp_b_best = project_dir / "exp_b_yolo11s_twophase" / "weights" / "best.pt"
+                if exp_b_best.exists() and exp_a_best.exists():
+                    best_model_weights = str(exp_a_best)
+                elif exp_a_best.exists():
+                    best_model_weights = str(exp_a_best)
+                elif exp_b_best.exists():
+                    best_model_weights = str(exp_b_best)
+                else:
+                    best_model_weights = cfg["exp_a"]["model"]
 
             cfg["exp_c"]["model"] = best_model_weights
             extra_aug = cfg["exp_c"].get("augment", {})
@@ -535,6 +564,11 @@ def main():
                 base_model = best_overall["best_weights"]
             else:
                 base_model = cfg["exp_a"]["model"]
+                for candidate_name in ["exp_c_strong_aug", "exp_b_yolo11s_twophase", "exp_a_yolo11n_twophase"]:
+                    cand_best = project_dir / candidate_name / "weights" / "best.pt"
+                    if cand_best.exists():
+                        base_model = str(cand_best)
+                        break
 
             cfg["exp_d"]["model"] = base_model
             res = run_training_experiment("exp_d", cfg, target_device, override_epochs=args.epochs, custom_data_yaml=os_data_yaml)
