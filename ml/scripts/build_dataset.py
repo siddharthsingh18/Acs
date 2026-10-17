@@ -7,7 +7,7 @@ Merges approved datasets into ml/data/merged/ using class_map.yaml and classes.y
 2. Removes exact and near-duplicate images across ALL sources using perceptual hashing (dHash/pHash).
 3. Groups images into source groups (by video ID / sequence prefix and perceptual-hash clusters)
    so near-identical frames from the same camera/video all land in the same split.
-4. Partitions source groups into train/val/test = 70/15/15.
+4. Partitions source groups into train/val/test = 70/15/15. The test split is strictly holdout.
 5. Enforces holdout isolation: acc_ex.mp4 frames in ml/data/holdout/ are strictly excluded.
 6. Validates zero perceptual hash overlap between splits and against holdout footage,
    failing the script if any overlap exists.
@@ -26,12 +26,56 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
-import imagehash
 import numpy as np
 from PIL import Image
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 import yaml
+
+# Perceptual hashing with fallback if imagehash package is not installed
+try:
+    import imagehash
+except ImportError:
+    import scipy.fftpack
+
+    class ImageHashWrapper:
+        """Wrapper mimicking imagehash.ImageHash interface."""
+        def __init__(self, hash_array: np.ndarray):
+            self.hash = np.asarray(hash_array, dtype=bool)
+
+        def __sub__(self, other) -> int:
+            return int(np.count_nonzero(self.hash != other.hash))
+
+        def __eq__(self, other) -> bool:
+            return np.array_equal(self.hash, other.hash)
+
+        def __hash__(self) -> int:
+            return hash(bytes(np.packbits(self.hash)))
+
+        def __str__(self) -> str:
+            return "".join(format(b, "02x") for b in np.packbits(self.hash))
+
+    class FallbackImageHash:
+        """Self-contained implementation of perceptual hashing using DCT and gradient differences."""
+        @staticmethod
+        def phash(image: Image.Image, hash_size: int = 8, highfreq_factor: int = 4) -> ImageHashWrapper:
+            img_size = hash_size * highfreq_factor
+            img = image.convert("L").resize((img_size, img_size), Image.Resampling.LANCZOS)
+            pixels = np.asarray(img, dtype=float)
+            dct = scipy.fftpack.dct(scipy.fftpack.dct(pixels, axis=0), axis=1)
+            dctlowfreq = dct[:hash_size, :hash_size]
+            med = np.median(dctlowfreq)
+            diff = dctlowfreq > med
+            return ImageHashWrapper(diff)
+
+        @staticmethod
+        def dhash(image: Image.Image, hash_size: int = 8) -> ImageHashWrapper:
+            img = image.convert("L").resize((hash_size + 1, hash_size), Image.Resampling.LANCZOS)
+            pixels = np.asarray(img, dtype=np.int32)
+            diff = pixels[:, 1:] > pixels[:, :-1]
+            return ImageHashWrapper(diff)
+
+    imagehash = FallbackImageHash
 
 
 def load_yaml(path: Path) -> Dict[str, Any]:
@@ -91,7 +135,6 @@ def extract_video_id(filename: str) -> str:
     # Check common CCTV / video sequence prefixes
     for prefix in ["cctv_train_", "cctv_val_", "cctv_test_", "cctv_"]:
         if base.startswith(prefix):
-            # Group by 10-frame or camera sequence block if applicable
             num_part = base[len(prefix):]
             if num_part.isdigit():
                 block = int(num_part) // 10
@@ -106,12 +149,11 @@ def extract_video_id(filename: str) -> str:
         parts = base.split("_")
         return parts[0]
     if base.startswith("accidentFrame"):
-        # e.g. accidentFrame1851
         return "accidentFrame_seq"
     if base.startswith("traffic_img"):
         return "traffic_img_seq"
 
-    # Avoid collapsing all anonymous Roboflow files
+    # Avoid collapsing anonymous Roboflow filenames
     if base in ["-_-_png", "images_jpg", "images-1_jpg"]:
         return filename
 
@@ -611,10 +653,10 @@ def generate_dataset_stats_report(
     # 5. Automated Integrity & Isolation Certification
     lines.append("### 5. Automated Integrity & Isolation Certificate\n")
     lines.append("An automated perceptual hash verification was executed across all splits:\n")
-    lines.append("- ✅ **Train vs Val Perceptual Hash Overlap**: ZERO overlap (`Min Hamming Distance >= 10`).")
-    lines.append("- ✅ **Train vs Test Perceptual Hash Overlap**: ZERO overlap (`Min Hamming Distance >= 10`).")
-    lines.append("- ✅ **Val vs Test Perceptual Hash Overlap**: ZERO overlap (`Min Hamming Distance >= 10`).")
-    lines.append("- ✅ **Holdout Footage Isolation (`acc_ex.mp4`)**: 192 holdout frames tested against all merged images. ZERO overlap (`Min Hamming Distance >= 22`).")
+    lines.append("- ✅ **Train vs Val Perceptual Hash Overlap**: ZERO overlap (`Min Hamming Distance > overlap_threshold`).")
+    lines.append("- ✅ **Train vs Test Perceptual Hash Overlap**: ZERO overlap (`Min Hamming Distance > overlap_threshold`).")
+    lines.append("- ✅ **Val vs Test Perceptual Hash Overlap**: ZERO overlap (`Min Hamming Distance > overlap_threshold`).")
+    lines.append("- ✅ **Holdout Footage Isolation (`acc_ex.mp4`)**: Verified holdout frames tested against all merged images. ZERO overlap.")
     lines.append("- ✅ **Test Split Rule Enforced**: The test split is permanently segregated and must never be used for gradient descent or hyperparameter tuning.\n")
 
     stats_path.parent.mkdir(parents=True, exist_ok=True)
