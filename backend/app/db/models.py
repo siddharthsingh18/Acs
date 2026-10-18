@@ -41,6 +41,40 @@ class Incident(SQLModel, table=True):
     is_privacy_blurred: bool = Field(default=True, index=True)
     unredacted_keyframe_path: Optional[str] = None
     unredacted_clip_path: Optional[str] = None
+    is_acknowledged: bool = Field(default=False, index=True)
+    acknowledged_at: Optional[str] = None
+    acknowledged_by: Optional[str] = None
+    ack_token: Optional[str] = Field(default=None, index=True)
+    escalation_tier: int = Field(default=1, index=True)
+    last_escalated_at: Optional[float] = None
+    is_demo: bool = Field(default=False, index=True)
+
+
+class WebPushSubscription(SQLModel, table=True):
+    """Stores Web Push API browser and device endpoints for PWA push alerts."""
+
+    id: str = Field(primary_key=True, index=True)
+    endpoint: str = Field(unique=True, index=True)
+    p256dh: str
+    auth: str
+    user_id: Optional[str] = Field(default=None, index=True)
+    user_agent: Optional[str] = None
+    created_at: float = Field(index=True)
+    is_active: bool = Field(default=True, index=True)
+
+
+class AlertDelivery(SQLModel, table=True):
+    """Tracks per-channel delivery and acknowledgment state for each incident alert."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    incident_id: str = Field(index=True)
+    channel: str = Field(index=True)  # "webpush", "telegram", "email", "console"
+    tier: int = Field(default=1, index=True)  # 1 for initial tier, 2 for escalated tier
+    status: str = Field(index=True)  # "sent", "failed", "acknowledged", "dry_run", "suppressed"
+    details: Optional[str] = None  # JSON string or explanation
+    created_at: float = Field(index=True)
+    acknowledged_at: Optional[float] = None
+    acknowledged_by: Optional[str] = None
 
 
 class ReviewFeedback(SQLModel, table=True):

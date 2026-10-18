@@ -544,6 +544,27 @@ export interface components {
             channel_status?: {
                 [key: string]: components["schemas"]["ChannelStatusInfo"];
             } | null;
+            /** Vapid Public Key */
+            vapid_public_key?: string | null;
+            /** Escalation Enabled */
+            escalation_enabled?: boolean | null;
+            /** Escalation Delay Minutes */
+            escalation_delay_minutes?: number | null;
+        };
+        /**
+         * AlertDeliveryResponse
+         * @description Delivery status record for an alert channel.
+         */
+        AlertDeliveryResponse: {
+            id?: number | null;
+            incident_id: string;
+            channel: string;
+            tier?: number;
+            status: string;
+            details?: string | null;
+            created_at: number;
+            acknowledged_at?: number | null;
+            acknowledged_by?: string | null;
         };
         /**
          * AlertSettingsUpdateRequest
@@ -562,6 +583,10 @@ export interface components {
             confidence_threshold?: number | null;
             /** Cooldown Seconds */
             cooldown_seconds?: number | null;
+            /** Escalation Enabled */
+            escalation_enabled?: boolean | null;
+            /** Escalation Delay Minutes */
+            escalation_delay_minutes?: number | null;
         };
         /**
          * AlertTestRequest
@@ -1101,6 +1126,18 @@ export interface components {
             is_privacy_blurred?: boolean | null;
             /** Has Unredacted Original */
             has_unredacted_original?: boolean | null;
+            /** Is Acknowledged */
+            is_acknowledged?: boolean | null;
+            /** Acknowledged At */
+            acknowledged_at?: string | null;
+            /** Acknowledged By */
+            acknowledged_by?: string | null;
+            /** Ack Token */
+            ack_token?: string | null;
+            /** Escalation Tier */
+            escalation_tier?: number | null;
+            /** Is Demo */
+            is_demo?: boolean | null;
         };
         /**
          * IncidentStatusUpdateRequest

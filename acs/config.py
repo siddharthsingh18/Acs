@@ -244,6 +244,37 @@ class AppConfig:
         default_factory=lambda: os.getenv("SMTP_USE_TLS", "true").lower() in ("true", "1", "yes")
     )
 
+    # Web Push (VAPID) Configuration
+    vapid_public_key: Optional[str] = field(
+        default_factory=lambda: os.getenv("VAPID_PUBLIC_KEY")
+    )
+    vapid_private_key: Optional[str] = field(
+        default_factory=lambda: os.getenv("VAPID_PRIVATE_KEY")
+    )
+    vapid_claims_sub: str = field(
+        default_factory=lambda: os.getenv("VAPID_CLAIMS_SUB", "mailto:alerts@acs-surveillance.local")
+    )
+    vapid_keys_file: str = field(
+        default_factory=lambda: os.getenv("VAPID_KEYS_FILE", "reports/vapid_keys.json")
+    )
+
+    # Alert Escalation & Storm Rate Limiting
+    escalation_enabled: bool = field(
+        default_factory=lambda: os.getenv("ALERT_ESCALATION_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    escalation_delay_minutes: float = field(
+        default_factory=lambda: float(os.getenv("ALERT_ESCALATION_DELAY_MINUTES", "5.0"))
+    )
+    storm_rate_limit_seconds: float = field(
+        default_factory=lambda: float(os.getenv("STORM_RATE_LIMIT_SECONDS", "60.0"))
+    )
+    storm_max_alerts_per_window: int = field(
+        default_factory=lambda: int(os.getenv("STORM_MAX_ALERTS_PER_WINDOW", "2"))
+    )
+    app_base_url: str = field(
+        default_factory=lambda: os.getenv("APP_BASE_URL", "http://localhost:8000")
+    )
+
     # Privacy Protection & Retention Configuration
     privacy_blur_enabled: bool = field(
         default_factory=lambda: os.getenv("PRIVACY_BLUR_ENABLED", "true").lower() in ("true", "1", "yes")

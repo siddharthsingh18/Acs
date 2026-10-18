@@ -1,0 +1,16 @@
+{
+  "short_name": "ACS Alert",
+  "name": "Automated CCTV Surveillance & Incident Alerts",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "display": "standalone",
+  "orientation": "portrait"
+}

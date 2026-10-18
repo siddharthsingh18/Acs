@@ -134,6 +134,18 @@ def get_current_user(
     return user
 
 
+def get_current_user_optional(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    session: Session = Depends(get_session),
+) -> Optional[User]:
+    """Dependency returning the active User if authenticated, or None if unauthenticated."""
+    try:
+        return get_current_user(request, credentials, session)
+    except Exception:
+        return None
+
+
 def require_role(allowed_roles: List[str]) -> Callable:
     """Factory creating an endpoint dependency enforcing minimum required role membership."""
 

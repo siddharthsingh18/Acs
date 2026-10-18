@@ -2,20 +2,26 @@
 backend.app.routers.incidents
 Route handlers for incident management, filtering, dispatch reports, PDF, video clips, and CSV export.
 """
+from datetime import datetime
 import json
 import logging
 import os
-from typing import Optional
+import time
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
-from sqlmodel import Session
+from sqlmodel import Session, select
 
+from acs.alerts import send_incident_alert
 from acs.config import config
 from acs.reporter import generate_report_pdf
 from backend.app.db.database import get_session
-from backend.app.db.models import Incident
+from backend.app.db.models import AlertDelivery, Incident, User
+from backend.app.deps import extract_client_ip, require_admin, require_operator
 from backend.app.schemas import (
+    AlertDeliveryResponse,
+    IncidentAcknowledgeRequest,
     IncidentListResponse,
     IncidentResponse,
     IncidentStatusUpdateRequest,
@@ -105,6 +111,12 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
             or os.path.exists(os.path.join(getattr(config, "privacy_unredacted_dir", "media/unredacted"), "keyframes", f"{inc.incident_id}_unredacted.jpg"))
             or os.path.exists(os.path.join(getattr(config, "privacy_unredacted_dir", "media/unredacted"), "clips", f"{inc.incident_id}_unredacted.mp4"))
         ),
+        is_acknowledged=bool(getattr(inc, "is_acknowledged", False)),
+        acknowledged_at=getattr(inc, "acknowledged_at", None),
+        acknowledged_by=getattr(inc, "acknowledged_by", None),
+        ack_token=getattr(inc, "ack_token", None),
+        escalation_tier=getattr(inc, "escalation_tier", 1),
+        is_demo=bool(getattr(inc, "is_demo", False)),
     )
 
 
@@ -289,6 +301,135 @@ def update_incident_status_endpoint(
     )
 
     return _to_incident_response(inc)
+
+
+@router.post("/{incident_id}/ack", response_model=IncidentResponse)
+def acknowledge_incident_endpoint(
+    incident_id: str,
+    body: IncidentAcknowledgeRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+    operator_user: User = Depends(require_operator),
+) -> IncidentResponse:
+    """Acknowledges an incident alert, halting multi-tier escalation (Operator/Admin)."""
+    inc = get_incident_by_id(session, incident_id)
+    if not inc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident '{incident_id}' not found.",
+        )
+
+    now_iso = datetime.utcnow().isoformat() + "Z"
+    now_epoch = time.time()
+    ack_by = operator_user.full_name or operator_user.username
+
+    inc.is_acknowledged = True
+    inc.acknowledged_at = now_iso
+    inc.acknowledged_by = ack_by
+    session.add(inc)
+
+    # Update delivery records
+    deliveries = session.exec(select(AlertDelivery).where(AlertDelivery.incident_id == incident_id)).all()
+    for deliv in deliveries:
+        deliv.status = "acknowledged"
+        deliv.acknowledged_at = now_epoch
+        deliv.acknowledged_by = ack_by
+        session.add(deliv)
+
+    session.commit()
+
+    log_audit_event(
+        session=session,
+        username=operator_user.username,
+        user_role=operator_user.role,
+        action="incident_acknowledged",
+        target_type="incident",
+        target_id=incident_id,
+        ip_address=extract_client_ip(request),
+        details={"acknowledged_by": ack_by, "notes": body.notes, "timestamp": now_iso},
+        user_id=operator_user.id,
+    )
+
+    return _to_incident_response(inc)
+
+
+@router.get("/{incident_id}/alert-deliveries", response_model=List[AlertDeliveryResponse])
+def get_incident_alert_deliveries_endpoint(
+    incident_id: str,
+    session: Session = Depends(get_session),
+) -> List[AlertDeliveryResponse]:
+    """Retrieves delivery status records per notification channel for an incident."""
+    deliveries = session.exec(
+        select(AlertDelivery)
+        .where(AlertDelivery.incident_id == incident_id)
+        .order_by(AlertDelivery.created_at.desc())
+    ).all()
+    return [
+        AlertDeliveryResponse(
+            id=d.id,
+            incident_id=d.incident_id,
+            channel=d.channel,
+            tier=d.tier,
+            status=d.status,
+            details=d.details,
+            created_at=d.created_at,
+            acknowledged_at=d.acknowledged_at,
+            acknowledged_by=d.acknowledged_by,
+        )
+        for d in deliveries
+    ]
+
+
+@router.post("/{incident_id}/alert")
+def dispatch_incident_alert_endpoint(
+    incident_id: str,
+    request: Request,
+    channels: Optional[List[str]] = Query(None, description="Channels to dispatch to"),
+    dry_run: Optional[bool] = Query(None, description="Dry-run simulation mode"),
+    session: Session = Depends(get_session),
+    operator_user: User = Depends(require_operator),
+) -> dict:
+    """Dispatches emergency alerts for a specific incident across registered notification channels."""
+    inc = get_incident_by_id(session, incident_id)
+    if not inc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident '{incident_id}' not found.",
+        )
+
+    # Respect DEMO safety interlock
+    is_demo = bool(inc.is_demo or str(incident_id).upper().startswith(("DEMO-", "SAMPLE-", "TEST-", "INC-DEMO")))
+    effective_dry_run = True if is_demo else (config.alerts_dry_run if dry_run is None else dry_run)
+
+    report_text = inc.dispatch_text or f"Accident incident {incident_id} ({inc.class_name.upper()}) detected with confidence {inc.max_confidence:.2f}."
+
+    results = send_incident_alert(
+        incident=inc,
+        report_text=report_text,
+        image_path=inc.image_path,
+        channels=channels,
+        dry_run=effective_dry_run,
+    )
+
+    log_audit_event(
+        session=session,
+        username=operator_user.username,
+        user_role=operator_user.role,
+        action="incident_alert_dispatched",
+        target_type="incident",
+        target_id=incident_id,
+        ip_address=extract_client_ip(request),
+        details={"channels": channels, "dry_run": effective_dry_run, "results": results, "is_demo": is_demo},
+        user_id=operator_user.id,
+    )
+
+    return {
+        "status": "dispatched",
+        "incident_id": incident_id,
+        "dry_run": effective_dry_run,
+        "is_demo": is_demo,
+        "results": results,
+    }
 
 
 

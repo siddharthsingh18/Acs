@@ -29,7 +29,14 @@ import {
   EyeOff,
   FolderArchive,
   Info,
+  Smartphone,
 } from 'lucide-react'
+import {
+  isPushSupported,
+  getPushSubscription,
+  subscribeToPushNotifications,
+  unsubscribeFromPushNotifications,
+} from '@/lib/pushNotifications'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -50,6 +57,11 @@ export const settingsFormSchema = z.object({
   alerts_enabled: z.boolean(),
   alerts_dry_run: z.boolean(),
   channels: z.array(z.string()).min(1, 'Select at least one notification delivery channel'),
+  escalation_enabled: z.boolean(),
+  escalation_delay_minutes: z
+    .number()
+    .min(0.5, 'Minimum escalation delay is 0.5 minutes (30s)')
+    .max(60.0, 'Maximum escalation delay is 60 minutes'),
 
   // Vision & Inference Defaults
   model_path: z.string().min(1, 'Primary YOLO weights checkpoint is required'),
@@ -241,6 +253,8 @@ export const SettingsPage: React.FC = () => {
       alerts_enabled: true,
       alerts_dry_run: false,
       channels: ['console'],
+      escalation_enabled: true,
+      escalation_delay_minutes: 5.0,
       model_path: activeModel || 'best.pt',
       confidence_threshold: 0.72,
       debounce_frames: Number(localStorage.getItem('acs_debounce_frames')) || 5,
@@ -251,11 +265,54 @@ export const SettingsPage: React.FC = () => {
     },
   })
 
+  // Device push notification registration state
+  const [isDeviceSubscribed, setIsDeviceSubscribed] = useState(false)
+  const [pushLoading, setPushLoading] = useState(false)
+  const [pushStatusMsg, setPushStatusMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isPushSupported()) {
+      getPushSubscription().then((sub) => {
+        setIsDeviceSubscribed(Boolean(sub))
+      })
+    }
+  }, [])
+
+  const handleToggleDevicePush = async () => {
+    setPushLoading(true)
+    setPushStatusMsg(null)
+    if (isDeviceSubscribed) {
+      const res = await unsubscribeFromPushNotifications()
+      if (res.success) {
+        setIsDeviceSubscribed(false)
+        setPushStatusMsg('Device push notifications disabled.')
+      } else {
+        setPushStatusMsg('Failed to unsubscribe: ' + (res.error || 'Error'))
+      }
+    } else {
+      const res = await subscribeToPushNotifications()
+      if (res.success) {
+        setIsDeviceSubscribed(true)
+        setPushStatusMsg('Device subscribed! You will receive push notifications on this phone/browser.')
+      } else {
+        setPushStatusMsg('Failed to subscribe: ' + (res.error || 'Permission denied or unsupported'))
+      }
+    }
+    setPushLoading(false)
+    setTimeout(() => setPushStatusMsg(null), 4000)
+  }
+
   // Populate form defaults when queries resolve
   useEffect(() => {
     if (alertSettings) {
       setValue('alerts_enabled', alertSettings.enabled)
       setValue('alerts_dry_run', alertSettings.dry_run)
+      if (alertSettings.escalation_enabled !== undefined && alertSettings.escalation_enabled !== null) {
+        setValue('escalation_enabled', alertSettings.escalation_enabled)
+      }
+      if (alertSettings.escalation_delay_minutes !== undefined && alertSettings.escalation_delay_minutes !== null) {
+        setValue('escalation_delay_minutes', alertSettings.escalation_delay_minutes)
+      }
       if (alertSettings.channels && alertSettings.channels.length > 0) {
         setValue('channels', alertSettings.channels)
       }
@@ -314,6 +371,8 @@ export const SettingsPage: React.FC = () => {
       enabled: values.alerts_enabled,
       dry_run: values.alerts_dry_run,
       channels: values.channels,
+      escalation_enabled: values.escalation_enabled,
+      escalation_delay_minutes: values.escalation_delay_minutes,
       model_path: values.model_path,
       confidence_threshold: values.confidence_threshold,
       cooldown_seconds: values.cooldown_seconds,
@@ -367,6 +426,13 @@ export const SettingsPage: React.FC = () => {
   }
 
   const ALL_CHANNELS = [
+    {
+      id: 'webpush',
+      title: 'Web Push (PWA Notifications)',
+      descriptionKey: 'settings.channel_webpush',
+      fallbackDesc: 'Delivers instant browser and lockscreen phone notifications with one-click acknowledgment.',
+      secretHelp: 'VAPID_PUBLIC_KEY & VAPID_PRIVATE_KEY (Auto-generated)',
+    },
     {
       id: 'telegram',
       title: 'Telegram Alert Bot',
@@ -535,6 +601,130 @@ export const SettingsPage: React.FC = () => {
                   Simulates alert generation in logs without emitting live external network messages.
                 </p>
               </div>
+            </div>
+
+            {/* Operator PWA Device Push Notification Link */}
+            <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-950/20 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <Smartphone className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-foreground">Operator Device Push Notifications (PWA)</h4>
+                      {isDeviceSubscribed ? (
+                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[9px] font-mono">
+                          DEVICE SUBSCRIBED
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] font-mono text-muted-foreground border-border">
+                          NOT LINKED
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Receive instant real-time alerts with keyframe images and one-click acknowledgment on your phone or browser lockscreen.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={pushLoading}
+                  onClick={handleToggleDevicePush}
+                  className={cn(
+                    "shrink-0 gap-2 text-xs font-semibold",
+                    isDeviceSubscribed
+                      ? "border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400"
+                      : "border-indigo-500/40 text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 hover:border-indigo-400"
+                  )}
+                >
+                  <Smartphone className="h-3.5 w-3.5" />
+                  {pushLoading
+                    ? 'Connecting...'
+                    : isDeviceSubscribed
+                    ? 'Unlink Device Push'
+                    : 'Link Device for Web Push'}
+                </Button>
+              </div>
+              {pushStatusMsg && (
+                <div className="p-2.5 rounded-lg bg-background/50 border border-border text-[11px] font-mono text-indigo-300 flex items-center gap-2">
+                  <Info className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                  <span>{pushStatusMsg}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Multi-Tier Alert Escalation Policy */}
+            <div className="p-4 rounded-xl border border-border bg-card/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-amber-400" />
+                  <h4 className="text-xs font-bold text-foreground">Multi-Tier Alert Escalation Policy</h4>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-mono text-amber-400 border-amber-500/40 bg-amber-500/10">
+                  Auto-Escalation
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                If an on-call operator does not acknowledge an alert within the designated threshold, the incident automatically escalates to Tier 2 channels (Email & Secondary dispatch).
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <Controller
+                      control={control}
+                      name="escalation_enabled"
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                        />
+                      )}
+                    />
+                    <span className="text-xs font-bold text-foreground">Enable Escalation Timer</span>
+                  </label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Automatically re-routes unacknowledged alerts to Tier 2 contacts.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground block">
+                    Escalation Delay (Minutes)
+                  </label>
+                  <Controller
+                    control={control}
+                    name="escalation_delay_minutes"
+                    render={({ field }) => (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0.5"
+                          max="60"
+                          value={field.value}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 5.0)}
+                          className="w-24 px-2.5 py-1 text-xs font-mono rounded-lg border border-border bg-background text-foreground"
+                        />
+                        <span className="text-xs text-muted-foreground">minutes before Tier 2 dispatch</span>
+                      </div>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Mandatory Regulatory Disclaimer */}
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+              <span>⚠️ DISCLAIMER: Alerts support human decisions and must not trigger emergency dispatch automatically.</span>
             </div>
 
             {/* Channels Checklist with Configured / Not Configured Badges */}

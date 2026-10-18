@@ -305,9 +305,51 @@ uvicorn backend.app.main:app --reload --port 8000
   - `GET http://localhost:8000/api/cameras/{id}/health`: Direct health indicator endpoint.
   - `GET ws://localhost:8000/api/cameras/{id}/stream`: WebSocket streaming live annotated JPEG frames, incidents, and health heartbeats.
 - **Emergency Alerts & System KPIs**:
-  - `POST http://localhost:8000/api/alerts/test`: Verify Telegram and SMTP notification channels.
-  - `GET / PUT http://localhost:8000/api/alerts/settings`: Inspect or update alert toggles and simulation mode.
+  - `POST http://localhost:8000/api/alerts/test`: Verify Telegram, SMTP, and Web Push notification channels.
+  - `GET / PUT http://localhost:8000/api/alerts/settings`: Inspect or update alert toggles, VAPID public key, escalation thresholds, and simulation mode.
+  - `GET http://localhost:8000/api/alerts/vapid-public-key`: Fetch application VAPID public key for browser and PWA push subscription.
+  - `POST http://localhost:8000/api/alerts/push/subscribe` / `unsubscribe`: Register or revoke Web Push subscriptions.
+  - `GET http://localhost:8000/api/alerts/ack/{token}`: Mobile-responsive one-click acknowledgment link for lockscreen, Telegram, and email notifications.
+  - `POST http://localhost:8000/api/alerts/escalate-check`: Force evaluation of unacknowledged incident escalation timers.
+  - `POST http://localhost:8000/api/incidents/{id}/ack`: Operator in-drawer acknowledgment endpoint.
+  - `GET http://localhost:8000/api/incidents/{id}/alert-deliveries`: Live channel delivery tracking statuses (`sent`, `failed`, `acknowledged`, `dry_run`, `suppressed`).
+  - `POST http://localhost:8000/api/incidents/{id}/alert`: Dispatches manual or on-demand multi-channel alerts for a specific incident.
   - `GET http://localhost:8000/api/stats`: Real-time incident analytics (incidents today, class distribution, average confidence, average review time).
+
+## Multi-Channel Alerting, Escalation & Safety Interlocks
+
+ACS features an enterprise-grade multi-channel dispatch alerting subsystem engineered for high-availability surveillance operations:
+
+### 1. Alerting Channels & PWA Web Push
+- **Web Push Notifications (PWA)**: Implemented using standard W3C Push API / Web Push protocol (`pywebpush` with EC P-256 VAPID keys). Operators receiving alerts on mobile phones or desktop browsers can inspect keyframe images and click a direct `"Acknowledge"` action directly from the notification lockscreen.
+- **Telegram Bot Dispatch**: Markdown-formatted emergency dispatches including incident class, severity rating, location map links, and the attached keyframe snapshot.
+- **SMTP Email Dispatch**: Multi-part MIME messages with responsive HTML tables, direct Google Maps link, one-click acknowledgment button, and inline keyframe image attachment.
+- **Console Log Stream**: High-visibility warning-level telemetry logged for monitoring and container log forwarders.
+
+### 2. Multi-Tier Escalation
+If an incident is detected and remains **unacknowledged after $X$ minutes** (configurable via `ALERT_ESCALATION_DELAY_MINUTES`, default `5.0` min), ACS automatically escalates to **Tier 2 Contacts & Channels** (Email + Telegram priority broadcast):
+- Background escalation worker evaluates unacknowledged active incidents periodically without blocking server operations.
+- Operators can acknowledge via the Incident Drawer in the UI, via one-click link on email/SMS, or via phone push notification.
+- Once acknowledged, escalation timers halt immediately and the incident is stamped with `acknowledged_by` and `acknowledged_at`.
+
+### 3. De-Duplication & Storm Rate-Limiting
+- **Per-Incident De-duplication**: Dispatches are de-duplicated per incident, channel, and tier to prevent duplicate notifications from looping.
+- **Per-Location Storm Rate Limiter**: A sliding-window algorithm (`StormRateLimiter`) suppresses alert bursts (e.g. during a highway multi-vehicle pileup or cascade accident at a specific camera location) within a configurable window (default: max 2 alerts per 60 seconds per location).
+- **Rich Notification Payloads**: All alert payloads contain severity level & score, Google Maps navigation link, peak keyframe URL, and a cryptographic one-click acknowledgment link.
+
+### 4. Channel Delivery Status Tracking
+Operators can view the live status of every dispatched notification channel directly within the **Incident Drawer**:
+- Badges display channel status: `SENT` (green), `ACKNOWLEDGED` (teal), `FAILED` (rose), `DRY RUN` (sky), or `SUPPRESSED` (amber).
+- Escalation countdown timer displays the exact time remaining before automatic Tier 2 escalation occurs.
+
+### 5. Dry-Run Mode & DEMO Safety Interlock
+- **Simulation / Dry-Run Mode**: When `ALERTS_DRY_RUN=true`, dispatches are simulated and logged without transmitting external network requests.
+- **Hard DEMO Incident Safety Interlock**: Demo or sample incidents (`is_demo=True`, IDs starting with `DEMO-`, `SAMPLE-`, `TEST-`, or loaded from sample test sources) are **mathematically barred** from triggering live external network transmissions (Push, Telegram, SMTP). Even if dry-run mode is disabled, demo incidents automatically fallback to simulated dry-run delivery.
+
+### 6. Mandatory Regulatory Disclaimer
+Every notification across every channel (PWA Push, Telegram, Email, and UI drawer) carries the mandatory safety notice:
+> ⚠️ **DISCLAIMER**: Alerts support human decisions and must not trigger emergency dispatch automatically.
+
 
 ## Data Privacy, Storage & Retention Policy
 

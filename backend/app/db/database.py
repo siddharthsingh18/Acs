@@ -51,6 +51,13 @@ def init_db() -> None:
                     "is_privacy_blurred": "BOOLEAN DEFAULT 1",
                     "unredacted_keyframe_path": "TEXT",
                     "unredacted_clip_path": "TEXT",
+                    "is_acknowledged": "BOOLEAN DEFAULT 0",
+                    "acknowledged_at": "TEXT",
+                    "acknowledged_by": "TEXT",
+                    "ack_token": "TEXT",
+                    "escalation_tier": "INTEGER DEFAULT 1",
+                    "last_escalated_at": "REAL",
+                    "is_demo": "BOOLEAN DEFAULT 0",
                 }
                 for col_name, col_type in cols_to_add.items():
                     if col_name not in existing_cols:

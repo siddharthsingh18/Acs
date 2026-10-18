@@ -199,6 +199,12 @@ class IncidentResponse(BaseModel):
     duration: float
     is_privacy_blurred: Optional[bool] = True
     has_unredacted_original: Optional[bool] = False
+    is_acknowledged: Optional[bool] = False
+    acknowledged_at: Optional[str] = None
+    acknowledged_by: Optional[str] = None
+    ack_token: Optional[str] = None
+    escalation_tier: Optional[int] = 1
+    is_demo: Optional[bool] = False
 
 
 class IncidentListResponse(BaseModel):
@@ -345,6 +351,9 @@ class AlertSettingsResponse(BaseModel):
         default_factory=dict,
         description="Configuration readiness per channel without exposing secrets",
     )
+    vapid_public_key: Optional[str] = Field(default=None, description="VAPID public key for Web Push subscription")
+    escalation_enabled: Optional[bool] = Field(default=True, description="Whether automated multi-tier escalation is enabled")
+    escalation_delay_minutes: Optional[float] = Field(default=5.0, description="Minutes before unacknowledged incidents escalate to Tier 2")
 
 
 class AlertSettingsUpdateRequest(BaseModel):
@@ -356,6 +365,42 @@ class AlertSettingsUpdateRequest(BaseModel):
     model_path: Optional[str] = None
     confidence_threshold: Optional[float] = None
     cooldown_seconds: Optional[float] = None
+    escalation_enabled: Optional[bool] = None
+    escalation_delay_minutes: Optional[float] = None
+
+
+class AlertDeliveryResponse(BaseModel):
+    """Delivery status record for a notification channel."""
+
+    id: Optional[int] = None
+    incident_id: str
+    channel: str
+    tier: int = 1
+    status: str  # sent, failed, acknowledged, dry_run, suppressed
+    details: Optional[str] = None
+    created_at: float
+    acknowledged_at: Optional[float] = None
+    acknowledged_by: Optional[str] = None
+
+
+class WebPushSubscribeRequest(BaseModel):
+    """Payload to register a Web Push browser subscription."""
+
+    endpoint: str
+    keys: dict  # {"p256dh": "...", "auth": "..."}
+    user_agent: Optional[str] = None
+
+
+class WebPushUnsubscribeRequest(BaseModel):
+    """Payload to unsubscribe Web Push browser endpoint."""
+
+    endpoint: str
+
+
+class IncidentAcknowledgeRequest(BaseModel):
+    """Payload for operator acknowledgment."""
+
+    notes: Optional[str] = None
 
 
 class StatsResponse(BaseModel):

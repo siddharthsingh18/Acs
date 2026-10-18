@@ -108,8 +108,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         config.device,
         config.model_path,
     )
+    # Start background alert escalation monitor
+    from backend.app.services.alert_escalation_service import run_escalation_worker
+    escalation_task = asyncio.create_task(run_escalation_worker(interval_seconds=30.0))
+
     yield
-    logger.info("Shutting down ACS Backend service and camera workers.")
+    logger.info("Shutting down ACS Backend service and background workers.")
+    escalation_task.cancel()
+    try:
+        await escalation_task
+    except asyncio.CancelledError:
+        pass
     camera_manager.shutdown()
 
 

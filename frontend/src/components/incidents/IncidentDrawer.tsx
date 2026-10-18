@@ -34,6 +34,10 @@ import {
   Archive,
   Trash2,
   Lock,
+  Smartphone,
+  Mail,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -175,6 +179,34 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
     queryFn: () => api.getAlertSettings(),
     enabled: isOpen,
   })
+
+  // Query Alert Deliveries for this incident
+  const { data: alertDeliveries = [], refetch: refetchDeliveries } = useQuery({
+    queryKey: ['incidentAlertDeliveries', incidentId],
+    queryFn: () => (incidentId ? api.getIncidentAlertDeliveries(incidentId) : Promise.resolve([])),
+    enabled: !!incidentId && isOpen,
+    refetchInterval: 8000,
+  })
+
+  const [isAcknowledging, setIsAcknowledging] = useState(false)
+
+  const handleAcknowledge = async () => {
+    if (!incidentId) return
+    setIsAcknowledging(true)
+    try {
+      await api.acknowledgeIncident(incidentId)
+      queryClient.invalidateQueries({ queryKey: ['incident', incidentId] })
+      queryClient.invalidateQueries({ queryKey: ['incidentAlertDeliveries', incidentId] })
+      queryClient.invalidateQueries({ queryKey: ['incidents'] })
+      setAlertFeedback('Incident acknowledged successfully. Escalation halted.')
+      setTimeout(() => setAlertFeedback(null), 4000)
+    } catch (err: any) {
+      setAlertFeedback('Failed to acknowledge: ' + (err.message || 'Error'))
+      setTimeout(() => setAlertFeedback(null), 4000)
+    } finally {
+      setIsAcknowledging(false)
+    }
+  }
 
   // Navigation between incidents
   const currentIndex = incidentList.findIndex(
@@ -335,31 +367,91 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
     setTimeout(() => setCopiedText(false), 2000)
   }
 
-  // Handle Send Alert (Respecting Dry-Run)
+  const getChannelIcon = (channel: string) => {
+    switch (channel.toLowerCase()) {
+      case 'webpush':
+        return <Smartphone className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+      case 'telegram':
+        return <Send className="h-3.5 w-3.5 text-sky-400 shrink-0" />
+      case 'email':
+        return <Mail className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+      default:
+        return <Radio className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+    }
+  }
+
+  const getDeliveryStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'acknowledged':
+        return (
+          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[9px] font-mono font-bold">
+            ACKNOWLEDGED
+          </Badge>
+        )
+      case 'sent':
+        return (
+          <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[9px] font-mono font-bold">
+            SENT
+          </Badge>
+        )
+      case 'dry_run':
+        return (
+          <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[9px] font-mono font-bold">
+            DRY RUN
+          </Badge>
+        )
+      case 'suppressed':
+        return (
+          <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-[9px] font-mono font-bold">
+            SUPPRESSED
+          </Badge>
+        )
+      case 'failed':
+      default:
+        return (
+          <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-[9px] font-mono font-bold">
+            FAILED
+          </Badge>
+        )
+    }
+  }
+
+  // Handle Send Alert (dispatches incident payload across channels with DEMO interlock)
   const handleSendAlert = async () => {
     if (!incidentId) return
     setIsSendingAlert(true)
     setAlertFeedback(null)
     try {
-      const isDryRun = alertSettings?.dry_run ?? true
-      const res = await api.testAlerts(
-        isDryRun,
-        i18n.language || 'en',
-        alertSettings?.channels || ['console']
+      const isDemoIncident =
+        Boolean(incident?.is_demo) ||
+        incidentId.toUpperCase().startsWith('DEMO-') ||
+        incidentId.toUpperCase().startsWith('SAMPLE-') ||
+        incidentId.toUpperCase().startsWith('TEST-') ||
+        incidentId.toUpperCase().startsWith('INC-DEMO')
+
+      const isDryRun = isDemoIncident || (alertSettings?.dry_run ?? true)
+      const res = await api.sendIncidentAlert(
+        incidentId,
+        alertSettings?.channels || ['console', 'webpush', 'telegram', 'email'],
+        isDryRun
       )
+      refetchDeliveries()
+
       const resultsText = Object.entries(res.results || {})
-        .map(([k, v]) => `${k}: ${v ? 'OK' : 'Skipped'}`)
+        .map(([k, v]) => `${k}: ${v ? 'OK' : 'Fail/Skipped'}`)
         .join(', ')
 
-      setAlertFeedback(
-        isDryRun
-          ? `Alert dispatched in DRY-RUN mode (${resultsText})`
-          : `Alert dispatched to live channels (${resultsText})`
-      )
-      setTimeout(() => setAlertFeedback(null), 4500)
+      if (isDemoIncident) {
+        setAlertFeedback(`DEMO incident: Simulation interlock strictly enforced (${resultsText})`)
+      } else if (isDryRun) {
+        setAlertFeedback(`Alert dispatched in DRY-RUN mode (${resultsText})`)
+      } else {
+        setAlertFeedback(`Alert dispatched to live channels (${resultsText})`)
+      }
+      setTimeout(() => setAlertFeedback(null), 5500)
     } catch (err: any) {
       setAlertFeedback('Failed to send alert: ' + (err.message || 'Network error'))
-      setTimeout(() => setAlertFeedback(null), 4500)
+      setTimeout(() => setAlertFeedback(null), 5500)
     } finally {
       setIsSendingAlert(false)
     }
@@ -409,6 +501,26 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
   }
 
   const dispatchReport = incident?.dispatch_report as any
+  const isAcknowledged = Boolean(incident?.is_acknowledged)
+  const isDemo = Boolean(
+    incident?.is_demo ||
+      (incidentId && (
+        incidentId.toUpperCase().startsWith('DEMO-') ||
+        incidentId.toUpperCase().startsWith('SAMPLE-') ||
+        incidentId.toUpperCase().startsWith('TEST-') ||
+        incidentId.toUpperCase().startsWith('INC-DEMO')
+      ))
+  )
+  const escalationTier = incident?.escalation_tier ?? 1
+  const delayMinutes = alertSettings?.escalation_delay_minutes ?? 5.0
+  const createdEpoch = incident?.created_at
+    ? typeof incident.created_at === 'number'
+      ? incident.created_at
+      : Date.parse(String(incident.created_at)) / 1000
+    : null
+  const nowEpoch = Date.now() / 1000
+  const elapsedMinutes = createdEpoch ? Math.max(0, Math.floor((nowEpoch - createdEpoch) / 60)) : 0
+  const remainingMinutes = Math.max(0, Math.ceil(delayMinutes - elapsedMinutes))
 
   return (
     <AnimatePresence>
@@ -444,11 +556,22 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                     <Siren className="h-5 w-5 animate-pulse" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <h3 className="font-bold text-base font-mono text-foreground">
                         {incident?.incident_id || incidentId}
                       </h3>
                       {incident?.severity && getSeverityBadge(incident.severity, incident?.severity_score)}
+                      {(incident?.is_demo || incidentId.toUpperCase().startsWith('DEMO-') || incidentId.toUpperCase().startsWith('SAMPLE-') || incidentId.toUpperCase().startsWith('TEST-')) && (
+                        <Badge variant="outline" className="border-amber-500/50 text-amber-400 bg-amber-500/10 text-[10px] font-mono font-bold">
+                          DEMO
+                        </Badge>
+                      )}
+                      {incident?.is_acknowledged && (
+                        <Badge variant="outline" className="gap-1 border-emerald-500/40 text-emerald-300 bg-emerald-500/15 text-[10px] font-mono font-bold">
+                          <Check className="h-3 w-3 text-emerald-400" />
+                          ACK
+                        </Badge>
+                      )}
                       {incident?.is_privacy_blurred && (
                         <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] font-mono">
                           <ShieldCheck className="h-3 w-3 text-emerald-400" />
@@ -1113,8 +1236,144 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                       )}
                     </div>
 
+                    {/* SECTION 3.5: Multi-Tier Alert Escalation & Channel Delivery Tracking */}
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Radio className="h-4 w-4 text-cyan-400" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider font-mono text-foreground">
+                            Alert Escalation & Channel Delivery
+                          </h4>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => refetchDeliveries()}
+                          className="h-6 text-[10px] text-muted-foreground hover:text-foreground font-mono"
+                        >
+                          Refresh Status
+                        </Button>
+                      </div>
+
+                      {/* Escalation Status Banner */}
+                      {isAcknowledged ? (
+                        <div className="p-3.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                            <div>
+                              <div className="text-xs font-bold text-emerald-300 font-mono">
+                                INCIDENT ACKNOWLEDGED
+                              </div>
+                              <div className="text-[11px] text-emerald-400/80">
+                                Confirmed by <span className="font-semibold text-emerald-200">{incident?.acknowledged_by || 'Control Room Operator'}</span>
+                                {incident?.acknowledged_at && ` at ${new Date(incident.acknowledged_at).toLocaleTimeString()}`} • Multi-tier escalation halted.
+                              </div>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 bg-emerald-500/20 text-[10px] font-mono shrink-0">
+                            Tier {escalationTier} Resolved
+                          </Badge>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 space-y-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-amber-400 animate-pulse shrink-0" />
+                              <div className="text-xs font-bold text-amber-300 font-mono">
+                                UNACKNOWLEDGED • TIER {escalationTier} ACTIVE
+                              </div>
+                            </div>
+                            {isOperatorOrAdmin && (
+                              <Button
+                                size="sm"
+                                onClick={handleAcknowledge}
+                                disabled={isAcknowledging}
+                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-1 shadow-sm shrink-0"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                <span>{isAcknowledging ? 'Acknowledging...' : 'Acknowledge Now'}</span>
+                              </Button>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-amber-200/90 font-mono leading-relaxed">
+                            {escalationTier === 1 ? (
+                              remainingMinutes > 0 ? (
+                                <>Incident unacknowledged for <span className="font-bold text-amber-100">{elapsedMinutes} min</span>. Tier 2 escalation (Email + Secondary Channels) in <span className="font-bold text-amber-100">~{remainingMinutes} min</span>.</>
+                              ) : (
+                                <>Escalation interval ({delayMinutes} min) reached. Tier 2 automated escalation in progress.</>
+                              )
+                            ) : (
+                              <>Incident escalated to Tier 2 contacts. Awaiting secondary channel operator confirmation.</>
+                            )}
+                          </div>
+                          {escalationTier === 1 && (
+                            <div className="w-full bg-amber-950/40 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className="bg-amber-400 h-1.5 transition-all duration-500 rounded-full"
+                                style={{ width: `${Math.min(100, (elapsedMinutes / Math.max(1, delayMinutes)) * 100)}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Per-Channel Delivery Status Tracking */}
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] uppercase font-mono text-muted-foreground font-semibold block">
+                          Channel Delivery Records ({alertDeliveries.length})
+                        </span>
+                        {alertDeliveries.length === 0 ? (
+                          <div className="p-3 rounded-lg border border-dashed border-border bg-background/40 text-center text-xs text-muted-foreground">
+                            No external channel deliveries recorded yet. Use the "Send Alert" action below to dispatch to Web Push, Telegram, and Email.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {alertDeliveries.map((deliv) => (
+                              <div
+                                key={deliv.id || `${deliv.channel}-${deliv.created_at}`}
+                                className="p-2.5 rounded-lg border border-border bg-background/60 flex items-center justify-between text-xs font-mono"
+                              >
+                                <div className="flex items-center gap-2 min-w-0 me-2">
+                                  {getChannelIcon(deliv.channel)}
+                                  <div className="truncate">
+                                    <div className="font-bold uppercase text-foreground text-[11px]">
+                                      {deliv.channel} <span className="text-[10px] text-muted-foreground font-normal">(T{deliv.tier})</span>
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground truncate" title={deliv.details || ''}>
+                                      {deliv.details || new Date(deliv.created_at * 1000).toLocaleTimeString()}
+                                    </div>
+                                  </div>
+                                </div>
+                                {getDeliveryStatusBadge(deliv.status)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mandatory Disclaimer */}
+                      <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[11px] flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                        <span>⚠️ DISCLAIMER: Alerts support human decisions and must not trigger emergency dispatch automatically.</span>
+                      </div>
+                    </div>
+
                     {/* SECTION 4: Quick Action Toolbar (PDF, Export, Alert, Delete) */}
                     <div className="flex flex-wrap items-center gap-2 pt-2">
+                      {/* One-Click Acknowledge Toolbar Button */}
+                      {!isAcknowledged && isOperatorOrAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isAcknowledging}
+                          onClick={handleAcknowledge}
+                          className="gap-1.5 text-xs border-emerald-500/40 text-emerald-400 hover:border-emerald-500 hover:text-emerald-300 hover:bg-emerald-950/20 font-bold"
+                        >
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>{isAcknowledging ? 'Acknowledging...' : 'Acknowledge'}</span>
+                        </Button>
+                      )}
+
                       {/* Copy Text */}
                       <Button
                         variant="outline"
@@ -1162,7 +1421,11 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                       >
                         <Send className="h-3.5 w-3.5 text-cyan-400" />
                         <span>Send Alert</span>
-                        {alertSettings?.dry_run && (
+                        {isDemo ? (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 uppercase font-mono font-bold">
+                            Demo Interlock
+                          </span>
+                        ) : alertSettings?.dry_run && (
                           <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 uppercase font-mono">
                             Dry-Run
                           </span>

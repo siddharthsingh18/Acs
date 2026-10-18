@@ -42,6 +42,7 @@ export type StatsResponse = components['schemas']['StatsResponse']
 export type AlertSettingsResponse = components['schemas']['AlertSettingsResponse']
 export type AlertSettingsUpdateRequest = components['schemas']['AlertSettingsUpdateRequest']
 export type AlertTestResponse = components['schemas']['AlertTestResponse']
+export type AlertDeliveryResponse = components['schemas']['AlertDeliveryResponse']
 export type JobCreateResponse = components['schemas']['JobCreatedResponse']
 export type JobCancelResponse = components['schemas']['JobCancelResponse']
 
@@ -207,6 +208,72 @@ export const api = {
 
   testAlert: async (dryRun: boolean = false) => {
     return api.testAlerts(dryRun)
+  },
+
+  getVapidPublicKey: async () => {
+    const res = await authFetch('/api/alerts/vapid-public-key')
+    if (!res.ok) throw new Error('Failed to fetch VAPID public key')
+    return (await res.json()) as { public_key: string }
+  },
+
+  subscribeWebPush: async (subscription: { endpoint: string; keys: { p256dh: string; auth: string }; user_agent?: string }) => {
+    const res = await authFetch('/api/alerts/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription),
+    })
+    if (!res.ok) throw new Error('Failed to subscribe to Web Push')
+    return await res.json()
+  },
+
+  unsubscribeWebPush: async (endpoint: string) => {
+    const res = await authFetch('/api/alerts/push/unsubscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint }),
+    })
+    if (!res.ok) throw new Error('Failed to unsubscribe from Web Push')
+    return await res.json()
+  },
+
+  getIncidentAlertDeliveries: async (incidentId: string) => {
+    const res = await authFetch(`/api/incidents/${incidentId}/alert-deliveries`)
+    if (!res.ok) throw new Error('Failed to fetch incident alert deliveries')
+    return (await res.json()) as AlertDeliveryResponse[]
+  },
+
+  acknowledgeIncident: async (incidentId: string, notes?: string) => {
+    const res = await authFetch(`/api/incidents/${incidentId}/ack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    })
+    if (!res.ok) throw new Error('Failed to acknowledge incident')
+    return (await res.json()) as IncidentResponse
+  },
+
+  sendIncidentAlert: async (incidentId: string, channels?: string[], dryRun?: boolean) => {
+    const query = new URLSearchParams()
+    if (channels && channels.length) {
+      channels.forEach(ch => query.append('channels', ch))
+    }
+    if (dryRun !== undefined) {
+      query.append('dry_run', dryRun ? 'true' : 'false')
+    }
+    const qStr = query.toString() ? `?${query.toString()}` : ''
+    const res = await authFetch(`/api/incidents/${incidentId}/alert${qStr}`, {
+      method: 'POST',
+    })
+    if (!res.ok) throw new Error('Failed to dispatch incident alert')
+    return await res.json()
+  },
+
+  triggerEscalationCheck: async () => {
+    const res = await authFetch('/api/alerts/escalate-check', {
+      method: 'POST',
+    })
+    if (!res.ok) throw new Error('Failed to execute escalation check')
+    return await res.json()
   },
 
   getIncidents: async (params?: {
