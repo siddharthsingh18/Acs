@@ -162,8 +162,28 @@ class AppConfig:
     report_images_dir: str = field(
         default_factory=lambda: os.getenv("REPORT_IMAGES_DIR", "report_images")
     )
+    clips_dir: str = field(
+        default_factory=lambda: os.getenv("CLIPS_DIR", "report_clips")
+    )
     temp_dir: str = field(
         default_factory=lambda: os.getenv("TEMP_DIR", "temp")
+    )
+
+    # Video Clip Recording & Buffer Configuration
+    clip_buffer_seconds: float = field(
+        default_factory=lambda: float(os.getenv("CLIP_BUFFER_SECONDS", "10.0"))
+    )
+    clip_pre_incident_seconds: float = field(
+        default_factory=lambda: float(os.getenv("CLIP_PRE_INCIDENT_SECONDS", "8.0"))
+    )
+    clip_post_incident_seconds: float = field(
+        default_factory=lambda: float(os.getenv("CLIP_POST_INCIDENT_SECONDS", "10.0"))
+    )
+    clip_retention_days: int = field(
+        default_factory=lambda: int(os.getenv("CLIP_RETENTION_DAYS", "7"))
+    )
+    clip_max_disk_usage_mb: int = field(
+        default_factory=lambda: int(os.getenv("CLIP_MAX_DISK_USAGE_MB", "2048"))
     )
 
     # Cooldown seconds between accident captures to prevent duplicate alerts
@@ -212,7 +232,7 @@ class AppConfig:
 
     def ensure_directories(self) -> None:
         """Create required output directories if they do not exist."""
-        for directory in [self.reports_dir, self.report_images_dir, self.temp_dir]:
+        for directory in [self.reports_dir, self.report_images_dir, self.clips_dir, self.temp_dir]:
             os.makedirs(directory, exist_ok=True)
 
 

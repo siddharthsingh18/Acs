@@ -27,6 +27,8 @@ import {
   UserCheck,
   Radio,
   AlertOctagon,
+  Video,
+  Film,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -75,6 +77,20 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
   const [streamingStep, setStreamingStep] = useState<string | null>(null)
   const streamingTimerRef = useRef<any>(null)
 
+  // Media view mode & Video timeline state
+  const [mediaTab, setMediaTab] = useState<'annotated' | 'raw' | 'keyframe'>('annotated')
+  const [videoDuration, setVideoDuration] = useState(0)
+  const [videoCurrentTime, setVideoCurrentTime] = useState(0)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  const formatSeconds = (sec: number) => {
+    if (!Number.isFinite(sec) || sec < 0) return '00:00.0'
+    const m = Math.floor(sec / 60)
+    const s = Math.floor(sec % 60)
+    const ms = Math.floor((sec % 1) * 10)
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms}`
+  }
+
   // Fetch full incident data
   const { data: incident, isLoading } = useQuery({
     queryKey: ['incident', incidentId],
@@ -82,6 +98,27 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
     enabled: Boolean(isOpen && incidentId),
     initialData: initialIncident as IncidentResponse | undefined,
   })
+
+  // Automatically select best available media mode when incident changes
+  useEffect(() => {
+    if (incident) {
+      if (incident.clip_annotated_url || incident.clip_annotated_path) {
+        setMediaTab('annotated')
+      } else if (incident.clip_url || incident.clip_path) {
+        setMediaTab('raw')
+      } else {
+        setMediaTab('keyframe')
+      }
+    }
+  }, [incident?.incident_id, incident?.clip_annotated_url, incident?.clip_url])
+
+  const jumpToImpact = useCallback(() => {
+    const impactSec = incident?.impact_offset_seconds ?? 8.0
+    if (videoRef.current) {
+      videoRef.current.currentTime = impactSec
+      videoRef.current.play().catch(() => {})
+    }
+  }, [incident?.impact_offset_seconds])
 
   // Query Alert Settings to display dry-run status
   const { data: alertSettings } = useQuery({
@@ -424,65 +461,205 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                   </div>
                 ) : (
                   <>
-                    {/* SECTION 1: Large Keyframe with Interactive Zoom */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase font-mono flex items-center gap-1.5">
-                          <Radio className="h-3.5 w-3.5 text-primary" />
-                          Peak Keyframe Capture
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsZoomed((z) => !z)}
-                            className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                          >
-                            {isZoomed ? <ZoomOut className="h-3.5 w-3.5" /> : <ZoomIn className="h-3.5 w-3.5" />}
-                            <span>{isZoomed ? 'Reset' : 'Zoom 2x'}</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsLightboxOpen(true)}
-                            title="Fullscreen Lightbox"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          >
-                            <Maximize2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
+                    {/* SECTION 1: Video Player & Keyframe with Timeline Marker */}
+                    {(() => {
+                      const rawClipUrl = incident?.clip_url || (incident?.clip_path ? `/api/incidents/${incident.incident_id}/clip` : null)
+                      const annClipUrl = incident?.clip_annotated_url || (incident?.clip_annotated_path ? `/api/incidents/${incident.incident_id}/clip?annotated=true` : null)
+                      const hasAnnotated = Boolean(annClipUrl)
+                      const hasRaw = Boolean(rawClipUrl)
+                      const isVideo = mediaTab !== 'keyframe' && (hasAnnotated || hasRaw)
+                      const activeVideoSrc = mediaTab === 'raw' ? (rawClipUrl || annClipUrl) : (annClipUrl || rawClipUrl)
+                      const impactOffset = incident?.impact_offset_seconds ?? 8.0
+                      const duration = videoDuration > 0 ? videoDuration : 18.0
+                      const impactPct = Math.min(100, Math.max(0, (impactOffset / duration) * 100))
+                      const playheadPct = Math.min(100, Math.max(0, (videoCurrentTime / duration) * 100))
 
-                      {/* Video / Keyframe Frame Box */}
-                      <div
-                        dir="ltr"
-                        className={cn(
-                          'relative aspect-video w-full rounded-xl bg-black/95 overflow-hidden border border-border/80 shadow-md transition-all select-none',
-                          isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
-                        )}
-                        onClick={() => setIsZoomed((z) => !z)}
-                      >
-                        {incident?.keyframe_url ? (
-                          <img
-                            src={incident.keyframe_url}
-                            alt={incident.incident_id}
-                            className={cn(
-                              'w-full h-full object-contain transition-transform duration-300',
-                              isZoomed && 'scale-175 origin-center'
-                            )}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center text-xs text-muted-foreground font-mono">
-                            <Radio className="h-6 w-6 text-muted-foreground/40 mb-2" />
-                            No keyframe image available
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            {/* Media View Selector Tabs */}
+                            <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg border border-border/60">
+                              {hasAnnotated && (
+                                <button
+                                  type="button"
+                                  onClick={() => setMediaTab('annotated')}
+                                  className={cn(
+                                    'px-2.5 py-1 text-xs font-mono font-medium rounded-md transition-all flex items-center gap-1.5',
+                                    mediaTab === 'annotated'
+                                      ? 'bg-background text-foreground shadow-sm'
+                                      : 'text-muted-foreground hover:text-foreground'
+                                  )}
+                                >
+                                  <Film className="h-3.5 w-3.5 text-primary" />
+                                  Annotated Clip
+                                </button>
+                              )}
+                              {hasRaw && (
+                                <button
+                                  type="button"
+                                  onClick={() => setMediaTab('raw')}
+                                  className={cn(
+                                    'px-2.5 py-1 text-xs font-mono font-medium rounded-md transition-all flex items-center gap-1.5',
+                                    mediaTab === 'raw'
+                                      ? 'bg-background text-foreground shadow-sm'
+                                      : 'text-muted-foreground hover:text-foreground'
+                                  )}
+                                >
+                                  <Video className="h-3.5 w-3.5 text-blue-400" />
+                                  Raw Clip
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setMediaTab('keyframe')}
+                                className={cn(
+                                  'px-2.5 py-1 text-xs font-mono font-medium rounded-md transition-all flex items-center gap-1.5',
+                                  mediaTab === 'keyframe'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                )}
+                              >
+                                <Radio className="h-3.5 w-3.5 text-amber-400" />
+                                Peak Keyframe
+                              </button>
+                            </div>
+
+                            {/* Controls: Jump to Impact, Zoom, Lightbox */}
+                            <div className="flex items-center gap-1">
+                              {isVideo && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={jumpToImpact}
+                                  className="h-7 px-2.5 text-xs gap-1.5 border-red-500/30 text-red-400 hover:text-red-300 hover:bg-red-950/30 font-mono"
+                                  title="Jump directly to impact moment"
+                                >
+                                  <Flame className="h-3.5 w-3.5 fill-red-500/20 text-red-500" />
+                                  <span>Jump to Impact</span>
+                                </Button>
+                              )}
+                              {mediaTab === 'keyframe' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setIsZoomed((z) => !z)}
+                                  className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                >
+                                  {isZoomed ? <ZoomOut className="h-3.5 w-3.5" /> : <ZoomIn className="h-3.5 w-3.5" />}
+                                  <span>{isZoomed ? 'Reset' : 'Zoom 2x'}</span>
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsLightboxOpen(true)}
+                                title="Fullscreen Lightbox"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              >
+                                <Maximize2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
-                        )}
 
-                        <div className="absolute bottom-2.5 start-2.5 px-2 py-0.5 rounded bg-black/75 text-cyan-400 font-mono text-[10px] border border-cyan-500/30">
-                          {incident?.class_name?.replace(/_/g, ' ') || 'Incident'}
+                          {/* Video / Keyframe Box */}
+                          <div
+                            dir="ltr"
+                            className={cn(
+                              'relative aspect-video w-full rounded-xl bg-black/95 overflow-hidden border border-border/80 shadow-md transition-all select-none',
+                              mediaTab === 'keyframe' && (isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in')
+                            )}
+                            onClick={mediaTab === 'keyframe' ? () => setIsZoomed((z) => !z) : undefined}
+                          >
+                            {isVideo && activeVideoSrc ? (
+                              <video
+                                ref={videoRef}
+                                key={activeVideoSrc}
+                                src={activeVideoSrc}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="w-full h-full object-contain"
+                                onTimeUpdate={(e) => setVideoCurrentTime(e.currentTarget.currentTime)}
+                                onLoadedMetadata={(e) => setVideoDuration(e.currentTarget.duration)}
+                              />
+                            ) : incident?.keyframe_url ? (
+                              <img
+                                src={incident.keyframe_url}
+                                alt={incident.incident_id}
+                                className={cn(
+                                  'w-full h-full object-contain transition-transform duration-300',
+                                  isZoomed && 'scale-175 origin-center'
+                                )}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center text-xs text-muted-foreground font-mono">
+                                <Radio className="h-6 w-6 text-muted-foreground/40 mb-2" />
+                                No media available for this incident
+                              </div>
+                            )}
+
+                            <div className="absolute bottom-2.5 start-2.5 px-2 py-0.5 rounded bg-black/75 text-cyan-400 font-mono text-[10px] border border-cyan-500/30 pointer-events-none">
+                              {incident?.class_name?.replace(/_/g, ' ') || 'Incident'}
+                              {isVideo && (
+                                <span className="ms-1.5 text-zinc-400">
+                                  [{mediaTab === 'annotated' ? 'H.264 Annotated' : 'H.264 Raw'}]
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Timeline Impact Marker Track (Active during video mode) */}
+                          {isVideo && (
+                            <div className="bg-card/70 border border-border/70 rounded-lg p-2.5 space-y-1.5 font-mono text-xs">
+                              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                                <span>00:00.0</span>
+                                <button
+                                  type="button"
+                                  onClick={jumpToImpact}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-red-400 hover:bg-red-900/50 transition-colors"
+                                >
+                                  <Flame className="h-3 w-3 text-red-400" />
+                                  Impact Moment: {formatSeconds(impactOffset)}
+                                </button>
+                                <span>{formatSeconds(duration)}</span>
+                              </div>
+
+                              {/* Interactive Timeline Bar with Impact Pin */}
+                              <div
+                                className="relative h-3 w-full bg-muted/60 rounded-full overflow-hidden cursor-pointer border border-border/40"
+                                onClick={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect()
+                                  const clickPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+                                  const seekTime = clickPct * duration
+                                  if (videoRef.current) {
+                                    videoRef.current.currentTime = seekTime
+                                  }
+                                }}
+                              >
+                                {/* Played Progress Track */}
+                                <div
+                                  className="absolute top-0 bottom-0 start-0 bg-primary/40 transition-all"
+                                  style={{ width: `${playheadPct}%` }}
+                                />
+
+                                {/* Impact Marker Pin */}
+                                <div
+                                  className="absolute top-0 bottom-0 w-1.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] z-10 -translate-x-1/2"
+                                  style={{ left: `${impactPct}%` }}
+                                  title={`Impact moment at ${formatSeconds(impactOffset)}`}
+                                />
+                              </div>
+
+                              <div className="flex items-center justify-between text-[10px] text-muted-foreground/80">
+                                <span>Pre-impact: 8s</span>
+                                <span>Current: {formatSeconds(videoCurrentTime)}</span>
+                                <span>Post-impact: 10s</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </div>
+                      )
+                    })()}
 
                     {/* SECTION 2: Metadata Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">

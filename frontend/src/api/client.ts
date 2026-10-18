@@ -44,6 +44,8 @@ export interface StreamIncidentMessage {
   end_time: number
   duration: number
   keyframe_url: string
+  clip_url?: string | null
+  clip_annotated_url?: string | null
 }
 
 export interface StreamDoneMessage {
@@ -350,4 +352,33 @@ export const api = {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     return `${proto}//${window.location.host}/api/cameras/${id}/stream`
   },
+
+  getRetentionSettings: async (): Promise<RetentionSettings> => {
+    const response = await fetch('/api/retention')
+    if (!response.ok) throw new Error('Failed to fetch retention settings')
+    return (await response.json()) as RetentionSettings
+  },
+
+  updateRetentionSettings: async (payload: {
+    retention_days?: number
+    max_disk_usage_mb?: number
+    trigger_cleanup?: boolean
+  }): Promise<RetentionSettings> => {
+    const response = await fetch('/api/retention', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) throw new Error('Failed to update retention settings')
+    return (await response.json()) as RetentionSettings
+  },
 }
+
+export interface RetentionSettings {
+  retention_days: number
+  max_disk_usage_mb: number
+  current_disk_usage_mb: number
+  total_clips_count: number
+  clips_dir: string
+}
+

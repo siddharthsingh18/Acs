@@ -66,6 +66,9 @@ class AccidentIncident:
     verification_frames: List[np.ndarray] = field(default_factory=list)
     verification_frame_paths: List[str] = field(default_factory=list)
     detection_history: List[Any] = field(default_factory=list)
+    clip_path: Optional[str] = None
+    clip_annotated_path: Optional[str] = None
+    impact_offset_seconds: Optional[float] = None
 
 
 def load_model(weights_path: str) -> YOLO:
@@ -418,6 +421,11 @@ class AccidentEventManager:
         auto_save: bool = True,
         auto_verify: bool = False,
         save_verification_frames: bool = False,
+        clips_dir: Optional[str] = None,
+        save_clips: bool = True,
+        clip_pre_seconds: Optional[float] = None,
+        clip_post_seconds: Optional[float] = None,
+        target_fps: float = 30.0,
     ):
         """Initializes the event manager with timing and storage parameters.
 
@@ -434,6 +442,11 @@ class AccidentEventManager:
             auto_save: Whether to automatically write keyframe and CSV row on incident end.
             auto_verify: Whether to automatically run VLM and physics verification on close.
             save_verification_frames: Whether to save multi-frame verification images to output_dir.
+            clips_dir: Directory to store incident H.264 video clips.
+            save_clips: Whether to record and save 8s-pre to 10s-post H.264 clips.
+            clip_pre_seconds: Duration of footage collected before impact (default: 8.0s).
+            clip_post_seconds: Duration of footage collected after impact (default: 10.0s).
+            target_fps: Estimated stream framerate for clip encoding.
         """
         self.consecutive_frames_threshold = (
             consecutive_frames_threshold
@@ -463,10 +476,29 @@ class AccidentEventManager:
         )
         self.output_dir = output_dir or config.report_images_dir
         self.reports_dir = reports_dir or config.reports_dir
+        self.clips_dir = clips_dir or getattr(config, "clips_dir", "report_clips")
+        self.save_clips = save_clips
+        self.clip_pre_seconds = (
+            clip_pre_seconds if clip_pre_seconds is not None else getattr(config, "clip_pre_incident_seconds", 8.0)
+        )
+        self.clip_post_seconds = (
+            clip_post_seconds if clip_post_seconds is not None else getattr(config, "clip_post_incident_seconds", 10.0)
+        )
+        self.target_fps = target_fps
         self.csv_filename = csv_filename
         self.auto_save = auto_save
         self.auto_verify = auto_verify
         self.save_verification_frames = save_verification_frames
+
+        # Clip Recorder with Bounded Rolling Ring Buffer
+        from acs.clip_recorder import IncidentClipRecorder
+        self.clip_recorder = IncidentClipRecorder(
+            rolling_buffer_seconds=getattr(config, "clip_buffer_seconds", 10.0),
+            pre_incident_seconds=self.clip_pre_seconds,
+            post_incident_seconds=self.clip_post_seconds,
+            output_dir=self.clips_dir,
+            target_fps=self.target_fps,
+        )
 
         # Internal state
         self.consecutive_count: int = 0
@@ -567,6 +599,12 @@ class AccidentEventManager:
 
         # Record to rolling frame buffer
         self._frame_buffer.append((current_time, frame_copy, detection_result))
+        ann_frame = (
+            detection_result.annotated_frame
+            if (detection_result is not None and getattr(detection_result, "annotated_frame", None) is not None)
+            else frame_copy
+        )
+        self.clip_recorder.feed_frame(current_time, raw_frame=frame_copy, annotated_frame=ann_frame)
 
         # Check cooldown status
         in_cooldown = (
@@ -627,6 +665,11 @@ class AccidentEventManager:
                         self.current_incident_id = (
                             f"INC-{int(self.current_start_time)}-{self.incident_counter:03d}"
                         )
+                        if self.save_clips:
+                            self.clip_recorder.start_incident(
+                                incident_id=self.current_incident_id,
+                                impact_time=self.current_start_time,
+                            )
                 else:
                     self.consecutive_count = 0
                     self.current_start_time = None
@@ -700,6 +743,18 @@ class AccidentEventManager:
 
         history_detections = [item[2] for item in self._active_incident_history]
 
+        # Finalize incident H.264 video clips (8s pre to 10s post impact)
+        raw_clip = None
+        ann_clip = None
+        impact_offset = self.clip_pre_seconds
+        if self.save_clips:
+            try:
+                raw_clip, ann_clip, impact_offset = self.clip_recorder.finalize_incident(
+                    incident_id, output_dir=self.clips_dir
+                )
+            except Exception as clip_err:
+                logger.warning("Failed to finalize incident clips for %s: %s", incident_id, clip_err)
+
         incident = AccidentIncident(
             incident_id=incident_id,
             start_timestamp=start_ts,
@@ -713,6 +768,9 @@ class AccidentEventManager:
             last_accident_time=self.last_accident_time,
             verification_frames=v_frames,
             detection_history=history_detections,
+            clip_path=raw_clip,
+            clip_annotated_path=ann_clip,
+            impact_offset_seconds=impact_offset,
         )
 
         if self.auto_save:

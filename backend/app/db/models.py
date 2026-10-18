@@ -26,6 +26,9 @@ class Incident(SQLModel, table=True):
     vlm_confidence: Optional[float] = None
     vlm_reason: Optional[str] = None
     physics_passed: Optional[bool] = None
+    clip_path: Optional[str] = None
+    clip_annotated_path: Optional[str] = None
+    impact_offset_seconds: Optional[float] = None
     created_at: float = Field(index=True)
     duration: float = Field(default=0.0)
 

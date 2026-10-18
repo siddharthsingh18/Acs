@@ -295,6 +295,8 @@ class JobManager:
 
                     keyframe_fname = os.path.basename(completed_incident.image_path)
                     duration_val = max(0.1, completed_incident.end_time - completed_incident.start_time)
+                    clip_url = f"/api/incidents/{completed_incident.incident_id}/clip" if completed_incident.clip_path else None
+                    clip_ann_url = f"/api/incidents/{completed_incident.incident_id}/clip?annotated=true" if completed_incident.clip_annotated_path else None
                     incident_msg = {
                         "type": "incident",
                         "incident_id": completed_incident.incident_id,
@@ -307,6 +309,8 @@ class JobManager:
                         "duration": duration_val,
                         "keyframe_url": f"/media/keyframes/{keyframe_fname}",
                         "verification_status": completed_incident.verification_status,
+                        "clip_url": clip_url,
+                        "clip_annotated_url": clip_ann_url,
                     }
                     job.incidents.append(incident_msg)
                     self.broadcast(job.job_id, incident_msg)
@@ -331,6 +335,9 @@ class JobManager:
                             vlm_confidence=completed_incident.vlm_confidence,
                             vlm_reason=completed_incident.vlm_reason,
                             physics_passed=completed_incident.physics_passed,
+                            clip_path=completed_incident.clip_path,
+                            clip_annotated_path=completed_incident.clip_annotated_path,
+                            impact_offset_seconds=completed_incident.impact_offset_seconds,
                         )
                     except Exception as db_err:
                         logger.warning("Failed to persist incident to DB: %s", db_err)

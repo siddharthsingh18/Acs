@@ -603,6 +603,24 @@ export interface components {
             } | null;
             /** Dispatch Text */
             dispatch_text?: string | null;
+            /** Verification Status */
+            verification_status?: string | null;
+            /** VLM Confidence */
+            vlm_confidence?: number | null;
+            /** VLM Reason */
+            vlm_reason?: string | null;
+            /** Physics Passed */
+            physics_passed?: boolean | null;
+            /** Raw Clip Path */
+            clip_path?: string | null;
+            /** Raw Clip Stream URL */
+            clip_url?: string | null;
+            /** Annotated Clip Path */
+            clip_annotated_path?: string | null;
+            /** Annotated Clip Stream URL */
+            clip_annotated_url?: string | null;
+            /** Impact Moment Offset in Seconds */
+            impact_offset_seconds?: number | null;
             /** Created At */
             created_at: number;
             /** Duration */

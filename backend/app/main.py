@@ -161,6 +161,15 @@ if os.path.exists(config.report_images_dir):
         name="media_keyframes",
     )
 
+
+@app.get("/media/clips/{filename}")
+@app.head("/media/clips/{filename}")
+def stream_media_clip(filename: str, request: Request):
+    """Streams video clips with full HTTP Range request support."""
+    from backend.app.routers.incidents import serve_file_with_range_support
+    file_path = os.path.join(config.clips_dir, filename)
+    return serve_file_with_range_support(file_path, request)
+
 # -----------------------------------------------------------------------------
 # Router Registration
 # -----------------------------------------------------------------------------

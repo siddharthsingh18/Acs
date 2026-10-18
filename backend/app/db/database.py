@@ -34,6 +34,9 @@ def init_db() -> None:
                     "vlm_confidence": "REAL",
                     "vlm_reason": "TEXT",
                     "physics_passed": "BOOLEAN",
+                    "clip_path": "TEXT",
+                    "clip_annotated_path": "TEXT",
+                    "impact_offset_seconds": "REAL",
                 }
                 for col_name, col_type in cols_to_add.items():
                     if col_name not in existing_cols:

@@ -213,12 +213,15 @@ class CameraWorker:
                         vlm_confidence=incident.vlm_confidence,
                         vlm_reason=incident.vlm_reason,
                         physics_passed=incident.physics_passed,
+                        clip_path=incident.clip_path,
+                        clip_annotated_path=incident.clip_annotated_path,
+                        impact_offset_seconds=incident.impact_offset_seconds,
                         created_at=incident.start_time,
                         duration=max(0.0, incident.end_time - incident.start_time),
                     )
                     session.add(db_inc)
                     session.commit()
-                    logger.info("Persisted incident %s from camera '%s' to DB (status: %s)", incident.incident_id, self.name, incident.verification_status)
+                    logger.info("Persisted incident %s from camera '%s' to DB (status: %s, clip: %s)", incident.incident_id, self.name, incident.verification_status, bool(incident.clip_path))
         except Exception as exc:
             logger.error("Failed to persist camera incident to DB: %s", exc)
 

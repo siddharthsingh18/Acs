@@ -112,6 +112,9 @@ def save_incident_to_db(
     vlm_confidence: Optional[float] = None,
     vlm_reason: Optional[str] = None,
     physics_passed: Optional[bool] = None,
+    clip_path: Optional[str] = None,
+    clip_annotated_path: Optional[str] = None,
+    impact_offset_seconds: Optional[float] = None,
     session: Optional[Session] = None,
 ) -> Incident:
     """Inserts or updates an incident record in SQLite."""
@@ -133,6 +136,12 @@ def save_incident_to_db(
                 existing.vlm_reason = vlm_reason
             if physics_passed is not None:
                 existing.physics_passed = physics_passed
+            if clip_path is not None:
+                existing.clip_path = clip_path
+            if clip_annotated_path is not None:
+                existing.clip_annotated_path = clip_annotated_path
+            if impact_offset_seconds is not None:
+                existing.impact_offset_seconds = impact_offset_seconds
             if status != "pending":
                 existing.status = status
             s.add(existing)
@@ -154,6 +163,9 @@ def save_incident_to_db(
             vlm_confidence=vlm_confidence,
             vlm_reason=vlm_reason,
             physics_passed=physics_passed,
+            clip_path=clip_path,
+            clip_annotated_path=clip_annotated_path,
+            impact_offset_seconds=impact_offset_seconds,
             created_at=created_epoch,
             duration=duration,
         )

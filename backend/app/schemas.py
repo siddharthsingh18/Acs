@@ -56,6 +56,9 @@ class ConfigDefaults(BaseModel):
     alerts_dry_run: bool = Field(description="Whether alert dispatch is in simulation mode")
     reports_dir: str = Field(description="Directory storing incident CSV reports")
     report_images_dir: str = Field(description="Directory storing incident keyframes")
+    clips_dir: str = Field(description="Directory storing incident video clips")
+    clip_retention_days: int = Field(description="Days before stored video clips are deleted")
+    clip_max_disk_usage_mb: int = Field(description="Maximum MB disk usage for stored clips")
     temp_dir: str = Field(description="Directory storing temporary uploads")
 
 
@@ -136,6 +139,8 @@ class IncidentItem(BaseModel):
     duration: float
     keyframe_url: str
     verification_status: Optional[str] = None
+    clip_url: Optional[str] = None
+    clip_annotated_url: Optional[str] = None
 
 
 class JobStatusResponse(BaseModel):
@@ -172,6 +177,11 @@ class IncidentResponse(BaseModel):
     vlm_confidence: Optional[float] = None
     vlm_reason: Optional[str] = None
     physics_passed: Optional[bool] = None
+    clip_path: Optional[str] = None
+    clip_url: Optional[str] = None
+    clip_annotated_path: Optional[str] = None
+    clip_annotated_url: Optional[str] = None
+    impact_offset_seconds: Optional[float] = None
     created_at: float
     duration: float
 
@@ -316,6 +326,25 @@ class CameraResponse(BaseModel):
     created_at: float = Field(description="Creation epoch timestamp")
     updated_at: float = Field(description="Last update epoch timestamp")
     health: Optional[CameraHealth] = Field(default=None, description="Real-time stream health telemetry")
+
+
+class RetentionSettingsResponse(BaseModel):
+    """Current clip retention rules and disk storage metrics."""
+
+    retention_days: int = Field(description="Days before stored video clips are deleted")
+    max_disk_usage_mb: int = Field(description="Maximum disk storage in MB allocated for clips")
+    current_disk_usage_mb: float = Field(description="Current disk storage in MB used by clips")
+    total_clips_count: int = Field(description="Total number of stored video clip files")
+    clips_dir: str = Field(description="Filesystem directory where video clips are stored")
+
+
+class RetentionSettingsUpdateRequest(BaseModel):
+    """Payload to update video clip retention policies and trigger manual cleanup."""
+
+    retention_days: Optional[int] = Field(default=None, ge=1, le=365, description="New max clip age in days")
+    max_disk_usage_mb: Optional[int] = Field(default=None, ge=50, le=1000000, description="New max clip disk usage cap in MB")
+    trigger_cleanup: Optional[bool] = Field(default=True, description="Whether to run cleanup immediately upon save")
+
 
 
 

@@ -9,6 +9,7 @@ __pycache__/
 
 # Application runtime outputs
 /report_images/
+/report_clips/
 /reports/
 /runs/
 /temp/

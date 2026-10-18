@@ -88,6 +88,9 @@ def get_system_config(cfg: AppConfig) -> SystemConfigResponse:
         alerts_dry_run=cfg.alerts_dry_run,
         reports_dir=cfg.reports_dir,
         report_images_dir=cfg.report_images_dir,
+        clips_dir=getattr(cfg, "clips_dir", "report_clips"),
+        clip_retention_days=getattr(cfg, "clip_retention_days", 7),
+        clip_max_disk_usage_mb=getattr(cfg, "clip_max_disk_usage_mb", 2048),
         temp_dir=cfg.temp_dir,
     )
 

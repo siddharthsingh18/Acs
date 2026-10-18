@@ -1,12 +1,14 @@
 """
 backend.app.routers.incidents
-Route handlers for incident management, filtering, dispatch reports, PDF, and CSV export.
+Route handlers for incident management, filtering, dispatch reports, PDF, video clips, and CSV export.
 """
 import json
 import logging
+import os
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session
 
 from acs.reporter import generate_report_pdf
@@ -38,6 +40,17 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
         except Exception:
             pass
 
+    clip_url = (
+        f"/api/incidents/{inc.incident_id}/clip"
+        if inc.clip_path and os.path.exists(inc.clip_path)
+        else None
+    )
+    clip_ann_url = (
+        f"/api/incidents/{inc.incident_id}/clip?annotated=true"
+        if inc.clip_annotated_path and os.path.exists(inc.clip_annotated_path)
+        else None
+    )
+
     return IncidentResponse(
         incident_id=inc.incident_id,
         start_timestamp=inc.start_timestamp,
@@ -52,6 +65,15 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
         reviewed_at=inc.reviewed_at,
         dispatch_report=parsed_dispatch,
         dispatch_text=inc.dispatch_text,
+        verification_status=inc.verification_status,
+        vlm_confidence=inc.vlm_confidence,
+        vlm_reason=inc.vlm_reason,
+        physics_passed=inc.physics_passed,
+        clip_path=inc.clip_path,
+        clip_url=clip_url,
+        clip_annotated_path=inc.clip_annotated_path,
+        clip_annotated_url=clip_ann_url,
+        impact_offset_seconds=inc.impact_offset_seconds if inc.impact_offset_seconds is not None else 8.0,
         created_at=inc.created_at,
         duration=inc.duration,
     )
@@ -198,3 +220,140 @@ def update_incident_status_endpoint(
             detail=f"Incident with ID '{incident_id}' not found.",
         )
     return _to_incident_response(inc)
+
+
+def serve_file_with_range_support(file_path: str, request: Optional[Request] = None) -> Response:
+    """Streams a video file supporting RFC 7233 HTTP Byte Range requests for smooth scrubbing."""
+    if not os.path.isfile(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Video clip file not found on disk.",
+        )
+
+    file_size = os.path.getsize(file_path)
+
+    # HEAD request handling for browser media player probing
+    if request and request.method == "HEAD":
+        return Response(
+            status_code=status.HTTP_200_OK,
+            headers={
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(file_size),
+                "Content-Type": "video/mp4",
+            },
+        )
+
+    range_header = request.headers.get("Range") if request else None
+
+    if not range_header:
+        def full_iter():
+            with open(file_path, "rb") as f:
+                while chunk := f.read(64 * 1024):
+                    yield chunk
+
+        return StreamingResponse(
+            full_iter(),
+            status_code=status.HTTP_200_OK,
+            media_type="video/mp4",
+            headers={
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(file_size),
+                "Content-Type": "video/mp4",
+            },
+        )
+
+    try:
+        range_str = range_header.strip()
+        if not range_str.startswith("bytes="):
+            raise ValueError("Invalid range unit")
+
+        range_val = range_str[len("bytes="):].strip()
+        parts = range_val.split("-")
+
+        if parts[0] == "":
+            suffix_len = int(parts[1])
+            start = max(0, file_size - suffix_len)
+            end = file_size - 1
+        elif len(parts) > 1 and parts[1] != "":
+            start = int(parts[0])
+            end = min(file_size - 1, int(parts[1]))
+        else:
+            start = int(parts[0])
+            end = file_size - 1
+
+        if start > end or start >= file_size:
+            return Response(
+                status_code=status.HTTP_416_RANGE_NOT_SATISFIABLE,
+                headers={
+                    "Content-Range": f"bytes */{file_size}",
+                    "Accept-Ranges": "bytes",
+                },
+            )
+
+        chunk_size = end - start + 1
+
+        def chunk_iter():
+            with open(file_path, "rb") as f:
+                f.seek(start)
+                bytes_left = chunk_size
+                while bytes_left > 0:
+                    read_len = min(64 * 1024, bytes_left)
+                    data = f.read(read_len)
+                    if not data:
+                        break
+                    bytes_left -= len(data)
+                    yield data
+
+        return StreamingResponse(
+            chunk_iter(),
+            status_code=status.HTTP_206_PARTIAL_CONTENT,
+            media_type="video/mp4",
+            headers={
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(chunk_size),
+                "Content-Type": "video/mp4",
+            },
+        )
+    except Exception:
+        return Response(
+            status_code=status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE,
+            headers={
+                "Content-Range": f"bytes */{file_size}",
+                "Accept-Ranges": "bytes",
+            },
+        )
+
+
+@router.get("/{incident_id}/clip")
+@router.head("/{incident_id}/clip")
+def get_incident_clip_endpoint(
+    incident_id: str,
+    request: Request,
+    annotated: bool = Query(False, description="Whether to stream the annotated clip with bounding boxes burned in"),
+    session: Session = Depends(get_session),
+) -> Response:
+    """Streams the raw or annotated H.264 MP4 clip with full HTTP Range request support."""
+    inc = get_incident_by_id(session, incident_id)
+    if not inc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident with ID '{incident_id}' not found.",
+        )
+
+    file_path = None
+    if annotated and inc.clip_annotated_path and os.path.isfile(inc.clip_annotated_path):
+        file_path = inc.clip_annotated_path
+    elif inc.clip_path and os.path.isfile(inc.clip_path):
+        file_path = inc.clip_path
+    elif inc.clip_annotated_path and os.path.isfile(inc.clip_annotated_path):
+        file_path = inc.clip_annotated_path
+
+    if not file_path or not os.path.isfile(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No video clip available on disk for incident '{incident_id}'.",
+        )
+
+    return serve_file_with_range_support(file_path, request)
+
