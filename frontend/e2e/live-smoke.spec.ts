@@ -61,4 +61,47 @@ test.describe('Live Surveillance Smoke Test', () => {
     const addCamBtn = page.getByRole('button', { name: /Add Camera/i })
     await expect(addCamBtn).toBeVisible()
   })
+
+  test('navigates to /map, verifies Leaflet map viewport, layer toggles, replay slider, and RTL assurance', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('acs_demo_mode', 'true')
+      localStorage.setItem('acs_theme', 'dark')
+    })
+
+    // 1. Navigate to /map
+    await page.goto('/map')
+
+    // 2. Expect Map Header and OSM attribution badge
+    await expect(page.locator('h1')).toContainText(/Interactive CCTV Map/i)
+    await expect(page.getByText('OSM Tiles')).toBeVisible()
+
+    // 3. Verify Leaflet map container has strict LTR direction
+    const mapViewport = page.locator('#tactical-map-viewport')
+    await expect(mapViewport).toBeVisible()
+    await expect(mapViewport).toHaveAttribute('dir', 'ltr')
+
+    // 4. Assert layer controls are present
+    await expect(page.getByTitle(/Toggle Collision Hotspot Heatmap/i)).toBeVisible()
+    await expect(page.getByTitle(/Toggle Marker Clustering/i)).toBeVisible()
+    await expect(page.getByTitle(/Toggle Incidents/i)).toBeVisible()
+    await expect(page.getByTitle(/Toggle Tactical Dark Mode Tiles/i)).toBeVisible()
+
+    // 5. Assert bottom replay slider dock
+    await expect(page.getByText(/Incident Chronological Replay/i)).toBeVisible()
+    const replayModeToggle = page.getByRole('button', { name: /Show All Incidents/i })
+    await expect(replayModeToggle).toBeVisible()
+    await replayModeToggle.click()
+    await expect(page.getByRole('button', { name: /Replay Mode/i })).toBeVisible()
+
+    // 6. Test RTL assurance: Switch to Arabic and assert map container remains LTR
+    await page.evaluate(() => {
+      window.localStorage.setItem('i18nextLng', 'ar')
+      window.location.reload()
+    })
+    await page.waitForLoadState('networkidle')
+
+    const rtlMapViewport = page.locator('#tactical-map-viewport')
+    await expect(rtlMapViewport).toBeVisible()
+    await expect(rtlMapViewport).toHaveAttribute('dir', 'ltr')
+  })
 })

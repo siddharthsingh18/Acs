@@ -11,6 +11,9 @@ vi.mock('@/api/client', () => ({
     getAlertSettings: vi.fn(),
     updateAlertSettings: vi.fn(),
     testAlerts: vi.fn(),
+    getCameras: vi.fn().mockResolvedValue([]),
+    createCamera: vi.fn().mockResolvedValue({}),
+    updateCamera: vi.fn().mockResolvedValue({}),
   },
 }))
 

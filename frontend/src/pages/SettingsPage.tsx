@@ -21,11 +21,21 @@ import {
   Moon,
   AlertTriangle,
   Check,
+  Camera as CameraIcon,
+  MapPin,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { api, type AlertSettingsUpdateRequest } from '@/api/client'
+import {
+  api,
+  type AlertSettingsUpdateRequest,
+  type CameraCreatePayload,
+} from '@/api/client'
+import { CameraLocationPicker } from '@/components/map/CameraLocationPicker'
+import { AddCameraModal } from '@/components/live/AddCameraModal'
 import { useAppStore } from '@/store/appStore'
 import { cn } from '@/lib/utils'
 
@@ -90,6 +100,56 @@ export const SettingsPage: React.FC = () => {
   const { data: alertSettings } = useQuery({
     queryKey: ['alertSettings'],
     queryFn: () => api.getAlertSettings(),
+  })
+
+  // Camera Geolocation & Management state
+  const [isAddCameraModalOpen, setIsAddCameraModalOpen] = useState(false)
+  const [editingCameraId, setEditingCameraId] = useState<string | null>(null)
+  const [editingCoords, setEditingCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [cameraFeedbackMsg, setCameraFeedbackMsg] = useState<string | null>(null)
+
+  // Cameras query
+  const { data: cameras = [] } = useQuery({
+    queryKey: ['cameras'],
+    queryFn: () => (api.getCameras ? api.getCameras() : Promise.resolve([])),
+  })
+
+  // Camera coordinates update mutation
+  const updateCameraCoordsMutation = useMutation({
+    mutationFn: async ({ id, lat, lng }: { id: string; lat: number | null; lng: number | null }) => {
+      return api.updateCamera(id, { location_lat: lat, location_lng: lng })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cameras'] })
+      setCameraFeedbackMsg(t('map.save_location', 'Camera location updated and saved.'))
+      setTimeout(() => setCameraFeedbackMsg(null), 3500)
+      setEditingCameraId(null)
+      setEditingCoords(null)
+    },
+  })
+
+  // Camera create mutation
+  const createCameraMutation = useMutation({
+    mutationFn: async (payload: CameraCreatePayload) => {
+      return api.createCamera(payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cameras'] })
+      setCameraFeedbackMsg('New camera registered successfully.')
+      setTimeout(() => setCameraFeedbackMsg(null), 3500)
+    },
+  })
+
+  // Camera delete mutation
+  const deleteCameraMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.deleteCamera(id)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cameras'] })
+      setCameraFeedbackMsg('Camera removed successfully.')
+      setTimeout(() => setCameraFeedbackMsg(null), 3500)
+    },
   })
 
   // React Hook Form initialized with zod validation
@@ -904,6 +964,186 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
+      {/* SECTION: CCTV SURVEILLANCE CAMERAS & GEOLOCATION MAPPING                  */}
+      {/* ========================================================================= */}
+      <Card className="border-border shadow-sm">
+        <CardHeader className="py-4 px-6 border-b border-border bg-muted/20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <CameraIcon className="h-4 w-4 text-primary" />
+                {t('map.manage_cameras', 'CCTV Camera Geolocation & Network')}
+              </CardTitle>
+              <CardDescription className="text-xs mt-1">
+                {t(
+                  'map.location_picker_title',
+                  'Click on the interactive map to place and position CCTV cameras for the spatial incident replay map.'
+                )}
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAddCameraModalOpen(true)}
+              className="gap-1.5 text-xs font-semibold shrink-0"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Register Camera</span>
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-6 space-y-4">
+          {cameraFeedbackMsg && (
+            <div className="p-3 rounded-lg bg-[var(--status-ok)]/15 border border-[var(--status-ok)]/30 text-[var(--status-ok)] text-xs flex items-center gap-2 font-medium">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{cameraFeedbackMsg}</span>
+            </div>
+          )}
+
+          {cameras.length === 0 ? (
+            <div className="text-center py-8 border border-dashed border-border rounded-xl">
+              <CameraIcon className="h-8 w-8 mx-auto text-muted-foreground opacity-50 mb-2" />
+              <p className="text-xs text-muted-foreground">
+                No cameras registered yet. Click &quot;Register Camera&quot; to add a camera and set its GPS location.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cameras.map((cam) => {
+                const isEditingThis = editingCameraId === cam.id
+                const hasCoordinates =
+                  typeof cam.location_lat === 'number' && typeof cam.location_lng === 'number'
+
+                return (
+                  <div
+                    key={cam.id}
+                    className="p-4 rounded-xl border border-border bg-card/60 space-y-3 transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-foreground">{cam.name}</span>
+                          <Badge
+                            variant={cam.health?.connected ? 'success' : 'outline'}
+                            className="text-[10px] font-mono px-2 py-0.2"
+                          >
+                            {cam.health?.connected ? 'ONLINE' : 'OFFLINE'}
+                          </Badge>
+                          <Badge variant="secondary" className="text-[10px] font-mono uppercase px-1.5 py-0">
+                            {cam.source_type}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono">
+                          <span>ID: {cam.id}</span>
+                          <span className="text-border">|</span>
+                          {hasCoordinates ? (
+                            <span className="text-cyan-400 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {cam.location_lat?.toFixed(5)}, {cam.location_lng?.toFixed(5)}
+                            </span>
+                          ) : (
+                            <span className="text-amber-400">
+                              {t('map.no_location_set', 'No GPS coordinates set. Click map to place marker.')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-start sm:self-center">
+                        <Button
+                          type="button"
+                          variant={isEditingThis ? 'secondary' : 'outline'}
+                          size="sm"
+                          onClick={() => {
+                            if (isEditingThis) {
+                              setEditingCameraId(null)
+                              setEditingCoords(null)
+                            } else {
+                              setEditingCameraId(cam.id)
+                              setEditingCoords(
+                                hasCoordinates
+                                  ? { lat: cam.location_lat!, lng: cam.location_lng! }
+                                  : null
+                              )
+                            }
+                          }}
+                          className="h-7 px-2.5 text-xs gap-1.5"
+                        >
+                          <MapPin className="h-3 w-3 text-primary" />
+                          <span>
+                            {isEditingThis
+                              ? 'Close Map'
+                              : hasCoordinates
+                              ? t('map.edit_location', 'Edit Location')
+                              : t('map.save_location', 'Set Geolocation')}
+                          </span>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            if (window.confirm(`Delete camera '${cam.name}'?`)) {
+                              await deleteCameraMutation.mutateAsync(cam.id)
+                            }
+                          }}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-rose-400"
+                          title="Delete Camera"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Collapsible Interactive Click-to-Place Map Picker */}
+                    {isEditingThis && (
+                      <div className="pt-3 border-t border-border space-y-3 animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            {t('map.click_to_place', 'Click anywhere on the map to position the camera marker.')}
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={!editingCoords || updateCameraCoordsMutation.isPending}
+                            onClick={() => {
+                              updateCameraCoordsMutation.mutate({
+                                id: cam.id,
+                                lat: editingCoords?.lat ?? null,
+                                lng: editingCoords?.lng ?? null,
+                              })
+                            }}
+                            className="h-7 px-3 text-xs font-bold gap-1 shadow-xs"
+                          >
+                            <Save className="h-3 w-3" />
+                            <span>
+                              {updateCameraCoordsMutation.isPending
+                                ? 'Saving...'
+                                : t('map.save_location', 'Save Location')}
+                            </span>
+                          </Button>
+                        </div>
+
+                        <CameraLocationPicker
+                          lat={editingCoords?.lat ?? cam.location_lat}
+                          lng={editingCoords?.lng ?? cam.location_lng}
+                          onChange={(coords) => setEditingCoords(coords)}
+                          height="h-64"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ========================================================================= */}
       {/* SECTION 4: LANGUAGE AND THEME PREFERENCES                                 */}
       {/* ========================================================================= */}
       <Card className="border-border shadow-sm">
@@ -1046,6 +1286,15 @@ export const SettingsPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Camera Modal with Map Location Picker */}
+      <AddCameraModal
+        isOpen={isAddCameraModalOpen}
+        onClose={() => setIsAddCameraModalOpen(false)}
+        onAddCamera={async (payload) => {
+          await createCameraMutation.mutateAsync(payload)
+        }}
+      />
     </form>
   )
 }

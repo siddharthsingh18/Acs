@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Radio,
+  Map,
   FileSpreadsheet,
   Layers,
   BarChart3,
@@ -24,6 +25,11 @@ const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
     labelKey: 'nav.live',
     icon: Radio,
     isLive: true,
+  },
+  {
+    to: '/map',
+    labelKey: 'nav.map',
+    icon: Map,
   },
   {
     to: '/review',

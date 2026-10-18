@@ -16,6 +16,7 @@ describe('BottomNav Component', () => {
 
     // Expect navigation items
     expect(screen.getByText(/Live Analysis/i)).toBeInTheDocument()
+    expect(screen.getByText(/Live Map/i)).toBeInTheDocument()
     expect(screen.getByText(/Review Queue/i)).toBeInTheDocument()
     expect(screen.getByText(/Incident Logs/i)).toBeInTheDocument()
     expect(screen.getByText(/Analytics/i)).toBeInTheDocument()

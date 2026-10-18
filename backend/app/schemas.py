@@ -167,6 +167,7 @@ class IncidentResponse(BaseModel):
     """Full incident record for detail and list APIs."""
 
     incident_id: str
+    camera_id: Optional[str] = None
     start_timestamp: str
     end_timestamp: str
     class_name: str

@@ -67,6 +67,7 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
 
     return IncidentResponse(
         incident_id=inc.incident_id,
+        camera_id=getattr(inc, "camera_id", None),
         start_timestamp=inc.start_timestamp,
         end_timestamp=inc.end_timestamp,
         class_name=inc.class_name,

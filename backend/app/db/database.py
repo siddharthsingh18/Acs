@@ -30,6 +30,7 @@ def init_db() -> None:
             existing_cols = {row[1] for row in cursor.fetchall()}
             if existing_cols:
                 cols_to_add = {
+                    "camera_id": "TEXT",
                     "verification_status": "TEXT",
                     "vlm_confidence": "REAL",
                     "vlm_reason": "TEXT",

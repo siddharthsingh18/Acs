@@ -211,6 +211,7 @@ class CameraWorker:
                     )
                     db_inc = Incident(
                         incident_id=incident.incident_id,
+                        camera_id=self.camera_id,
                         start_timestamp=incident.start_timestamp,
                         end_timestamp=incident.end_timestamp,
                         class_name=incident.class_name,

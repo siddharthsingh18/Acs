@@ -143,3 +143,28 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
+
+/* Tactical Dark Map Filter for OpenStreetMap Tiles (No paid keys) */
+.acs-tactical-map-filter .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%) saturate(55%);
+}
+
+/* Ensure Leaflet map container remains strictly LTR under RTL layouts */
+[dir="rtl"] .leaflet-container,
+.leaflet-container {
+  direction: ltr !important;
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--card) !important;
+}
+

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Plus, X, Video, Globe, Camera as CameraIcon } from 'lucide-react'
 import type { CameraCreatePayload } from '@/api/client'
+import { CameraLocationPicker } from '@/components/map/CameraLocationPicker'
 
 interface AddCameraModalProps {
   isOpen: boolean
@@ -156,29 +157,47 @@ export const AddCameraModal: React.FC<AddCameraModalProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Latitude (optional)</label>
-              <input
-                type="number"
-                step="any"
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                placeholder="37.7749"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Latitude (optional)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={lat}
+                  onChange={(e) => setLat(e.target.value)}
+                  placeholder="37.7749"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Longitude (optional)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={lng}
+                  onChange={(e) => setLng(e.target.value)}
+                  placeholder="-122.4194"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Longitude (optional)</label>
-              <input
-                type="number"
-                step="any"
-                value={lng}
-                onChange={(e) => setLng(e.target.value)}
-                placeholder="-122.4194"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
+
+            {/* Interactive Click-to-Place Leaflet Map Picker */}
+            <CameraLocationPicker
+              lat={lat ? parseFloat(lat) : null}
+              lng={lng ? parseFloat(lng) : null}
+              onChange={(coords) => {
+                if (coords) {
+                  setLat(coords.lat.toString())
+                  setLng(coords.lng.toString())
+                } else {
+                  setLat('')
+                  setLng('')
+                }
+              }}
+              height="h-44"
+            />
           </div>
 
           <div className="space-y-1.5">

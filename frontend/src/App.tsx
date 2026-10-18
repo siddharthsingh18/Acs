@@ -9,6 +9,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 
 // Route-level code splitting with React.lazy for optimal chunking and Lighthouse score
 const LivePage = lazy(() => import('@/pages/LivePage').then((m) => ({ default: m.LivePage })))
+const MapPage = lazy(() => import('@/pages/MapPage').then((m) => ({ default: m.MapPage })))
 const ReviewQueuePage = lazy(() =>
   import('@/pages/ReviewQueuePage').then((m) => ({ default: m.ReviewQueuePage }))
 )
@@ -51,6 +52,14 @@ const AnimatedRoutes: React.FC = () => {
             element={
               <PageTransition>
                 <LivePage />
+              </PageTransition>
+            }
+          />
+          <Route
+            path="map"
+            element={
+              <PageTransition>
+                <MapPage />
               </PageTransition>
             }
           />

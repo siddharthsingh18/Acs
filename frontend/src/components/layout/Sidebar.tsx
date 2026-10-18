@@ -11,6 +11,7 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
+  Map,
 } from 'lucide-react'
 import { useAppStore } from '@/store/appStore'
 import { cn } from '@/lib/utils'
@@ -28,6 +29,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'nav.live',
     icon: Radio,
     badge: 'LIVE',
+  },
+  {
+    to: '/map',
+    labelKey: 'nav.map',
+    icon: Map,
+    badge: 'GEO',
   },
   {
     to: '/review',

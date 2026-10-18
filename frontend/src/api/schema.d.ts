@@ -1030,6 +1030,8 @@ export interface components {
         IncidentResponse: {
             /** Incident Id */
             incident_id: string;
+            /** Camera Id */
+            camera_id?: string | null;
             /** Start Timestamp */
             start_timestamp: string;
             /** End Timestamp */

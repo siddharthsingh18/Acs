@@ -10,6 +10,7 @@ class Incident(SQLModel, table=True):
     """Represents a recorded accident incident stored in SQLite."""
 
     incident_id: str = Field(primary_key=True, index=True)
+    camera_id: Optional[str] = Field(default=None, index=True)
     start_timestamp: str = Field(index=True)
     end_timestamp: str
     class_name: str = Field(index=True)

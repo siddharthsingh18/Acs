@@ -119,6 +119,7 @@ def save_incident_to_db(
     severity_score: Optional[int] = None,
     severity_breakdown: Optional[Union[str, dict]] = None,
     recommended_units: Optional[Union[str, list]] = None,
+    camera_id: Optional[str] = None,
     session: Optional[Session] = None,
 ) -> Incident:
     """Inserts or updates an incident record in SQLite."""
@@ -143,6 +144,8 @@ def save_incident_to_db(
             existing.end_timestamp = end_timestamp
             existing.max_confidence = max(existing.max_confidence, max_confidence)
             existing.duration = max(existing.duration, duration)
+            if camera_id is not None:
+                existing.camera_id = camera_id
             if verification_status is not None:
                 existing.verification_status = verification_status
             if vlm_confidence is not None:
@@ -174,6 +177,7 @@ def save_incident_to_db(
 
         new_inc = Incident(
             incident_id=incident_id,
+            camera_id=camera_id,
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
             class_name=class_name,
