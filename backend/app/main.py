@@ -24,11 +24,13 @@ from fastapi.staticfiles import StaticFiles
 from acs.config import config
 from backend.app.db.database import init_db
 from backend.app.routers import alerts as alerts_router
+from backend.app.routers import cameras as cameras_router
 from backend.app.routers import config as config_router
 from backend.app.routers import health as health_router
 from backend.app.routers import incidents as incidents_router
 from backend.app.routers import jobs as jobs_router
 from backend.app.routers import stats as stats_router
+from backend.app.services.camera_manager import camera_manager
 from backend.app.services.incident_service import import_csv_to_db
 from backend.app.services.job_manager import job_manager
 
@@ -61,12 +63,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as db_init_err:
         logger.warning("Database init or CSV migration warning: %s", db_init_err)
 
-    # Register running event loop with job manager
+    # Register running event loop with job manager and camera manager
     try:
         loop = asyncio.get_running_loop()
         job_manager.set_loop(loop)
+        camera_manager.set_loop(loop)
+        camera_manager.initialize_cameras()
     except Exception as e:
-        logger.warning("Could not set event loop on job manager: %s", e)
+        logger.warning("Could not initialize camera manager or loop: %s", e)
 
     logger.info(
         "ACS Backend initialized [Device: %s | Model: %s]",
@@ -74,7 +78,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         config.model_path,
     )
     yield
-    logger.info("Shutting down ACS Backend service.")
+    logger.info("Shutting down ACS Backend service and camera workers.")
+    camera_manager.shutdown()
 
 
 # Initial module load initialization for storage and database
@@ -165,6 +170,7 @@ app.include_router(jobs_router.router)
 app.include_router(incidents_router.router)
 app.include_router(alerts_router.router)
 app.include_router(stats_router.router)
+app.include_router(cameras_router.router)
 
 # -----------------------------------------------------------------------------
 # Mount Frontend Static Build (Production / Docker)

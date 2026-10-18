@@ -69,8 +69,10 @@ promote:
 test: test-unit test-e2e
 
 test-unit:
-	@echo "Running pytest unit test suite..."
+	@echo "Running pytest backend unit test suite..."
 	$(PYTEST) tests/
+	@echo "Running Vitest frontend unit test suite..."
+	cd frontend && $(NPM) test
 
 test-e2e:
 	@echo "Running Playwright frontend smoke test..."

@@ -69,6 +69,71 @@ export type JobStreamMessage =
   | StreamDoneMessage
   | StreamErrorMessage
 
+export interface CameraHealth {
+  connected: boolean
+  fps: number
+  last_frame_age: number
+  dropped_frames: number
+  reconnect_count: number
+  is_incident_active: boolean
+  active_incident_id?: string | null
+  last_accident_class?: string | null
+  last_accident_confidence?: number | null
+}
+
+export interface CameraItem {
+  id: string
+  name: string
+  source_type: 'file' | 'webcam' | 'rtsp' | 'http'
+  source_url: string
+  location_lat?: number | null
+  location_lng?: number | null
+  enabled: boolean
+  confidence_override?: number | null
+  created_at: number
+  updated_at: number
+  health?: CameraHealth | null
+}
+
+export interface CameraCreatePayload {
+  name: string
+  source_url: string
+  location_lat?: number | null
+  location_lng?: number | null
+  enabled?: boolean
+  confidence_override?: number | null
+}
+
+export interface CameraStreamFrameMessage {
+  type: 'frame'
+  camera_id: string
+  camera_name: string
+  frame_number: number
+  timestamp: number
+  fps: number
+  incident_active: boolean
+  active_incident_id?: string | null
+  frame: string
+  detections_count: number
+}
+
+export interface CameraStreamIncidentMessage {
+  type: 'incident'
+  camera_id: string
+  camera_name: string
+  incident_id: string
+  class_name: string
+  confidence: number
+  start_timestamp: string
+  end_timestamp: string
+  keyframe_url: string
+}
+
+export type CameraStreamMessage =
+  | CameraStreamFrameMessage
+  | CameraStreamIncidentMessage
+  | { type: 'heartbeat' | 'status'; camera_id: string; connected?: boolean; health?: CameraHealth }
+
 // Typed query and mutation functions for use with TanStack Query
 export const api = {
   getHealth: async () => {
@@ -234,4 +299,55 @@ export const api = {
 
   getExportCsvUrl: () => '/api/incidents/export.csv',
   getIncidentPdfUrl: (incidentId: string) => `/api/incidents/${incidentId}/pdf`,
+
+  // Camera Management Endpoints
+  getCameras: async (): Promise<CameraItem[]> => {
+    const response = await fetch('/api/cameras')
+    if (!response.ok) throw new Error('Failed to fetch cameras')
+    return (await response.json()) as CameraItem[]
+  },
+
+  getCamera: async (id: string): Promise<CameraItem> => {
+    const response = await fetch(`/api/cameras/${id}`)
+    if (!response.ok) throw new Error(`Failed to fetch camera ${id}`)
+    return (await response.json()) as CameraItem
+  },
+
+  createCamera: async (payload: CameraCreatePayload): Promise<CameraItem> => {
+    const response = await fetch('/api/cameras', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(err.detail || 'Failed to create camera')
+    }
+    return (await response.json()) as CameraItem
+  },
+
+  updateCamera: async (id: string, payload: Partial<CameraCreatePayload>): Promise<CameraItem> => {
+    const response = await fetch(`/api/cameras/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(err.detail || `Failed to update camera ${id}`)
+    }
+    return (await response.json()) as CameraItem
+  },
+
+  deleteCamera: async (id: string): Promise<void> => {
+    const response = await fetch(`/api/cameras/${id}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) throw new Error(`Failed to delete camera ${id}`)
+  },
+
+  getCameraStreamWsUrl: (id: string): string => {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${proto}//${window.location.host}/api/cameras/${id}/stream`
+  },
 }

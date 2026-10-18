@@ -37,4 +37,11 @@ yolo11s.pt
 models/*.pt
 models/*.onnx
 
+# Local media server certs
+*.crt
+*.key
+mediamtx.yml
+rtsp-simple-server.yml
+
+
 

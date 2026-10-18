@@ -250,3 +250,67 @@ class StatsResponse(BaseModel):
     average_review_time_seconds: Optional[float] = None
 
 
+# -----------------------------------------------------------------------------
+# Live Camera Feed Schemas
+# -----------------------------------------------------------------------------
+class CameraHealth(BaseModel):
+    """Live telemetry and health indicators for an active camera worker."""
+
+    connected: bool = Field(description="Whether the camera stream is currently open and delivering frames")
+    fps: float = Field(description="Current processing throughput frames-per-second")
+    last_frame_age: float = Field(description="Elapsed seconds since the most recent frame was received")
+    dropped_frames: int = Field(description="Cumulative count of skipped or dropped frames under load")
+    reconnect_count: int = Field(description="Number of stream disconnect & auto-reconnect attempts")
+    is_incident_active: bool = Field(description="True if an accident incident is actively ongoing on this camera")
+    active_incident_id: Optional[str] = Field(default=None, description="Active incident tracking ID if ongoing")
+    last_accident_class: Optional[str] = Field(default=None, description="Class label of the most recent accident")
+    last_accident_confidence: Optional[float] = Field(default=None, description="Peak confidence of active accident")
+
+
+class CameraCreateRequest(BaseModel):
+    """Payload for registering a new live CCTV camera feed."""
+
+    name: str = Field(description="Human-readable camera title or intersection name")
+    source_url: str = Field(
+        description="Connection URL or device index (e.g. '0', 'rtsp://...', 'http://...', or file path)"
+    )
+    location_lat: Optional[float] = Field(default=None, description="Camera GPS latitude coordinate")
+    location_lng: Optional[float] = Field(default=None, description="Camera GPS longitude coordinate")
+    enabled: Optional[bool] = Field(default=True, description="Whether camera worker should be active")
+    confidence_override: Optional[float] = Field(
+        default=None, ge=0.05, le=1.0, description="Optional per-camera accident confidence threshold override"
+    )
+
+
+class CameraUpdateRequest(BaseModel):
+    """Payload for updating camera configuration attributes."""
+
+    name: Optional[str] = Field(default=None, description="Updated camera title")
+    source_url: Optional[str] = Field(default=None, description="Updated connection string/URL")
+    location_lat: Optional[float] = Field(default=None, description="Updated latitude")
+    location_lng: Optional[float] = Field(default=None, description="Updated longitude")
+    enabled: Optional[bool] = Field(default=None, description="Enable or disable camera worker")
+    confidence_override: Optional[float] = Field(
+        default=None, ge=0.05, le=1.0, description="Updated confidence override"
+    )
+
+
+class CameraResponse(BaseModel):
+    """Camera descriptor with credentials safely masked and live health metrics attached."""
+
+    id: str = Field(description="Unique camera identifier")
+    name: str = Field(description="Camera title")
+    source_type: str = Field(description="Source classification: 'file', 'webcam', 'rtsp', or 'http'")
+    source_url: str = Field(
+        description="Masked connection string (passwords & usernames are strictly redacted)"
+    )
+    location_lat: Optional[float] = Field(default=None, description="GPS latitude")
+    location_lng: Optional[float] = Field(default=None, description="GPS longitude")
+    enabled: bool = Field(description="Whether camera is currently active")
+    confidence_override: Optional[float] = Field(default=None, description="Custom confidence override")
+    created_at: float = Field(description="Creation epoch timestamp")
+    updated_at: float = Field(description="Last update epoch timestamp")
+    health: Optional[CameraHealth] = Field(default=None, description="Real-time stream health telemetry")
+
+
+

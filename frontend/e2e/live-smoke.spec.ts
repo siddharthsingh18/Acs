@@ -40,4 +40,25 @@ test.describe('Live Surveillance Smoke Test', () => {
     await expect(drawer).toBeVisible()
     await expect(drawer).toContainText('INC-DEMO-2026-001')
   })
+
+  test('switches to Live Camera Wall and interacts with 1x1, 2x2, 3x3 layout', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('acs_demo_mode', 'true')
+      localStorage.setItem('acs_theme', 'dark')
+    })
+
+    await page.goto('/live')
+    const wallButton = page.getByRole('button', { name: /Live Camera Wall/i })
+    await expect(wallButton).toBeVisible()
+    await wallButton.click()
+
+    // Assert grid buttons are visible
+    await expect(page.getByRole('button', { name: /1x1/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /2x2/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /3x3/i })).toBeVisible()
+
+    // Assert Add Camera button is visible
+    const addCamBtn = page.getByRole('button', { name: /Add Camera/i })
+    await expect(addCamBtn).toBeVisible()
+  })
 })

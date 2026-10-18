@@ -24,3 +24,19 @@ class Incident(SQLModel, table=True):
     dispatch_text: Optional[str] = None  # Rendered markdown text summary
     created_at: float = Field(index=True)
     duration: float = Field(default=0.0)
+
+
+class Camera(SQLModel, table=True):
+    """Represents a configured CCTV camera or video feed."""
+
+    id: str = Field(primary_key=True, index=True)
+    name: str = Field(index=True)
+    source_type: str = Field(default="file")  # "file", "webcam", "rtsp", "http"
+    source_url_encrypted: str = Field(description="Fernet-encrypted connection string/URL")
+    location_lat: Optional[float] = None
+    location_lng: Optional[float] = None
+    enabled: bool = Field(default=True, index=True)
+    confidence_override: Optional[float] = None
+    created_at: float = Field(index=True)
+    updated_at: float
+

@@ -232,6 +232,14 @@ uvicorn backend.app.main:app --reload --port 8000
   - `POST http://localhost:8000/api/incidents/{id}/dispatch-report`: Generates and caches Gemini multimodal dispatch assessment in SQLite.
   - `GET http://localhost:8000/api/incidents/{id}/pdf`: Downloads vector PDF accident report.
   - `GET http://localhost:8000/api/incidents/export.csv`: Exports master incident records as CSV.
+- **Live CCTV Camera Feeds & Camera Wall (RTSP, Webcam, HTTP, Video)**:
+  - `GET http://localhost:8000/api/cameras`: List registered cameras with masked credentials and real-time health (FPS, connection status, last frame age, dropped frames, active incidents).
+  - `POST http://localhost:8000/api/cameras`: Register camera feed (credentials automatically encrypted at rest).
+  - `GET http://localhost:8000/api/cameras/{id}`: Detailed camera configuration and live health telemetry.
+  - `PUT http://localhost:8000/api/cameras/{id}`: Update configuration, confidence threshold override, or toggle state.
+  - `DELETE http://localhost:8000/api/cameras/{id}`: Unregister camera and terminate dedicated worker.
+  - `GET http://localhost:8000/api/cameras/{id}/health`: Direct health indicator endpoint.
+  - `GET ws://localhost:8000/api/cameras/{id}/stream`: WebSocket streaming live annotated JPEG frames, incidents, and health heartbeats.
 - **Emergency Alerts & System KPIs**:
   - `POST http://localhost:8000/api/alerts/test`: Verify Telegram and SMTP notification channels.
   - `GET / PUT http://localhost:8000/api/alerts/settings`: Inspect or update alert toggles and simulation mode.

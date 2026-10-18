@@ -8,11 +8,22 @@ import { LiveIncidentFeed } from '@/components/live/LiveIncidentFeed'
 import { IncidentDrawer } from '@/components/incidents/IncidentDrawer'
 import { TacticalToast } from '@/components/live/TacticalToast'
 import { RunSummaryCards } from '@/components/live/RunSummaryCards'
+import { CameraWall } from '@/components/live/CameraWall'
 import { useJobStream } from '@/hooks/useJobStream'
 import { api, type StreamIncidentMessage } from '@/api/client'
+import { LayoutGrid, PlaySquare } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export const LivePage: React.FC = () => {
   const { t } = useTranslation()
+
+  // View Mode: 'wall' (multi-camera live grid) or 'analyzer' (single file batch inspector)
+  const [viewMode, setViewMode] = useState<'wall' | 'analyzer'>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('acs_demo_mode') === 'true') {
+      return 'analyzer'
+    }
+    return 'wall'
+  })
 
   // Control Form States
   const [sourceType, setSourceType] = useState<'sample' | 'upload'>('sample')
@@ -135,53 +146,89 @@ export const LivePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Top Control Bar */}
-      <TopControlBar
-        sourceType={sourceType}
-        setSourceType={setSourceType}
-        selectedFile={selectedFile}
-        setSelectedFile={setSelectedFile}
-        selectedModel={selectedModel}
-        setSelectedModel={setSelectedModel}
-        confidence={confidence}
-        setConfidence={setConfidence}
-        useInjuryModel={useInjuryModel}
-        setUseInjuryModel={setUseInjuryModel}
-        isStreaming={status === 'streaming'}
-        isStarting={status === 'starting'}
-        onStart={handleStart}
-        onCancel={cancelJob}
-        isMuted={isMuted}
-        setIsMuted={setIsMuted}
-        configData={configData}
-      />
-
-      {/* Main Analysis Grid (Left: Large Video, Right: Live Incident Feed) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column (8 cols): Video Panel + End-of-Run Summary */}
-        <div className="lg:col-span-8 space-y-6">
-          <VideoPanel
-            imageRef={imageRef}
-            status={status}
-            progress={progress}
-            isIncidentActive={isIncidentActive}
-            error={error}
-          />
-
-          {/* End-of-Run Summary Cards */}
-          {summary && (
-            <RunSummaryCards summary={summary} onReset={reset} />
+      {/* View Switcher Tabs: Live Camera Wall vs File Analyzer */}
+      <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-card/60 backdrop-blur-md shadow-sm w-fit">
+        <button
+          onClick={() => setViewMode('wall')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+            viewMode === 'wall'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           )}
-        </div>
-
-        {/* Right Column (4 cols): Live Incident Feed */}
-        <div className="lg:col-span-4">
-          <LiveIncidentFeed
-            incidents={incidents}
-            onSelectIncident={(inc) => setDrawerIncident(inc)}
-          />
-        </div>
+        >
+          <LayoutGrid className="h-4 w-4" />
+          <span>Live Camera Wall</span>
+        </button>
+        <button
+          onClick={() => setViewMode('analyzer')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+            viewMode === 'analyzer'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <PlaySquare className="h-4 w-4" />
+          <span>File Video Analyzer</span>
+        </button>
       </div>
+
+      {viewMode === 'wall' ? (
+        /* Multi-Camera Live Wall Grid */
+        <CameraWall />
+      ) : (
+        /* Single Video Stream Analyzer */
+        <>
+          {/* Top Control Bar */}
+          <TopControlBar
+            sourceType={sourceType}
+            setSourceType={setSourceType}
+            selectedFile={selectedFile}
+            setSelectedFile={setSelectedFile}
+            selectedModel={selectedModel}
+            setSelectedModel={setSelectedModel}
+            confidence={confidence}
+            setConfidence={setConfidence}
+            useInjuryModel={useInjuryModel}
+            setUseInjuryModel={setUseInjuryModel}
+            isStreaming={status === 'streaming'}
+            isStarting={status === 'starting'}
+            onStart={handleStart}
+            onCancel={cancelJob}
+            isMuted={isMuted}
+            setIsMuted={setIsMuted}
+            configData={configData}
+          />
+
+          {/* Main Analysis Grid (Left: Large Video, Right: Live Incident Feed) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column (8 cols): Video Panel + End-of-Run Summary */}
+            <div className="lg:col-span-8 space-y-6">
+              <VideoPanel
+                imageRef={imageRef}
+                status={status}
+                progress={progress}
+                isIncidentActive={isIncidentActive}
+                error={error}
+              />
+
+              {/* End-of-Run Summary Cards */}
+              {summary && (
+                <RunSummaryCards summary={summary} onReset={reset} />
+              )}
+            </div>
+
+            {/* Right Column (4 cols): Live Incident Feed */}
+            <div className="lg:col-span-4">
+              <LiveIncidentFeed
+                incidents={incidents}
+                onSelectIncident={(inc) => setDrawerIncident(inc)}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Floating Tactical Siren Toast on Incident */}
       <TacticalToast
