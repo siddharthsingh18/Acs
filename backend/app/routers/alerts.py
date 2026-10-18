@@ -173,7 +173,7 @@ def acknowledge_alert_by_token(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Invalid or expired acknowledgment link.",
             )
-        html_not_found = f"""<!DOCTYPE html>
+        html_not_found = """<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>ACS Alert - Not Found</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
 <body style="background:#0f172a;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">

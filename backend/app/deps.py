@@ -4,7 +4,7 @@ FastAPI dependency providers for configuration, authentication, role-based acces
 and client telemetry.
 """
 import os
-from typing import Callable, Generator, List, Optional
+from typing import Callable, List, Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

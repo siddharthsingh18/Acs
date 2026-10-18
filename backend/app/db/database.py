@@ -107,7 +107,7 @@ def init_db() -> None:
                 ]
                 session.add_all(users)
                 session.commit()
-    except Exception as e:
+    except Exception:
         # Avoid crashing initialization if table locked or in test runner
         pass
 

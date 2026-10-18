@@ -16,6 +16,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { api, ReviewQueueItem, ReviewStatsResponse } from '@/api/client'
+import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
 const CANONICAL_CLASSES = [
@@ -64,6 +65,10 @@ export const ReviewQueuePage: React.FC = () => {
     queryFn: () => api.getReviewStats(),
   })
 
+  const { user } = useAuthStore()
+  const isOperatorOrAdmin = !user || user.role === 'operator' || user.role === 'admin'
+  const reviewerName = user?.full_name || user?.username || 'Dispatch Operator'
+
   const items = useMemo(() => queueData?.items || [], [queueData])
   const currentItem = items[currentIndex] as ReviewQueueItem | undefined
   const remainingCount = Math.max(0, items.length - currentIndex)
@@ -82,7 +87,7 @@ export const ReviewQueuePage: React.FC = () => {
       return api.submitReviewDecision(incidentId, {
         decision,
         corrected_class: correctedClass || null,
-        reviewer_name: 'Dispatch Operator',
+        reviewer_name: reviewerName,
       })
     },
     onSuccess: (_, variables) => {
@@ -119,24 +124,24 @@ export const ReviewQueuePage: React.FC = () => {
 
   // Decision Handlers
   const handleApproveAccident = useCallback(() => {
-    if (!currentItem || decisionMutation.isPending) return
+    if (!currentItem || decisionMutation.isPending || !isOperatorOrAdmin) return
     decisionMutation.mutate({
       incidentId: currentItem.incident_id,
       decision: 'accident',
     })
-  }, [currentItem, decisionMutation])
+  }, [currentItem, decisionMutation, isOperatorOrAdmin])
 
   const handleRejectNotAccident = useCallback(() => {
-    if (!currentItem || decisionMutation.isPending) return
+    if (!currentItem || decisionMutation.isPending || !isOperatorOrAdmin) return
     decisionMutation.mutate({
       incidentId: currentItem.incident_id,
       decision: 'not_accident',
     })
-  }, [currentItem, decisionMutation])
+  }, [currentItem, decisionMutation, isOperatorOrAdmin])
 
   const handleConfirmWrongClass = useCallback(
     (chosenClass: string) => {
-      if (!currentItem || decisionMutation.isPending) return
+      if (!currentItem || decisionMutation.isPending || !isOperatorOrAdmin) return
       decisionMutation.mutate({
         incidentId: currentItem.incident_id,
         decision: 'wrong_class',
@@ -145,7 +150,7 @@ export const ReviewQueuePage: React.FC = () => {
       setIsWrongClassModalOpen(false)
       setSelectedWrongClass(null)
     },
-    [currentItem, decisionMutation]
+    [currentItem, decisionMutation, isOperatorOrAdmin]
   )
 
   const handleSkip = useCallback(() => {
@@ -563,7 +568,13 @@ export const ReviewQueuePage: React.FC = () => {
                 </div>
 
                 {/* Primary Action Buttons */}
-                <div className="flex items-center gap-2.5 w-full sm:w-auto ml-auto">
+                <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto ml-auto">
+                  {!isOperatorOrAdmin && (
+                    <span className="text-xs font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-lg">
+                      Read-only role (Operator required)
+                    </span>
+                  )}
+
                   {/* Skip */}
                   <button
                     onClick={handleSkip}
@@ -577,8 +588,8 @@ export const ReviewQueuePage: React.FC = () => {
                   {/* Wrong Class */}
                   <button
                     onClick={() => setIsWrongClassModalOpen(true)}
-                    disabled={decisionMutation.isPending}
-                    className="px-4 py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-2 transition-colors shadow-sm"
+                    disabled={decisionMutation.isPending || !isOperatorOrAdmin}
+                    className="px-4 py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
                   >
                     <AlertTriangle className="h-4 w-4" />
                     {t('review_queue.wrong_class', 'Wrong Class')}
@@ -590,8 +601,8 @@ export const ReviewQueuePage: React.FC = () => {
                   {/* Not Accident (Hard Negative) */}
                   <button
                     onClick={handleRejectNotAccident}
-                    disabled={decisionMutation.isPending}
-                    className="px-4 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold flex items-center gap-2 transition-colors shadow-sm"
+                    disabled={decisionMutation.isPending || !isOperatorOrAdmin}
+                    className="px-4 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
                   >
                     <XCircle className="h-4 w-4" />
                     {t('review_queue.not_accident', 'Not Accident')}
@@ -604,8 +615,8 @@ export const ReviewQueuePage: React.FC = () => {
                   {/* Accident (Approve Candidate) */}
                   <button
                     onClick={handleApproveAccident}
-                    disabled={decisionMutation.isPending}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-[0_0_16px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-[0.98]"
+                    disabled={decisionMutation.isPending || !isOperatorOrAdmin}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-[0_0_16px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     {t('review_queue.accident', 'Accident')}

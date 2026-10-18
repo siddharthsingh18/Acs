@@ -21,7 +21,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSo
 from sqlmodel import Session, select
 
 from backend.app.db.database import get_session
-from backend.app.db.models import Camera
+from backend.app.db.models import Camera, User
+from backend.app.deps import extract_client_ip, require_admin, require_viewer
+from backend.app.services.audit_service import log_audit_event
 from backend.app.schemas import (
     CameraCreateRequest,
     CameraHealth,
@@ -68,9 +70,6 @@ def _to_camera_response(cam: Camera) -> CameraResponse:
     )
 
 
-from backend.app.db.models import Camera, User
-from backend.app.deps import extract_client_ip, require_admin, require_viewer
-from backend.app.services.audit_service import log_audit_event
 
 
 @router.get("", response_model=List[CameraResponse])
@@ -252,7 +251,11 @@ def delete_camera(
 
 
 @router.get("/{camera_id}/health", response_model=CameraHealth)
-def get_camera_health(camera_id: str, session: Session = Depends(get_session)) -> CameraHealth:
+def get_camera_health(
+    camera_id: str,
+    session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
+) -> CameraHealth:
     """Returns direct health indicators (connected, fps, last frame age, dropped frames)."""
     cam = session.get(Camera, camera_id)
     if not cam:

@@ -3,6 +3,7 @@ backend.app.routers.auth
 Authentication endpoints: login, token refresh, current user profile, and logout.
 Features Argon2 verification, brute-force rate limiting, JWT generation, and audit logging.
 """
+import os
 import time
 from typing import Optional
 
@@ -92,12 +93,17 @@ def login(
     refresh_token = create_refresh_token(subject=user.id)
 
     # 5. Set HTTP-only cookies
+    is_secure = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or os.getenv("ENVIRONMENT", "").lower() in ("production", "prod")
+    )
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         samesite="lax",
-        secure=False,  # Set to True in HTTPS production
+        secure=is_secure,
         max_age=1800,
     )
     response.set_cookie(
@@ -105,7 +111,7 @@ def login(
         value=refresh_token,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=is_secure,
         max_age=7 * 86400,
     )
 
@@ -189,12 +195,17 @@ def refresh_token(
     new_access_token = create_access_token(token_claims)
     new_refresh_token = create_refresh_token(subject=user.id)
 
+    is_secure = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or os.getenv("ENVIRONMENT", "").lower() in ("production", "prod")
+    )
     response.set_cookie(
         key="access_token",
         value=new_access_token,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=is_secure,
         max_age=1800,
     )
     response.set_cookie(
@@ -202,7 +213,7 @@ def refresh_token(
         value=new_refresh_token,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=is_secure,
         max_age=7 * 86400,
     )
 

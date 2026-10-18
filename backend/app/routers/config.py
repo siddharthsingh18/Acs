@@ -5,8 +5,8 @@ System configuration, retention settings, and capabilities inspection endpoints.
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session
 
-from acs.clip_recorder import cleanup_expired_clips, get_clip_storage_stats
-from acs.config import AppConfig, config
+from acs.clip_recorder import get_clip_storage_stats
+from acs.config import AppConfig
 from backend.app.db.database import get_session
 from backend.app.db.models import User
 from backend.app.deps import extract_client_ip, get_config, require_admin, require_viewer

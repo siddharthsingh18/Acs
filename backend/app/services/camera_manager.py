@@ -14,15 +14,15 @@ Key Architecture Requirements:
 """
 import asyncio
 import base64
+import json
 import logging
 import os
 import threading
 import time
 from collections import deque
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, Optional, Set
 
 import cv2
-import numpy as np
 from sqlmodel import Session, select
 
 from acs.config import config
@@ -31,7 +31,6 @@ from backend.app.db.database import engine
 from backend.app.db.models import Camera, Incident
 from backend.app.schemas import CameraHealth
 from backend.app.services.camera_source import (
-    CameraSource,
     create_camera_source,
     decrypt_credentials,
     encrypt_credentials,

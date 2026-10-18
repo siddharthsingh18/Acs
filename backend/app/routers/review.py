@@ -3,13 +3,12 @@ backend.app.routers.review
 Fast swipe-style review queue API for triage of uncertain detections and feedback collection.
 """
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlmodel import Session
 
 from backend.app.db.database import get_session
-from backend.app.db.models import Incident, User
+from backend.app.db.models import User
 from backend.app.deps import extract_client_ip, require_operator, require_viewer
 from backend.app.services.audit_service import log_audit_event
 from backend.app.schemas import (

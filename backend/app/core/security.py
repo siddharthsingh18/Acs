@@ -13,7 +13,6 @@ from typing import Any, Dict, Optional, Tuple
 
 import jwt
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
 
 # -----------------------------------------------------------------------------
 # Argon2 Password Hashing

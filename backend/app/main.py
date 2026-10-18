@@ -70,6 +70,22 @@ def validate_startup_secrets() -> None:
         if fernet_key and is_placeholder_secret(fernet_key):
             errors.append("FERNET_KEY matches an insecure placeholder pattern.")
 
+        initial_admin_pw = os.getenv("INITIAL_ADMIN_PASSWORD")
+        if initial_admin_pw and is_placeholder_secret(initial_admin_pw):
+            errors.append("INITIAL_ADMIN_PASSWORD matches an insecure placeholder pattern.")
+
+        vault_secret = os.getenv("SECRET_KEY")
+        if vault_secret and is_placeholder_secret(vault_secret):
+            errors.append("SECRET_KEY matches an insecure placeholder pattern.")
+
+        if os.getenv("ALERTS_ENABLED", "true").lower() in ("true", "1", "yes") and os.getenv("ALERTS_DRY_RUN", "false").lower() not in ("true", "1", "yes"):
+            tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
+            if tg_token and is_placeholder_secret(tg_token):
+                errors.append("TELEGRAM_BOT_TOKEN matches an insecure placeholder pattern.")
+            smtp_pw = os.getenv("SMTP_PASSWORD")
+            if smtp_pw and is_placeholder_secret(smtp_pw):
+                errors.append("SMTP_PASSWORD matches an insecure placeholder pattern.")
+
     if errors:
         error_msg = "FATAL: Startup secret validation failed:\n  " + "\n  ".join(errors)
         logger.error(error_msg)
@@ -143,20 +159,23 @@ app = FastAPI(
 # -----------------------------------------------------------------------------
 # Restrictive CORS Middleware
 # -----------------------------------------------------------------------------
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
-# Allow custom CORS origins via environment variable
+is_prod = os.getenv("ENVIRONMENT", "").lower() in ("production", "prod")
 extra_origins = os.getenv("CORS_ORIGINS")
-if extra_origins:
-    for o in extra_origins.split(","):
-        stripped = o.strip()
-        if stripped and stripped not in origins:
-            origins.append(stripped)
+
+if is_prod and extra_origins:
+    origins = [o.strip() for o in extra_origins.split(",") if o.strip()]
+else:
+    origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    if extra_origins:
+        for o in extra_origins.split(","):
+            stripped = o.strip()
+            if stripped and stripped not in origins:
+                origins.append(stripped)
 
 app.add_middleware(
     CORSMiddleware,
@@ -184,6 +203,8 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com; "

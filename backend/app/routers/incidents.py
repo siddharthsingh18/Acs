@@ -18,7 +18,8 @@ from acs.config import config
 from acs.reporter import generate_report_pdf
 from backend.app.db.database import get_session
 from backend.app.db.models import AlertDelivery, Incident, User
-from backend.app.deps import extract_client_ip, require_admin, require_operator
+from backend.app.deps import extract_client_ip, require_admin, require_operator, require_viewer
+from backend.app.services.audit_service import log_audit_event
 from backend.app.schemas import (
     AlertDeliveryResponse,
     IncidentAcknowledgeRequest,
@@ -132,6 +133,7 @@ def list_incidents_endpoint(
     sort_by: str = Query("created_at", description="Field to sort by ('created_at', 'start_timestamp', 'max_confidence', 'class_name')"),
     order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order ('asc' or 'desc')"),
     session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
 ) -> IncidentListResponse:
     """Returns paginated, filtered, and sorted incidents list."""
     items, total = get_incidents(
@@ -160,6 +162,7 @@ def list_incidents_endpoint(
 @router.get("/export.csv")
 def export_incidents_csv_endpoint(
     session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
 ) -> Response:
     """Exports all incidents as a downloadable CSV file."""
     csv_content = export_incidents_csv(session=session)
@@ -174,6 +177,7 @@ def export_incidents_csv_endpoint(
 def get_incident_endpoint(
     incident_id: str,
     session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
 ) -> IncidentResponse:
     """Retrieves full details for a single incident by ID."""
     inc = get_incident_by_id(session, incident_id)
@@ -190,6 +194,7 @@ def generate_dispatch_report_endpoint(
     incident_id: str,
     lang: str = Query("en", description="Target report language ('en' or 'ar')"),
     session: Session = Depends(get_session),
+    operator_user: User = Depends(require_operator),
 ) -> dict:
     """Generates structured Gemini dispatch report and caches it in SQLite."""
     inc = get_incident_by_id(session, incident_id)
@@ -213,6 +218,7 @@ def get_incident_pdf_endpoint(
     incident_id: str,
     lang: str = Query("en", description="Language for generated PDF ('en' or 'ar')"),
     session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
 ) -> Response:
     """Generates and returns an official PDF incident report."""
     inc = get_incident_by_id(session, incident_id)
@@ -240,11 +246,6 @@ def get_incident_pdf_endpoint(
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
-
-
-from backend.app.db.models import Incident, User
-from backend.app.deps import extract_client_ip, require_admin, require_operator, require_viewer
-from backend.app.services.audit_service import log_audit_event
 
 
 @router.post("/{incident_id}/status", response_model=IncidentResponse)
@@ -357,6 +358,7 @@ def acknowledge_incident_endpoint(
 def get_incident_alert_deliveries_endpoint(
     incident_id: str,
     session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
 ) -> List[AlertDeliveryResponse]:
     """Retrieves delivery status records per notification channel for an incident."""
     deliveries = session.exec(
@@ -543,6 +545,7 @@ def get_incident_clip_endpoint(
     request: Request,
     annotated: bool = Query(False, description="Whether to stream the annotated clip with bounding boxes burned in"),
     session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
 ) -> Response:
     """Streams the raw or annotated H.264 MP4 clip with full HTTP Range request support."""
     inc = get_incident_by_id(session, incident_id)

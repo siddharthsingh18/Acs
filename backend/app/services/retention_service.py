@@ -8,10 +8,9 @@ import io
 import json
 import logging
 import os
-import shutil
 import time
 import zipfile
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from sqlmodel import Session, select
 

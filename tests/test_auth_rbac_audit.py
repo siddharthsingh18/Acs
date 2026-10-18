@@ -424,3 +424,102 @@ def test_startup_secret_check_fails_loudly_in_production(monkeypatch):
     with pytest.raises(RuntimeError) as exc_info:
         validate_startup_secrets()
     assert "FATAL: Startup secret validation failed" in str(exc_info.value)
+
+
+# -----------------------------------------------------------------------------
+# 8. Security Headers & CORS Tests
+# -----------------------------------------------------------------------------
+def test_security_headers_and_cors(test_client):
+    res = test_client.get("/api/health")
+    assert res.status_code == 200
+    headers = res.headers
+
+    assert headers.get("X-Content-Type-Options") == "nosniff"
+    assert headers.get("X-Frame-Options") == "DENY"
+    assert headers.get("X-XSS-Protection") == "1; mode=block"
+    assert headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+    assert headers.get("Permissions-Policy") == "camera=(), microphone=(), geolocation=()"
+    assert headers.get("X-Permitted-Cross-Domain-Policies") == "none"
+    assert "default-src 'self'" in headers.get("Content-Security-Policy", "")
+
+
+def test_session_cookie_auth(test_client, auth_db_session):
+    import uuid
+    uid = uuid.uuid4().hex[:8]
+    user = User(
+        id=f"usr_cookie_{uid}",
+        username=f"cookie_user_{uid}",
+        hashed_password=hash_password("Pass123456!"),
+        full_name="Cookie User",
+        role="operator",
+        is_active=True,
+        created_at=time.time(),
+    )
+    auth_db_session.add(user)
+    auth_db_session.commit()
+
+    # Login to receive cookies
+    login_res = test_client.post(
+        "/api/auth/login",
+        json={"username": user.username, "password": "Pass123456!"},
+        headers={"X-Forwarded-Proto": "https"},
+    )
+    assert login_res.status_code == 200
+    assert "access_token" in login_res.cookies
+    assert "refresh_token" in login_res.cookies
+
+    # Test that requests using cookie without Authorization header authenticate successfully
+    me_res = test_client.get("/api/auth/me", cookies={"access_token": login_res.cookies["access_token"]})
+    assert me_res.status_code == 200
+    assert me_res.json()["username"] == user.username
+
+
+# -----------------------------------------------------------------------------
+# 9. Extended RBAC Matrix Tests
+# -----------------------------------------------------------------------------
+def test_extended_rbac_enforcement(test_client, auth_db_session):
+    import uuid
+    uid = uuid.uuid4().hex[:8]
+    viewer = User(
+        id=f"usr_v_{uid}",
+        username=f"viewer_ext_{uid}",
+        hashed_password=hash_password("Pass123!"),
+        full_name="Viewer Ext",
+        role="viewer",
+        is_active=True,
+        created_at=time.time(),
+    )
+    operator = User(
+        id=f"usr_o_{uid}",
+        username=f"operator_ext_{uid}",
+        hashed_password=hash_password("Pass123!"),
+        full_name="Operator Ext",
+        role="operator",
+        is_active=True,
+        created_at=time.time(),
+    )
+    auth_db_session.add_all([viewer, operator])
+    auth_db_session.commit()
+
+    v_auth = _get_auth_header(viewer)
+    o_auth = _get_auth_header(operator)
+
+    # Viewer cannot access operator review-queue decision -> 403
+    v_rev_fail = test_client.post(
+        "/api/review-queue/INC-DUMMY/decision",
+        json={"decision": "accident"},
+        headers=v_auth,
+    )
+    assert v_rev_fail.status_code == 403
+
+    # Operator cannot access admin user management -> 403
+    o_users_fail = test_client.get("/api/users", headers=o_auth)
+    assert o_users_fail.status_code == 403
+
+    # Operator cannot update alert settings -> 403
+    o_alerts_fail = test_client.put(
+        "/api/alerts/settings",
+        json={"enabled": True},
+        headers=o_auth,
+    )
+    assert o_alerts_fail.status_code == 403

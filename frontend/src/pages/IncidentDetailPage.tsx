@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -17,14 +17,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/api/client'
+import { useAuthStore } from '@/store/authStore'
 
 export const IncidentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const { t, i18n } = useTranslation()
   const isArabic = i18n.language === 'ar'
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
 
-  const [reviewerName, setReviewerName] = useState('Traffic Desk Officer')
+  const reviewerName = user?.full_name || user?.username || 'Traffic Desk Officer'
+  const isOperatorOrAdmin = user?.role === 'operator' || user?.role === 'admin'
 
   // Fetch Incident Details
   const { data: incident, isLoading, error } = useQuery({
@@ -330,22 +333,30 @@ export const IncidentDetailPage: React.FC = () => {
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                  Reviewing Officer Name / Badge:
+                <label className="text-xs font-semibold text-muted-foreground block mb-1.5 font-mono">
+                  Authenticated Reviewing Officer:
                 </label>
-                <input
-                  type="text"
-                  value={reviewerName}
-                  onChange={(e) => setReviewerName(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-md border border-border bg-background text-xs font-mono text-foreground focus:ring-1 focus:ring-primary outline-none"
-                />
+                <div className="flex items-center gap-2 p-2.5 rounded-lg border border-border bg-muted/30">
+                  <UserCheck className="h-4 w-4 text-primary shrink-0" />
+                  <span className="font-semibold text-xs text-foreground font-mono">{reviewerName}</span>
+                  {user?.role && (
+                    <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                      {user.role}
+                    </span>
+                  )}
+                  {!isOperatorOrAdmin && (
+                    <span className="text-[11px] text-amber-500 font-mono ms-auto">
+                      (Read-only role)
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-col gap-2 pt-2">
                 <Button
                   onClick={() => statusMutation.mutate('dispatched')}
-                  disabled={statusMutation.isPending}
-                  className="w-full gap-2 text-xs font-bold bg-[var(--status-alert)] hover:bg-[var(--status-alert)]/90 text-white shadow-sm"
+                  disabled={statusMutation.isPending || !isOperatorOrAdmin}
+                  className="w-full gap-2 text-xs font-bold bg-[var(--status-alert)] hover:bg-[var(--status-alert)]/90 text-white shadow-sm disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
                   {t('incidents.dispatch')}
@@ -355,8 +366,8 @@ export const IncidentDetailPage: React.FC = () => {
                   <Button
                     variant="outline"
                     onClick={() => statusMutation.mutate('approved')}
-                    disabled={statusMutation.isPending}
-                    className="gap-1.5 text-xs font-semibold border-border hover:border-[var(--status-ok)] text-[var(--status-ok)] hover:bg-[var(--status-ok)]/10"
+                    disabled={statusMutation.isPending || !isOperatorOrAdmin}
+                    className="gap-1.5 text-xs font-semibold border-border hover:border-[var(--status-ok)] text-[var(--status-ok)] hover:bg-[var(--status-ok)]/10 disabled:opacity-50"
                   >
                     <ShieldCheck className="h-3.5 w-3.5" />
                     {t('incidents.approve')}
@@ -365,8 +376,8 @@ export const IncidentDetailPage: React.FC = () => {
                   <Button
                     variant="outline"
                     onClick={() => statusMutation.mutate('rejected')}
-                    disabled={statusMutation.isPending}
-                    className="gap-1.5 text-xs font-semibold border-border hover:border-slate-500 text-muted-foreground hover:bg-muted"
+                    disabled={statusMutation.isPending || !isOperatorOrAdmin}
+                    className="gap-1.5 text-xs font-semibold border-border hover:border-slate-500 text-muted-foreground hover:bg-muted disabled:opacity-50"
                   >
                     <ShieldX className="h-3.5 w-3.5" />
                     {t('incidents.reject')}
