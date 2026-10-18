@@ -1,0 +1,71 @@
+# =============================================================================
+# Automated CCTV Accident Detection System (ACS)
+# Edge Deployment Profile: Small x86 Edge Box (Intel NUC / Elkhart Lake / Alder Lake)
+# =============================================================================
+# Optimized for Intel CPU / iGPU with OpenVINO and ONNX Runtime acceleration,
+# local 18s clip encoding, and resilient event uplink.
+# =============================================================================
+
+version: "3.8"
+
+services:
+  acs-edge-x86:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.edge
+    image: acs-edge:x86-latest
+    container_name: acs-edge-x86
+    restart: unless-stopped
+    network_mode: host
+
+    environment:
+      # Edge Operating Mode
+      - ACS_EDGE_MODE=true
+      - ACS_EDGE_NODE_ID=${EDGE_NODE_ID:-edge-x86-nuc-01}
+      - ACS_EDGE_API_KEY=${EDGE_API_KEY:-dev_edge_secret_key_change_in_prod}
+      - CENTRAL_SERVER_URL=${CENTRAL_SERVER_URL:-http://central-server:8000}
+
+      # Hardware Accelerator & Model Paths
+      - ACS_DEVICE=cpu
+      - INFERENCE_BACKEND=openvino
+      - MODEL_PATH=/app/models/best_openvino_model/best.xml
+      - ONNX_MODEL_PATH=/app/models/best_int8.onnx
+
+      # Local Stream & Detection Tuning
+      - BATCH_INFERENCE_ENABLED=true
+      - BATCH_MAX_SIZE=4
+      - BATCH_TIMEOUT_MS=12.0
+      - CONFIDENCE_THRESHOLD=0.55
+      - DEBOUNCE_FRAMES=4
+      - COOLDOWN_SECONDS=15.0
+
+      # Local Privacy Redaction
+      - PRIVACY_BLUR_ENABLED=true
+      - PRIVACY_PRESERVE_UNBLURRED_ORIGINAL=true
+      - PRIVACY_UNREDACTED_DIR=/app/data/unredacted
+
+      # Camera Sources (Comma-separated RTSP URLs or local devices)
+      - CAMERA_SOURCES=${CAMERA_SOURCES:-rtsp://192.168.1.101:554/live,rtsp://192.168.1.102:554/live}
+
+    volumes:
+      # Model weights (OpenVINO IR / ONNX INT8)
+      - ./models:/app/models:ro
+      # Local offline event buffer & media cache
+      - acs-edge-data:/app/data
+      # Hardware video capture devices
+      - /dev:/dev
+
+    devices:
+      # Intel QuickSync / VA-API video decode acceleration
+      - /dev/dri:/dev/dri
+
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  acs-edge-data:
+    driver: local

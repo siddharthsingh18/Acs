@@ -1,0 +1,81 @@
+# =============================================================================
+# Automated CCTV Accident Detection System (ACS)
+# Edge Deployment Profile: NVIDIA Jetson Orin / AGX / Xavier (ARM64)
+# =============================================================================
+# High-efficiency edge detection running TensorRT / CUDA with local privacy
+# blurring and resilient event/clip uplink to the central surveillance server.
+# =============================================================================
+
+version: "3.8"
+
+services:
+  acs-edge-jetson:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.edge
+    image: acs-edge:jetson-latest
+    container_name: acs-edge-jetson
+    restart: unless-stopped
+    runtime: nvidia
+    network_mode: host
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    environment:
+      # Edge Operating Mode
+      - ACS_EDGE_MODE=true
+      - ACS_EDGE_NODE_ID=${EDGE_NODE_ID:-edge-jetson-orin-01}
+      - ACS_EDGE_API_KEY=${EDGE_API_KEY:-dev_edge_secret_key_change_in_prod}
+      - CENTRAL_SERVER_URL=${CENTRAL_SERVER_URL:-http://central-server:8000}
+
+      # Hardware Accelerator & Model Paths
+      - ACS_DEVICE=cuda
+      - MODEL_PATH=/app/models/best.engine
+      - ONNX_MODEL_PATH=/app/models/best.onnx
+
+      # Local Stream & Detection Tuning
+      - BATCH_INFERENCE_ENABLED=true
+      - BATCH_MAX_SIZE=8
+      - BATCH_TIMEOUT_MS=12.0
+      - CONFIDENCE_THRESHOLD=0.55
+      - DEBOUNCE_FRAMES=4
+      - COOLDOWN_SECONDS=15.0
+
+      # Local Privacy Redaction
+      - PRIVACY_BLUR_ENABLED=true
+      - PRIVACY_PRESERVE_UNBLURRED_ORIGINAL=true
+      - PRIVACY_UNREDACTED_DIR=/app/data/unredacted
+
+      # Camera Sources (Comma-separated RTSP URLs or /dev/videoN devices)
+      - CAMERA_SOURCES=${CAMERA_SOURCES:-rtsp://192.168.1.50:554/live,rtsp://192.168.1.51:554/live}
+
+    volumes:
+      # Model weights (TensorRT engine / ONNX models)
+      - ./models:/app/models:ro
+      # Local offline event buffer & media cache
+      - acs-edge-data:/app/data
+      # Hardware video capture devices (USB webcams / CSI cameras)
+      - /dev:/dev
+
+    devices:
+      - /dev/nvhost-ctrl
+      - /dev/nvhost-ctrl-gpu
+      - /dev/nvmap
+
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  acs-edge-data:
+    driver: local

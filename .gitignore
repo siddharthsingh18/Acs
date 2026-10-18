@@ -10,7 +10,9 @@ __pycache__/
 # Application runtime outputs
 /report_images/
 /report_clips/
-/reports/
+/reports/*
+!/reports/HARDWARE_OPTIMIZATION.md
+!/reports/hardware_benchmark.json
 /runs/
 /temp/
 /media/

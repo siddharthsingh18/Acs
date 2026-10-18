@@ -28,6 +28,7 @@ from backend.app.routers import audit as audit_router
 from backend.app.routers import auth as auth_router
 from backend.app.routers import cameras as cameras_router
 from backend.app.routers import config as config_router
+from backend.app.routers import edge as edge_router
 from backend.app.routers import health as health_router
 from backend.app.routers import incidents as incidents_router
 from backend.app.routers import jobs as jobs_router
@@ -283,6 +284,7 @@ app.include_router(alerts_router.router)
 app.include_router(stats_router.router)
 app.include_router(cameras_router.router)
 app.include_router(review_router.router)
+app.include_router(edge_router.router)
 
 
 # -----------------------------------------------------------------------------

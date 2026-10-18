@@ -1,0 +1,45 @@
+# Multi-stage edge build for ACS lightweight edge agent
+FROM python:3.11-slim as base
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Install runtime system libraries (FFmpeg, OpenCV dependencies, LibGL)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install lightweight edge dependencies
+RUN pip install --no-cache-dir \
+    torch --index-url https://download.pytorch.org/whl/cpu \
+    ultralytics \
+    onnx \
+    onnxruntime \
+    openvino \
+    opencv-python-headless \
+    numpy \
+    requests \
+    sqlmodel \
+    psutil \
+    python-dotenv
+
+# Copy application code
+COPY acs/ /app/acs/
+COPY edge/ /app/edge/
+COPY best.pt /app/models/best.pt
+COPY best.onnx /app/models/best.onnx
+COPY best_int8.onnx /app/models/best_int8.onnx
+COPY best_openvino_model/ /app/models/best_openvino_model/
+
+ENV PYTHONPATH="/app"
+
+EXPOSE 8080
+
+CMD ["python3", "-m", "edge.edge_client"]

@@ -1,0 +1,33 @@
+description: Ultralytics YOLO11n model trained on datasets/Real-Time-Accident-Detection-1/data.yaml
+author: Ultralytics
+date: '2026-10-19T04:06:53.879668+05:30'
+version: 8.4.173
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+head: Detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: bike
+  1: bike_bike_accident
+  2: bike_object_accident
+  3: bike_person_accident
+  4: car
+  5: car_bike_accident
+  6: car_car_accident
+  7: car_object_accident
+  8: car_person_accident
+  9: person
+args:
+  data: null
+  batch: 1
+  fraction: 1.0
+  quantize: 16
+  nms: null
+  dynamic: false
+channels: 3
+end2end: false
