@@ -4,12 +4,13 @@ Provides model loading, ByteTrack tracking inference, structured detections,
 and the AccidentEventManager state machine for incident lifecycle tracking.
 No Streamlit dependencies are included to ensure testability.
 """
+from collections import deque
 from dataclasses import dataclass, field
 import datetime
 import logging
 import os
 import time
-from typing import List, Optional, Set, Tuple
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -56,6 +57,15 @@ class AccidentIncident:
     end_time: float
     keyframe: Optional[np.ndarray] = None
     last_accident_time: Optional[float] = None
+    verification_status: str = "unverified"
+    vlm_confidence: Optional[float] = None
+    vlm_reason: Optional[str] = None
+    vlm_severity: Optional[str] = None
+    vehicles_involved: Optional[int] = None
+    physics_passed: Optional[bool] = None
+    verification_frames: List[np.ndarray] = field(default_factory=list)
+    verification_frame_paths: List[str] = field(default_factory=list)
+    detection_history: List[Any] = field(default_factory=list)
 
 
 def load_model(weights_path: str) -> YOLO:
@@ -406,6 +416,8 @@ class AccidentEventManager:
         reports_dir: Optional[str] = None,
         csv_filename: str = "incidents.csv",
         auto_save: bool = True,
+        auto_verify: bool = False,
+        save_verification_frames: bool = False,
     ):
         """Initializes the event manager with timing and storage parameters.
 
@@ -420,6 +432,8 @@ class AccidentEventManager:
             reports_dir: Directory to append the incidents CSV log.
             csv_filename: File name for the master incidents CSV.
             auto_save: Whether to automatically write keyframe and CSV row on incident end.
+            auto_verify: Whether to automatically run VLM and physics verification on close.
+            save_verification_frames: Whether to save multi-frame verification images to output_dir.
         """
         self.consecutive_frames_threshold = (
             consecutive_frames_threshold
@@ -451,6 +465,8 @@ class AccidentEventManager:
         self.reports_dir = reports_dir or config.reports_dir
         self.csv_filename = csv_filename
         self.auto_save = auto_save
+        self.auto_verify = auto_verify
+        self.save_verification_frames = save_verification_frames
 
         # Internal state
         self.consecutive_count: int = 0
@@ -467,6 +483,11 @@ class AccidentEventManager:
         self.last_accident_time: Optional[float] = None
         self.last_incident_end_time: Optional[float] = None
 
+        # Frame buffer and active history for verification and physics pre-check
+        self._frame_buffer: Deque[Tuple[float, np.ndarray, DetectionResult]] = deque(maxlen=30)
+        self._active_incident_history: List[Tuple[float, np.ndarray, DetectionResult]] = []
+        self._active_peak_idx: int = 0
+
         # Incident history
         self.incidents: List[AccidentIncident] = []
 
@@ -475,6 +496,23 @@ class AccidentEventManager:
         return datetime.datetime.fromtimestamp(
             ts, tz=datetime.timezone.utc
         ).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+    def get_verification_frames(self, num_frames: int = 3) -> List[np.ndarray]:
+        """Collects 3 to 5 chronological frames (before impact, at peak, and after) for active incident."""
+        frames: List[np.ndarray] = []
+        if self._active_incident_history:
+            start_t = self.current_start_time if self.current_start_time is not None else 0.0
+            pre_candidates = [item[1] for item in self._frame_buffer if item[0] < start_t and item[1] is not None]
+            frames.append(pre_candidates[-1] if pre_candidates else self._active_incident_history[0][1])
+
+            peak_idx = min(self._active_peak_idx, len(self._active_incident_history) - 1)
+            peak_f = self.current_keyframe if self.current_keyframe is not None else self._active_incident_history[peak_idx][1]
+            frames.append(peak_f)
+
+            frames.append(self._active_incident_history[-1][1])
+        elif self.current_keyframe is not None:
+            frames = [self.current_keyframe, self.current_keyframe, self.current_keyframe]
+        return frames
 
     def update(
         self,
@@ -527,6 +565,9 @@ class AccidentEventManager:
         else:
             frame_copy = np.zeros((480, 640, 3), dtype=np.uint8)
 
+        # Record to rolling frame buffer
+        self._frame_buffer.append((current_time, frame_copy, detection_result))
+
         # Check cooldown status
         in_cooldown = (
             self.last_incident_end_time is not None
@@ -536,6 +577,7 @@ class AccidentEventManager:
         completed_incident: Optional[AccidentIncident] = None
 
         if self.is_incident_active:
+            self._active_incident_history.append((current_time, frame_copy, detection_result))
             if has_accident:
                 self.last_accident_time = current_time
                 best_box = max(accident_boxes, key=lambda b: b.confidence)
@@ -543,6 +585,7 @@ class AccidentEventManager:
                     self.current_max_confidence = best_box.confidence
                     self.current_class_name = best_box.class_name
                     self.current_keyframe = frame_copy
+                    self._active_peak_idx = len(self._active_incident_history) - 1
             else:
                 # Check for incident timeout (M seconds without accident detections)
                 if (
@@ -554,11 +597,13 @@ class AccidentEventManager:
         else:
             if in_cooldown:
                 self.consecutive_count = 0
+                self._active_incident_history.clear()
             else:
                 if has_accident:
                     self.consecutive_count += 1
                     best_box = max(accident_boxes, key=lambda b: b.confidence)
                     self.last_accident_time = current_time
+                    self._active_incident_history.append((current_time, frame_copy, detection_result))
 
                     # Initialize incident buffer on first consecutive detection
                     if self.consecutive_count == 1:
@@ -567,11 +612,13 @@ class AccidentEventManager:
                         self.current_max_confidence = best_box.confidence
                         self.current_class_name = best_box.class_name
                         self.current_keyframe = frame_copy
+                        self._active_peak_idx = 0
                     else:
                         if best_box.confidence > self.current_max_confidence:
                             self.current_max_confidence = best_box.confidence
                             self.current_class_name = best_box.class_name
                             self.current_keyframe = frame_copy
+                            self._active_peak_idx = len(self._active_incident_history) - 1
 
                     # Trigger incident start upon reaching consecutive frames threshold (N)
                     if self.consecutive_count >= self.consecutive_frames_threshold:
@@ -588,6 +635,7 @@ class AccidentEventManager:
                     self.current_max_confidence = 0.0
                     self.current_keyframe = None
                     self.last_accident_time = None
+                    self._active_incident_history.clear()
 
         return completed_incident
 
@@ -621,6 +669,37 @@ class AccidentEventManager:
         image_filename = f"{incident_id}_keyframe.jpg"
         image_path = os.path.join(self.output_dir, image_filename)
 
+        # Collect 3 to 5 verification frames: before impact, at peak, and after impact
+        v_frames: List[np.ndarray] = []
+        if self._active_incident_history:
+            pre_candidates = [item[1] for item in self._frame_buffer if item[0] < start_time and item[1] is not None]
+            v_frames.append(pre_candidates[-1] if pre_candidates else self._active_incident_history[0][1])
+
+            peak_idx = min(self._active_peak_idx, len(self._active_incident_history) - 1)
+            if peak_idx > 1 and len(self._active_incident_history) >= 4:
+                mid_before = self._active_incident_history[peak_idx // 2][1]
+                v_frames.append(mid_before)
+
+            peak_f = self.current_keyframe if self.current_keyframe is not None else self._active_incident_history[peak_idx][1]
+            v_frames.append(peak_f)
+
+            post_count = len(self._active_incident_history) - 1 - peak_idx
+            if post_count > 1 and len(self._active_incident_history) >= 4:
+                mid_after = self._active_incident_history[peak_idx + (post_count // 2)][1]
+                v_frames.append(mid_after)
+
+            v_frames.append(self._active_incident_history[-1][1])
+        elif self.current_keyframe is not None:
+            v_frames = [self.current_keyframe, self.current_keyframe, self.current_keyframe]
+
+        if len(v_frames) < 3 and self.current_keyframe is not None:
+            while len(v_frames) < 3:
+                v_frames.append(self.current_keyframe)
+        elif len(v_frames) > 5:
+            v_frames = [v_frames[0], v_frames[len(v_frames)//4], v_frames[len(v_frames)//2], v_frames[3*len(v_frames)//4], v_frames[-1]]
+
+        history_detections = [item[2] for item in self._active_incident_history]
+
         incident = AccidentIncident(
             incident_id=incident_id,
             start_timestamp=start_ts,
@@ -632,10 +711,30 @@ class AccidentEventManager:
             end_time=end_time,
             keyframe=self.current_keyframe,
             last_accident_time=self.last_accident_time,
+            verification_frames=v_frames,
+            detection_history=history_detections,
         )
 
         if self.auto_save:
             self._save_incident_artifacts(incident)
+
+        if self.auto_verify:
+            try:
+                from acs.verifier import verify_incident
+                decision = verify_incident(
+                    incident,
+                    detection_history=history_detections,
+                    frames=v_frames,
+                )
+                incident.verification_status = decision.status
+                incident.vlm_confidence = decision.confidence
+                incident.vlm_reason = decision.reason
+                incident.vlm_severity = decision.severity
+                incident.vehicles_involved = decision.vehicles_involved
+                incident.physics_passed = decision.physics_passed
+            except Exception as v_err:
+                logger.warning(f"Auto-verification failed for incident {incident_id}: {v_err}")
+                incident.verification_status = "unverified"
 
         self.incidents.append(incident)
         self.last_incident_end_time = end_time
@@ -650,11 +749,13 @@ class AccidentEventManager:
         self.current_max_confidence = 0.0
         self.current_keyframe = None
         self.last_accident_time = None
+        self._active_incident_history.clear()
+        self._active_peak_idx = 0
 
         return incident
 
     def _save_incident_artifacts(self, incident: AccidentIncident) -> None:
-        """Persists the keyframe image and appends exactly one CSV row."""
+        """Persists the keyframe image, verification frames, and appends exactly one CSV row."""
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.reports_dir, exist_ok=True)
 
@@ -666,7 +767,24 @@ class AccidentEventManager:
             blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
             cv2.imwrite(incident.image_path, blank_frame)
 
-        # 2. Append exactly one CSV row
+        # 2. Save verification frames (before, peak, after) if requested
+        v_paths = []
+        if self.save_verification_frames and incident.verification_frames:
+            roles = (
+                ["before", "approach", "peak", "aftermath", "rest"]
+                if len(incident.verification_frames) == 5
+                else ["before", "peak", "after"]
+            )
+            for idx, vf in enumerate(incident.verification_frames[:5]):
+                role = roles[idx] if idx < len(roles) else f"frame_{idx + 1}"
+                v_fname = f"{incident.incident_id}_frame_{idx + 1:02d}_{role}.jpg"
+                v_path = os.path.join(self.output_dir, v_fname)
+                if vf is not None and isinstance(vf, np.ndarray) and vf.size > 0:
+                    cv2.imwrite(v_path, vf)
+                    v_paths.append(v_path)
+            incident.verification_frame_paths = v_paths
+
+        # 3. Append exactly one CSV row
         csv_path = os.path.join(self.reports_dir, self.csv_filename)
         file_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
 
@@ -717,3 +835,6 @@ class AccidentEventManager:
         self.last_incident_end_time = None
         self.incident_counter = 0
         self.incidents.clear()
+        self._active_incident_history.clear()
+        self._active_peak_idx = 0
+

@@ -132,6 +132,29 @@ class AppConfig:
         default_factory=lambda: int(os.getenv("GEMINI_MAX_RETRIES", "3"))
     )
 
+    # VLM Verification Stage Configuration
+    vlm_verification_enabled: bool = field(
+        default_factory=lambda: os.getenv("VLM_VERIFICATION_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    physics_check_enabled: bool = field(
+        default_factory=lambda: os.getenv("PHYSICS_CHECK_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    vlm_daily_budget: int = field(
+        default_factory=lambda: int(os.getenv("VLM_DAILY_BUDGET", "200"))
+    )
+    vlm_timeout_seconds: float = field(
+        default_factory=lambda: float(os.getenv("VLM_TIMEOUT_SECONDS", "10.0"))
+    )
+    vlm_max_retries: int = field(
+        default_factory=lambda: int(os.getenv("VLM_MAX_RETRIES", "2"))
+    )
+    vlm_confidence_threshold: float = field(
+        default_factory=lambda: float(os.getenv("VLM_CONFIDENCE_THRESHOLD", "0.50"))
+    )
+    vlm_budget_file: str = field(
+        default_factory=lambda: os.getenv("VLM_BUDGET_FILE", "reports/vlm_budget.json")
+    )
+
     # Storage output directories
     reports_dir: str = field(
         default_factory=lambda: os.getenv("REPORTS_DIR", "reports")

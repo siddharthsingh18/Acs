@@ -381,14 +381,32 @@ def send_incident_alert(
     conf = getattr(incident, "max_confidence", 1.0)
     img = image_path or getattr(incident, "image_path", None)
 
+    # Verification stage gate enforcement:
+    # 1. Suppressed: never alerted
+    # 2. Needs human review: held for review, alert withheld
+    # 3. Auto-confirmed: alert dispatched
+    # 4. Unverified: fallback alert dispatched with unverified annotation
+    v_status = getattr(incident, "verification_status", None)
+    if v_status == "suppressed":
+        logger.info("Incident %s is marked 'suppressed'. Alert suppressed.", inc_id)
+        return {"suppressed": True}
+    if v_status == "needs_review":
+        logger.info("Incident %s requires human review. Alert withheld.", inc_id)
+        return {"held_for_review": True}
+
+    final_text = report_text
+    if v_status == "unverified" and "[UNVERIFIED" not in final_text:
+        final_text = f"[UNVERIFIED - YOLO ONLY: PENDING VERIFICATION]\n{report_text}"
+
     payload = AlertPayload(
         incident_id=inc_id,
         class_name=cls_name,
         timestamp=ts,
         confidence=conf,
-        report_text=report_text,
+        report_text=final_text,
         image_path=img,
         dry_run=dry_run,
+        metadata={"verification_status": v_status or "auto_confirmed"},
     )
     return alert_manager.send(payload, channels=channels)
 

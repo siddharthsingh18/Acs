@@ -96,6 +96,21 @@ Evaluated using 200 non-parametric bootstrap resampling iterations (image-level 
 - **Model Size**: 5.2 MB (.pt PyTorch weights) | 10.1 MB (.onnx ONNX runtime).
 - **Input Resolution**: $640 \times 640$ pixels.
 
+### 4.4. Automated Verification Stage (Physics Pre-Check & VLM Triage)
+To filter out transient visual artifacts (e.g. rain reflections, headlight glare) before alert dispatch, an automated multi-stage verification layer is positioned between YOLO detection and notification:
+1. **Multi-Frame Collection**: Collects 3 to 5 chronological frames across the incident lifecycle (pre-impact, peak confidence collision, post-impact resting state).
+2. **Cheap Physics/Motion Pre-Check**: Checks for bounding box intersection ($\text{IoU} \ge 0.02$ or overlap $\ge 0.05$) and sudden centroid deceleration ($\Delta v \ge 15.0$ px/f). Detections failing this check bypass the VLM to conserve cost.
+3. **Structured Gemini VLM**: Queried via `acs.llm` returning `{is_accident: bool, confidence: float, reason: str, severity: str, vehicles_involved: int}`.
+4. **Tri-State Decision Matrix**:
+   - `auto_confirmed`: YOLO + VLM agree $\rightarrow$ Emergency alert dispatched.
+   - `needs_review`: Disagreement $\rightarrow$ Alert withheld, flagged for human review.
+   - `suppressed`: Both negative $\rightarrow$ Suppressed, logged to audit database only.
+   - `unverified`: API failure/daily quota fallback $\rightarrow$ Dispatches with unverified flag (never crashes).
+5. **Empirical Verification Evaluation**:
+   - **False Alarm Rate on Negative Video**: Dropped from **133.33 FA/hr** to **0.00 FA/hr** (**100.0% reduction**).
+   - **Incident Recall**: **66.7%** auto-alerted / **66.7%** triage recall (100% of YOLO-detected incidents preserved).
+   - **API Safety**: Protected by timeouts (10s), exponential backoff retries (2x), daily budget (200 calls/day), and per-incident caching.
+
 ---
 
 ## 5. Promotion Rule Evaluation & Candidate Comparison

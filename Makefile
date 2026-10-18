@@ -9,7 +9,7 @@ PIP ?= ./venv/bin/pip
 PYTEST ?= ./venv/bin/pytest
 NPM ?= npm
 
-.PHONY: help setup install data audit train eval tune promote test test-unit test-e2e clean
+.PHONY: help setup install data audit train eval eval-verification tune promote test test-unit test-e2e clean
 
 # Default Target
 help:
@@ -21,6 +21,7 @@ help:
 	@echo "  make audit       - Audit dataset integrity, bounding boxes, and leakage"
 	@echo "  make train       - Train model using the 2-phase fine-tuning recipe (Exp A)"
 	@echo "  make eval        - Evaluate baseline & candidate models on TEST split + holdout video"
+	@echo "  make eval-verification - Evaluate incident-level verifier (YOLO vs Verified)"
 	@echo "  make tune        - Run threshold, debounce, and overlap grid-search on tuning suite"
 	@echo "  make promote     - Execute model promotion gate check against baseline"
 	@echo "  make test        - Run full test suite (pytest unit tests + Playwright smoke test)"
@@ -57,6 +58,10 @@ train:
 eval:
 	@echo "Running model benchmark on test split and holdout video..."
 	$(PYTHON) ml/scripts/evaluate_all.py --split test --video acc_ex.mp4
+
+eval-verification:
+	@echo "Running incident-level verification stage evaluation..."
+	$(PYTHON) ml/scripts/eval_verification.py
 
 tune:
 	@echo "Running threshold and event manager grid-search tuning..."

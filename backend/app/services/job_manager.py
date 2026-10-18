@@ -277,6 +277,22 @@ class JobManager:
                 # Feed into incident lifecycle aggregator
                 completed_incident = event_manager.update(result, frame=frame, timestamp=timestamp)
                 if completed_incident:
+                    # Run automated verification stage (physics + VLM)
+                    try:
+                        from acs.verifier import verify_incident
+                        decision = verify_incident(
+                            completed_incident,
+                            detection_history=completed_incident.detection_history,
+                            frames=completed_incident.verification_frames,
+                        )
+                        completed_incident.verification_status = decision.status
+                        completed_incident.vlm_confidence = decision.confidence
+                        completed_incident.vlm_reason = decision.reason
+                        completed_incident.physics_passed = decision.physics_passed
+                    except Exception as ver_err:
+                        logger.warning("Verification error for incident %s: %s", completed_incident.incident_id, ver_err)
+                        completed_incident.verification_status = "unverified"
+
                     keyframe_fname = os.path.basename(completed_incident.image_path)
                     duration_val = max(0.1, completed_incident.end_time - completed_incident.start_time)
                     incident_msg = {
@@ -290,6 +306,7 @@ class JobManager:
                         "end_time": completed_incident.end_time,
                         "duration": duration_val,
                         "keyframe_url": f"/media/keyframes/{keyframe_fname}",
+                        "verification_status": completed_incident.verification_status,
                     }
                     job.incidents.append(incident_msg)
                     self.broadcast(job.job_id, incident_msg)
@@ -297,6 +314,10 @@ class JobManager:
                     # Persist to SQLite DB
                     try:
                         from backend.app.services.incident_service import save_incident_to_db
+                        db_status = (
+                            "approved" if completed_incident.verification_status == "auto_confirmed"
+                            else ("rejected" if completed_incident.verification_status == "suppressed" else "pending")
+                        )
                         save_incident_to_db(
                             incident_id=completed_incident.incident_id,
                             start_timestamp=completed_incident.start_timestamp,
@@ -305,6 +326,11 @@ class JobManager:
                             max_confidence=float(completed_incident.max_confidence),
                             image_path=completed_incident.image_path,
                             duration=duration_val,
+                            status=db_status,
+                            verification_status=completed_incident.verification_status,
+                            vlm_confidence=completed_incident.vlm_confidence,
+                            vlm_reason=completed_incident.vlm_reason,
+                            physics_passed=completed_incident.physics_passed,
                         )
                     except Exception as db_err:
                         logger.warning("Failed to persist incident to DB: %s", db_err)
@@ -350,6 +376,22 @@ class JobManager:
             if not job.cancel_event.is_set():
                 final_incident = event_manager.end_active_incident(timestamp=frame_idx / fps)
                 if final_incident:
+                    # Run automated verification stage (physics + VLM)
+                    try:
+                        from acs.verifier import verify_incident
+                        decision = verify_incident(
+                            final_incident,
+                            detection_history=final_incident.detection_history,
+                            frames=final_incident.verification_frames,
+                        )
+                        final_incident.verification_status = decision.status
+                        final_incident.vlm_confidence = decision.confidence
+                        final_incident.vlm_reason = decision.reason
+                        final_incident.physics_passed = decision.physics_passed
+                    except Exception as ver_err:
+                        logger.warning("Verification error for final incident %s: %s", final_incident.incident_id, ver_err)
+                        final_incident.verification_status = "unverified"
+
                     keyframe_fname = os.path.basename(final_incident.image_path)
                     duration_val = max(0.1, final_incident.end_time - final_incident.start_time)
                     incident_msg = {
@@ -363,12 +405,17 @@ class JobManager:
                         "end_time": final_incident.end_time,
                         "duration": duration_val,
                         "keyframe_url": f"/media/keyframes/{keyframe_fname}",
+                        "verification_status": final_incident.verification_status,
                     }
                     job.incidents.append(incident_msg)
                     self.broadcast(job.job_id, incident_msg)
 
                     try:
                         from backend.app.services.incident_service import save_incident_to_db
+                        db_status = (
+                            "approved" if final_incident.verification_status == "auto_confirmed"
+                            else ("rejected" if final_incident.verification_status == "suppressed" else "pending")
+                        )
                         save_incident_to_db(
                             incident_id=final_incident.incident_id,
                             start_timestamp=final_incident.start_timestamp,
@@ -377,6 +424,11 @@ class JobManager:
                             max_confidence=float(final_incident.max_confidence),
                             image_path=final_incident.image_path,
                             duration=duration_val,
+                            status=db_status,
+                            verification_status=final_incident.verification_status,
+                            vlm_confidence=final_incident.vlm_confidence,
+                            vlm_reason=final_incident.vlm_reason,
+                            physics_passed=final_incident.physics_passed,
                         )
                     except Exception as db_err:
                         logger.warning("Failed to persist final incident to DB: %s", db_err)

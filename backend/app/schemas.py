@@ -135,6 +135,7 @@ class IncidentItem(BaseModel):
     end_time: float
     duration: float
     keyframe_url: str
+    verification_status: Optional[str] = None
 
 
 class JobStatusResponse(BaseModel):
@@ -167,6 +168,10 @@ class IncidentResponse(BaseModel):
     reviewed_at: Optional[str] = None
     dispatch_report: Optional[dict] = None
     dispatch_text: Optional[str] = None
+    verification_status: Optional[str] = None
+    vlm_confidence: Optional[float] = None
+    vlm_reason: Optional[str] = None
+    physics_passed: Optional[bool] = None
     created_at: float
     duration: float
 

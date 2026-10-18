@@ -12,6 +12,7 @@ import os
 import re
 import time
 from typing import Any, Dict, List, Literal, Optional, Union
+import numpy as np
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -54,6 +55,29 @@ class DispatchReportModel(BaseModel):
     )
     severity: Literal["low", "medium", "high"] = Field(
         description="Overall incident severity classification: low, medium, or high."
+    )
+
+
+class VerificationReportModel(BaseModel):
+    """Structured response model for VLM collision verification."""
+
+    is_accident: bool = Field(
+        description="True if a real traffic collision is visible in the provided frames, False otherwise."
+    )
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Confidence score between 0.0 and 1.0 that a real traffic collision occurred.",
+    )
+    reason: str = Field(
+        description="Brief factual explanation of visual evidence or rationale."
+    )
+    severity: Literal["low", "medium", "high"] = Field(
+        description="Incident severity classification: low, medium, or high."
+    )
+    vehicles_involved: int = Field(
+        ge=0,
+        description="Count of vehicles visibly involved in the collision."
     )
 
 
@@ -542,3 +566,155 @@ def generate_accident_report(
         model_name=model_name,
     )
     return report.get("rendered_text") or render_dispatch_text(report, lang=lang)
+
+
+def verify_incident_frames_vlm(
+    frames: List[Union[str, np.ndarray, bytes]],
+    detections: Optional[Any] = None,
+    api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
+    timeout: Optional[float] = None,
+    max_retries: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Sends 3 to 5 chronological frames to Google Gemini VLM for collision verification.
+
+    Prompt format:
+    "Is a real traffic collision visible? Answer JSON: {is_accident: bool, confidence: 0-1, reason: str, severity: low|medium|high, vehicles_involved: int}"
+
+    Args:
+        frames: 3 to 5 images (file paths, numpy BGR frames, or JPEG bytes) representing:
+            before impact, at peak collision, and after impact.
+        detections: Optional YOLO detection classes or DetectionResult for fallback context.
+        api_key: Optional Gemini API key override (defaults to GOOGLE_API_KEY or GEMINI_API_KEY).
+        model_name: Model override (defaults to config.gemini_model_name).
+        timeout: Maximum seconds per API call attempt before timing out.
+        max_retries: Number of exponential backoff retry attempts.
+
+    Returns:
+        Dict[str, Any]: Structured dictionary conforming to VerificationReportModel schema.
+    """
+    import cv2
+
+    active_key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not active_key or genai is None or types is None:
+        logger.info("Google GenAI API key or SDK unavailable for VLM verification; using fallback.")
+        return {
+            "is_accident": True,
+            "confidence": 0.5,
+            "reason": "VLM API key or SDK unavailable; graceful fallback to YOLO",
+            "severity": "medium",
+            "vehicles_involved": 2,
+            "verification_status": "unverified",
+        }
+
+    image_parts: List[Any] = []
+    for f in (frames or [])[:5]:
+        try:
+            if isinstance(f, str):
+                if os.path.exists(f):
+                    with open(f, "rb") as fp:
+                        data = fp.read()
+                    mime_type = mimetypes.guess_type(f)[0] or "image/jpeg"
+                    image_parts.append(types.Part.from_bytes(data=data, mime_type=mime_type))
+            elif isinstance(f, np.ndarray):
+                ret, buf = cv2.imencode(".jpg", f)
+                if ret:
+                    image_parts.append(types.Part.from_bytes(data=buf.tobytes(), mime_type="image/jpeg"))
+            elif isinstance(f, bytes):
+                image_parts.append(types.Part.from_bytes(data=f, mime_type="image/jpeg"))
+        except Exception as err:
+            logger.warning(f"Failed to prepare frame for VLM verification: {err}")
+
+    if not image_parts:
+        logger.warning("No valid frames available for VLM verification; using fallback.")
+        return {
+            "is_accident": True,
+            "confidence": 0.5,
+            "reason": "No valid frames available for VLM verification; fallback",
+            "severity": "medium",
+            "vehicles_involved": 2,
+            "verification_status": "unverified",
+        }
+
+    strict_prompt = (
+        "You are an expert traffic incident verification multimodal system.\n"
+        f"You are provided {len(image_parts)} chronological camera frames from a potential incident: "
+        "before impact, at peak collision, and after impact.\n\n"
+        "Carefully examine vehicle kinematics, road positioning, structural deformities, and traffic dynamics.\n"
+        "Question: Is a real traffic collision visible?\n"
+        'Answer JSON: {"is_accident": bool, "confidence": 0-1, "reason": str, "severity": low|medium|high, "vehicles_involved": int}'
+    )
+
+    chosen_model = model_name or config.gemini_model_name
+    call_timeout = timeout if timeout is not None else getattr(config, "vlm_timeout_seconds", 10.0)
+    retries = max_retries if max_retries is not None else getattr(config, "vlm_max_retries", 2)
+
+    try:
+        client = genai.Client(api_key=active_key)
+    except Exception as init_err:
+        logger.warning(f"Failed to initialize GenAI client: {init_err}")
+        return {
+            "is_accident": True,
+            "confidence": 0.5,
+            "reason": f"GenAI client initialization failed: {init_err}",
+            "severity": "medium",
+            "vehicles_involved": 2,
+            "verification_status": "unverified",
+        }
+
+    def _call():
+        cfg = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=VerificationReportModel,
+            temperature=0.1,
+        )
+        resp = client.models.generate_content(
+            model=chosen_model,
+            contents=[*image_parts, strict_prompt],
+            config=cfg,
+        )
+        return resp.text or ""
+
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_call)
+                raw_text = future.result(timeout=call_timeout)
+
+            # Clean markdown code block fences if present
+            cleaned_text = raw_text.strip()
+            if cleaned_text.startswith("```"):
+                cleaned_text = re.sub(r"^```(?:json)?\s*", "", cleaned_text)
+                cleaned_text = re.sub(r"\s*```$", "", cleaned_text)
+
+            parsed = json.loads(cleaned_text)
+            validated = VerificationReportModel(**parsed)
+            return {
+                "is_accident": bool(validated.is_accident),
+                "confidence": float(validated.confidence),
+                "reason": str(validated.reason),
+                "severity": str(validated.severity).lower(),
+                "vehicles_involved": int(validated.vehicles_involved),
+                "verification_status": "verified",
+            }
+        except concurrent.futures.TimeoutError:
+            last_error = TimeoutError(f"Call timed out after {call_timeout}s")
+            logger.warning(f"VLM verification attempt {attempt + 1}/{retries + 1} timed out")
+        except Exception as exc:
+            last_error = exc
+            logger.warning(f"VLM verification attempt {attempt + 1}/{retries + 1} failed: {exc}")
+
+        if attempt < retries:
+            time.sleep(1.0 * (2 ** attempt))
+
+    logger.error(f"All VLM verification attempts failed ({last_error}). Triggering unverified fallback.")
+    return {
+        "is_accident": True,
+        "confidence": 0.5,
+        "reason": f"VLM verification failed ({last_error}); falling back to unverified YOLO detection",
+        "severity": "medium",
+        "vehicles_involved": 2,
+        "verification_status": "unverified",
+    }
+

@@ -338,7 +338,23 @@ def render_live_analysis_tab(detector: AccidentDetector, lang: str) -> None:
             icon="🚨",
         )
 
-        # 1. Generate multimodal dispatch assessment report
+        # 1. Run Verification Stage (Physics + VLM)
+        try:
+            from acs.verifier import verify_incident
+            decision = verify_incident(
+                incident,
+                detection_history=getattr(incident, "detection_history", None),
+                frames=getattr(incident, "verification_frames", None),
+            )
+            incident.verification_status = decision.status
+            incident.vlm_confidence = decision.confidence
+            incident.vlm_reason = decision.reason
+            incident.vlm_severity = decision.severity
+            incident.physics_passed = decision.physics_passed
+        except Exception:
+            incident.verification_status = "unverified"
+
+        # 2. Generate multimodal dispatch assessment report
         report_text = ""
         try:
             dispatch_data = generate_dispatch_report(
@@ -356,7 +372,7 @@ def render_live_analysis_tab(detector: AccidentDetector, lang: str) -> None:
                 f"Confidence: {incident.max_confidence:.1%}"
             )
 
-        # 2. Dispatch alert with keyframe and report text
+        # 3. Dispatch alert with keyframe and report text (enforcing verification gate)
         if st.session_state.get("enable_alerts", config.alerts_enabled):
             try:
                 alert_res = send_incident_alert(
@@ -365,16 +381,21 @@ def render_live_analysis_tab(detector: AccidentDetector, lang: str) -> None:
                     image_path=incident.image_path,
                     dry_run=st.session_state.get("dry_run_alerts", config.alerts_dry_run),
                 )
-                channels_str = ", ".join([f"{k} ({'✓' if v else '✗'})" for k, v in alert_res.items()])
-                st.toast(
-                    t(
-                        "alert_dispatched_toast",
-                        lang,
-                        incident_id=incident.incident_id,
-                        channels=channels_str,
-                    ),
-                    icon="📨",
-                )
+                if alert_res.get("held_for_review"):
+                    st.toast(f"Incident {incident.incident_id} held for human review (VLM check pending/disagreed).", icon="⚠️")
+                elif alert_res.get("suppressed"):
+                    st.toast(f"Incident {incident.incident_id} suppressed (no accident verified).", icon="🛡️")
+                else:
+                    channels_str = ", ".join([f"{k} ({'✓' if v else '✗'})" for k, v in alert_res.items()])
+                    st.toast(
+                        t(
+                            "alert_dispatched_toast",
+                            lang,
+                            incident_id=incident.incident_id,
+                            channels=channels_str,
+                        ),
+                        icon="📨",
+                    )
             except Exception:
                 # Alerts must never crash the pipeline
                 pass

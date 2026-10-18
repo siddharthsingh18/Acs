@@ -22,6 +22,10 @@ class Incident(SQLModel, table=True):
     reviewed_at: Optional[str] = None
     dispatch_report: Optional[str] = None  # JSON string of structured dispatch report
     dispatch_text: Optional[str] = None  # Rendered markdown text summary
+    verification_status: Optional[str] = Field(default=None, index=True)  # "auto_confirmed", "needs_review", "suppressed", "unverified"
+    vlm_confidence: Optional[float] = None
+    vlm_reason: Optional[str] = None
+    physics_passed: Optional[bool] = None
     created_at: float = Field(index=True)
     duration: float = Field(default=0.0)
 

@@ -17,10 +17,30 @@ engine = create_engine(sqlite_url, echo=False, connect_args=connect_args)
 
 
 def init_db() -> None:
-    """Creates database tables if they do not already exist."""
+    """Creates database tables if they do not already exist and migrates missing columns."""
     import backend.app.db.models  # noqa: F401
+    from sqlalchemy import text
 
     SQLModel.metadata.create_all(engine)
+
+    # Lightweight schema migration for SQLite: add any missing columns to incident table
+    try:
+        with engine.connect() as conn:
+            cursor = conn.execute(text("PRAGMA table_info(incident);"))
+            existing_cols = {row[1] for row in cursor.fetchall()}
+            if existing_cols:
+                cols_to_add = {
+                    "verification_status": "TEXT",
+                    "vlm_confidence": "REAL",
+                    "vlm_reason": "TEXT",
+                    "physics_passed": "BOOLEAN",
+                }
+                for col_name, col_type in cols_to_add.items():
+                    if col_name not in existing_cols:
+                        conn.execute(text(f"ALTER TABLE incident ADD COLUMN {col_name} {col_type};"))
+                conn.commit()
+    except Exception:
+        pass
 
 
 def get_session() -> Generator[Session, None, None]:

@@ -195,6 +195,10 @@ class CameraWorker:
                 existing = session.get(Incident, incident.incident_id)
                 if not existing:
                     keyframe_url = f"/media/keyframes/{os.path.basename(incident.image_path)}"
+                    db_status = (
+                        "approved" if incident.verification_status == "auto_confirmed"
+                        else ("rejected" if incident.verification_status == "suppressed" else "pending")
+                    )
                     db_inc = Incident(
                         incident_id=incident.incident_id,
                         start_timestamp=incident.start_timestamp,
@@ -203,14 +207,18 @@ class CameraWorker:
                         max_confidence=incident.max_confidence,
                         image_path=incident.image_path,
                         keyframe_url=keyframe_url,
-                        severity="high" if incident.max_confidence >= 0.70 else "medium",
-                        status="pending",
+                        severity=incident.vlm_severity or ("high" if incident.max_confidence >= 0.70 else "medium"),
+                        status=db_status,
+                        verification_status=incident.verification_status,
+                        vlm_confidence=incident.vlm_confidence,
+                        vlm_reason=incident.vlm_reason,
+                        physics_passed=incident.physics_passed,
                         created_at=incident.start_time,
                         duration=max(0.0, incident.end_time - incident.start_time),
                     )
                     session.add(db_inc)
                     session.commit()
-                    logger.info("Persisted incident %s from camera '%s' to DB", incident.incident_id, self.name)
+                    logger.info("Persisted incident %s from camera '%s' to DB (status: %s)", incident.incident_id, self.name, incident.verification_status)
         except Exception as exc:
             logger.error("Failed to persist camera incident to DB: %s", exc)
 
@@ -292,6 +300,22 @@ class CameraWorker:
                     self.last_accident_confidence = self.event_manager.current_max_confidence
                 elif completed_incident:
                     self.active_incident_id = None
+                    try:
+                        from acs.verifier import verify_incident
+                        decision = verify_incident(
+                            completed_incident,
+                            detection_history=completed_incident.detection_history,
+                            frames=completed_incident.verification_frames,
+                        )
+                        completed_incident.verification_status = decision.status
+                        completed_incident.vlm_confidence = decision.confidence
+                        completed_incident.vlm_reason = decision.reason
+                        completed_incident.vlm_severity = decision.severity
+                        completed_incident.physics_passed = decision.physics_passed
+                    except Exception as ver_err:
+                        logger.warning("Verification error for camera incident %s: %s", completed_incident.incident_id, ver_err)
+                        completed_incident.verification_status = "unverified"
+
                     self._persist_incident_to_db(completed_incident)
                     # Broadcast incident event
                     self._broadcast_message(
@@ -305,6 +329,7 @@ class CameraWorker:
                             "start_timestamp": completed_incident.start_timestamp,
                             "end_timestamp": completed_incident.end_timestamp,
                             "keyframe_url": f"/media/keyframes/{os.path.basename(completed_incident.image_path)}",
+                            "verification_status": completed_incident.verification_status,
                         }
                     )
 
