@@ -29,6 +29,9 @@ class Incident(SQLModel, table=True):
     clip_path: Optional[str] = None
     clip_annotated_path: Optional[str] = None
     impact_offset_seconds: Optional[float] = None
+    severity_score: Optional[int] = Field(default=50, index=True)  # 0 to 100
+    severity_breakdown: Optional[str] = None  # JSON string of breakdown components and factors
+    recommended_units: Optional[str] = None  # JSON string list of recommended responder units
     created_at: float = Field(index=True)
     duration: float = Field(default=0.0)
 

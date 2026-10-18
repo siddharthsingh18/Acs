@@ -29,6 +29,8 @@ import {
   AlertOctagon,
   Video,
   Film,
+  Activity,
+  Gauge,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -331,25 +333,26 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
   }
 
   // Helper: Severity Badge variant & colors
-  const getSeverityBadge = (sev: string) => {
+  const getSeverityBadge = (sev: string, score?: number | null) => {
     const s = sev?.toLowerCase()
+    const scoreText = score !== undefined && score !== null ? ` • ${score}/100` : ''
     if (s === 'high') {
       return (
         <Badge variant="destructive" className="font-mono text-xs uppercase px-2.5 py-0.5">
-          High Severity
+          High{scoreText}
         </Badge>
       )
     }
     if (s === 'medium') {
       return (
         <Badge variant="warning" className="font-mono text-xs uppercase px-2.5 py-0.5">
-          Medium Severity
+          Medium{scoreText}
         </Badge>
       )
     }
     return (
       <Badge variant="outline" className="font-mono text-xs uppercase text-cyan-400 border-cyan-500/40 px-2.5 py-0.5">
-        Low Severity
+        Low{scoreText}
       </Badge>
     )
   }
@@ -403,7 +406,7 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                       <h3 className="font-bold text-base font-mono text-foreground">
                         {incident?.incident_id || incidentId}
                       </h3>
-                      {incident?.severity && getSeverityBadge(incident.severity)}
+                      {incident?.severity && getSeverityBadge(incident.severity, incident?.severity_score)}
                     </div>
                     <span className="text-xs text-muted-foreground font-mono">
                       {incident?.start_timestamp?.replace('T', ' ') || 'Live Event'}
@@ -729,6 +732,162 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                         </span>
                       </div>
                     )}
+
+                    {/* SECTION: Collision Severity Score & Transparent Breakdown */}
+                    {(() => {
+                      const breakdown = (incident as any)?.severity_breakdown
+                      const score = incident?.severity_score ?? breakdown?.score ?? (incident?.severity === 'high' ? 80 : incident?.severity === 'low' ? 25 : 50)
+                      const level = incident?.severity || breakdown?.level || (score > 70 ? 'high' : score > 35 ? 'medium' : 'low')
+                      const units: string[] = incident?.recommended_units || breakdown?.recommended_units || (dispatchReport?.recommended_units) || ['police', 'tow']
+                      const components = Array.isArray(breakdown?.components) ? breakdown.components : []
+                      const factors = Array.isArray(breakdown?.factors) ? breakdown.factors : []
+                      const scorerVersion = breakdown?.scorer_version || 'rule_based_v1'
+
+                      const scoreColor =
+                        level === 'high'
+                          ? 'text-rose-400 border-rose-500/40 bg-rose-950/30'
+                          : level === 'medium'
+                          ? 'text-amber-400 border-amber-500/40 bg-amber-950/30'
+                          : 'text-emerald-400 border-emerald-500/40 bg-emerald-950/30'
+
+                      const barColor =
+                        level === 'high' ? 'bg-rose-500' : level === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+
+                      return (
+                        <div className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm space-y-0">
+                          {/* Header */}
+                          <div className="p-4 border-b border-border bg-muted/40 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Activity className="h-4 w-4 text-primary" />
+                              <div>
+                                <h4 className="font-bold text-sm text-foreground">
+                                  Collision Severity & Unit Routing
+                                </h4>
+                                <span className="text-[10px] text-muted-foreground font-mono block">
+                                  Multi-factor telemetry analysis • {scorerVersion}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono text-muted-foreground">Score:</span>
+                              <div
+                                className={cn(
+                                  'px-2.5 py-1 rounded-md border font-mono font-bold text-sm flex items-center gap-1.5 shadow-2xs',
+                                  scoreColor
+                                )}
+                              >
+                                <Gauge className="h-3.5 w-3.5" />
+                                <span>{score}</span>
+                                <span className="text-[10px] opacity-70">/ 100</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-5 space-y-4">
+                            {/* Score Meter & Routing Summary */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                              {/* Overall Score Progress Bar */}
+                              <div className="p-3.5 rounded-lg border border-border bg-background/50 space-y-2">
+                                <div className="flex items-center justify-between text-xs font-mono">
+                                  <span className="text-muted-foreground">Calculated Severity Tier</span>
+                                  <Badge
+                                    variant={level === 'high' ? 'destructive' : level === 'medium' ? 'warning' : 'outline'}
+                                    className="uppercase font-mono text-[10px] font-bold"
+                                  >
+                                    {level} Severity ({score}/100)
+                                  </Badge>
+                                </div>
+                                <div className="h-2.5 w-full bg-muted/80 rounded-full overflow-hidden border border-border/40">
+                                  <div
+                                    className={cn('h-full transition-all duration-500 rounded-full', barColor)}
+                                    style={{ width: `${Math.min(100, Math.max(5, score))}%` }}
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground/80">
+                                  <span>0 (Low &le; 35)</span>
+                                  <span>Medium &le; 70</span>
+                                  <span>100 (High &gt; 70)</span>
+                                </div>
+                              </div>
+
+                              {/* Recommended Units Routed */}
+                              <div className="p-3.5 rounded-lg border border-border bg-background/50 space-y-2">
+                                <span className="text-[11px] font-mono text-muted-foreground uppercase font-semibold block">
+                                  Automated Unit Routing
+                                </span>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {units.map((unit) => (
+                                    <Badge
+                                      key={unit}
+                                      variant="outline"
+                                      className="px-2.5 py-1 text-xs font-mono font-bold border-border bg-background flex items-center gap-1.5 shadow-2xs"
+                                    >
+                                      {getUnitIcon(unit)}
+                                      <span className="uppercase">{unit.toUpperCase()}</span>
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Transparent Sub-Factor Breakdown */}
+                            {components.length > 0 && (
+                              <div className="space-y-2.5">
+                                <span className="text-[11px] font-mono text-muted-foreground uppercase font-semibold block">
+                                  Transparent Factor Breakdown (Explainable Scoring)
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                  {components.map((comp: any) => {
+                                    const compScore = comp.score ?? 0
+                                    const maxScore = comp.max_score ?? 25
+                                    const pct = Math.min(100, Math.max(0, (compScore / maxScore) * 100))
+                                    return (
+                                      <div
+                                        key={comp.key}
+                                        className="p-3 rounded-lg border border-border/80 bg-background/40 space-y-1.5"
+                                      >
+                                        <div className="flex items-center justify-between text-xs font-mono">
+                                          <span className="font-semibold text-foreground truncate">{comp.label}</span>
+                                          <span className="text-cyan-400 font-bold">
+                                            {compScore.toFixed(1)} <span className="text-[10px] text-muted-foreground">/ {maxScore}</span>
+                                          </span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-muted/80 rounded-full overflow-hidden">
+                                          <div
+                                            className="h-full bg-cyan-500 rounded-full transition-all"
+                                            style={{ width: `${pct}%` }}
+                                          />
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground leading-tight font-sans">
+                                          {comp.explanation}
+                                        </p>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Contributing Factor Explanations */}
+                            {factors.length > 0 && (
+                              <div className="p-3 rounded-lg border border-border/60 bg-muted/20 space-y-1.5 text-xs">
+                                <span className="text-[10px] font-mono uppercase text-muted-foreground font-semibold block">
+                                  Telemetry & Visual Findings:
+                                </span>
+                                <ul className="space-y-1 text-muted-foreground font-sans">
+                                  {factors.map((factor: string, idx: number) => (
+                                    <li key={idx} className="flex items-start gap-1.5">
+                                      <span className="text-primary select-none">•</span>
+                                      <span>{factor}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })()}
 
                     {/* SECTION 3: Multimodal Gemini AI Dispatch Report */}
                     <div className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm space-y-0">

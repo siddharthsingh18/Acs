@@ -186,6 +186,24 @@ class AppConfig:
         default_factory=lambda: int(os.getenv("CLIP_MAX_DISK_USAGE_MB", "2048"))
     )
 
+    # Multi-Factor Severity Scoring & Threshold Settings (0 to 100)
+    severity_low_max: int = field(
+        default_factory=lambda: int(os.getenv("SEVERITY_LOW_MAX", "35"))
+    )
+    severity_medium_max: int = field(
+        default_factory=lambda: int(os.getenv("SEVERITY_MEDIUM_MAX", "70"))
+    )
+    severity_scorer_type: str = field(
+        default_factory=lambda: os.getenv("SEVERITY_SCORER_TYPE", "rule_based")
+    )
+    camera_pixels_per_meter: Optional[float] = field(
+        default_factory=lambda: (
+            float(os.getenv("CAMERA_PIXELS_PER_METER"))
+            if os.getenv("CAMERA_PIXELS_PER_METER") is not None
+            else None
+        )
+    )
+
     # Cooldown seconds between accident captures to prevent duplicate alerts
     cooldown_seconds: float = field(
         default_factory=lambda: float(os.getenv("COOLDOWN_SECONDS", "5.0"))

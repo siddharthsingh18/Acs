@@ -40,6 +40,20 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
         except Exception:
             pass
 
+    parsed_breakdown = None
+    if inc.severity_breakdown:
+        try:
+            parsed_breakdown = json.loads(inc.severity_breakdown)
+        except Exception:
+            pass
+
+    parsed_units = None
+    if inc.recommended_units:
+        try:
+            parsed_units = json.loads(inc.recommended_units)
+        except Exception:
+            pass
+
     clip_url = (
         f"/api/incidents/{inc.incident_id}/clip"
         if inc.clip_path and os.path.exists(inc.clip_path)
@@ -60,6 +74,9 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
         image_path=inc.image_path,
         keyframe_url=inc.keyframe_url,
         severity=inc.severity,
+        severity_score=inc.severity_score if inc.severity_score is not None else 50,
+        severity_breakdown=parsed_breakdown,
+        recommended_units=parsed_units,
         status=inc.status,
         reviewer_name=inc.reviewer_name,
         reviewed_at=inc.reviewed_at,

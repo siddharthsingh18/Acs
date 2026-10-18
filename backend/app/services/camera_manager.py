@@ -199,6 +199,16 @@ class CameraWorker:
                         "approved" if incident.verification_status == "auto_confirmed"
                         else ("rejected" if incident.verification_status == "suppressed" else "pending")
                     )
+                    breakdown_str = (
+                        json.dumps(incident.severity_breakdown)
+                        if isinstance(incident.severity_breakdown, dict)
+                        else incident.severity_breakdown
+                    )
+                    units_str = (
+                        json.dumps(incident.recommended_units)
+                        if isinstance(incident.recommended_units, list)
+                        else incident.recommended_units
+                    )
                     db_inc = Incident(
                         incident_id=incident.incident_id,
                         start_timestamp=incident.start_timestamp,
@@ -207,7 +217,10 @@ class CameraWorker:
                         max_confidence=incident.max_confidence,
                         image_path=incident.image_path,
                         keyframe_url=keyframe_url,
-                        severity=incident.vlm_severity or ("high" if incident.max_confidence >= 0.70 else "medium"),
+                        severity=incident.severity or incident.vlm_severity or ("high" if incident.max_confidence >= 0.70 else "medium"),
+                        severity_score=incident.severity_score if incident.severity_score is not None else 50,
+                        severity_breakdown=breakdown_str,
+                        recommended_units=units_str,
                         status=db_status,
                         verification_status=incident.verification_status,
                         vlm_confidence=incident.vlm_confidence,
@@ -221,7 +234,7 @@ class CameraWorker:
                     )
                     session.add(db_inc)
                     session.commit()
-                    logger.info("Persisted incident %s from camera '%s' to DB (status: %s, clip: %s)", incident.incident_id, self.name, incident.verification_status, bool(incident.clip_path))
+                    logger.info("Persisted incident %s from camera '%s' to DB (severity: %s, score: %s, clip: %s)", incident.incident_id, self.name, db_inc.severity, db_inc.severity_score, bool(incident.clip_path))
         except Exception as exc:
             logger.error("Failed to persist camera incident to DB: %s", exc)
 
@@ -319,6 +332,22 @@ class CameraWorker:
                         logger.warning("Verification error for camera incident %s: %s", completed_incident.incident_id, ver_err)
                         completed_incident.verification_status = "unverified"
 
+                    # Update severity scoring with fresh VLM assessment
+                    try:
+                        from acs.severity import evaluate_incident_severity
+                        sev_result = evaluate_incident_severity(
+                            incident=completed_incident,
+                            detection_history=completed_incident.detection_history,
+                            vlm_severity=completed_incident.vlm_severity,
+                            vlm_confidence=completed_incident.vlm_confidence,
+                        )
+                        completed_incident.severity_score = sev_result.score
+                        completed_incident.severity = sev_result.level
+                        completed_incident.severity_breakdown = sev_result.to_dict()
+                        completed_incident.recommended_units = sev_result.recommended_units
+                    except Exception as s_err:
+                        logger.warning("Severity scoring failed for camera incident %s: %s", completed_incident.incident_id, s_err)
+
                     self._persist_incident_to_db(completed_incident)
                     # Broadcast incident event
                     self._broadcast_message(
@@ -333,6 +362,9 @@ class CameraWorker:
                             "end_timestamp": completed_incident.end_timestamp,
                             "keyframe_url": f"/media/keyframes/{os.path.basename(completed_incident.image_path)}",
                             "verification_status": completed_incident.verification_status,
+                            "severity": completed_incident.severity or "medium",
+                            "severity_score": completed_incident.severity_score,
+                            "recommended_units": completed_incident.recommended_units,
                         }
                     )
 

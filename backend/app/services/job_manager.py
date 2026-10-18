@@ -309,6 +309,9 @@ class JobManager:
                         "duration": duration_val,
                         "keyframe_url": f"/media/keyframes/{keyframe_fname}",
                         "verification_status": completed_incident.verification_status,
+                        "severity": completed_incident.severity or "medium",
+                        "severity_score": completed_incident.severity_score,
+                        "recommended_units": completed_incident.recommended_units,
                         "clip_url": clip_url,
                         "clip_annotated_url": clip_ann_url,
                     }
@@ -338,6 +341,10 @@ class JobManager:
                             clip_path=completed_incident.clip_path,
                             clip_annotated_path=completed_incident.clip_annotated_path,
                             impact_offset_seconds=completed_incident.impact_offset_seconds,
+                            severity=completed_incident.severity,
+                            severity_score=completed_incident.severity_score,
+                            severity_breakdown=completed_incident.severity_breakdown,
+                            recommended_units=completed_incident.recommended_units,
                         )
                     except Exception as db_err:
                         logger.warning("Failed to persist incident to DB: %s", db_err)
@@ -413,6 +420,9 @@ class JobManager:
                         "duration": duration_val,
                         "keyframe_url": f"/media/keyframes/{keyframe_fname}",
                         "verification_status": final_incident.verification_status,
+                        "severity": final_incident.severity or "medium",
+                        "severity_score": final_incident.severity_score,
+                        "recommended_units": final_incident.recommended_units,
                     }
                     job.incidents.append(incident_msg)
                     self.broadcast(job.job_id, incident_msg)
@@ -436,6 +446,13 @@ class JobManager:
                             vlm_confidence=final_incident.vlm_confidence,
                             vlm_reason=final_incident.vlm_reason,
                             physics_passed=final_incident.physics_passed,
+                            clip_path=final_incident.clip_path,
+                            clip_annotated_path=final_incident.clip_annotated_path,
+                            impact_offset_seconds=final_incident.impact_offset_seconds,
+                            severity=final_incident.severity,
+                            severity_score=final_incident.severity_score,
+                            severity_breakdown=final_incident.severity_breakdown,
+                            recommended_units=final_incident.recommended_units,
                         )
                     except Exception as db_err:
                         logger.warning("Failed to persist final incident to DB: %s", db_err)

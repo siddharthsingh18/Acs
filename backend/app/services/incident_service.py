@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from sqlmodel import Session, func, select
 
@@ -115,12 +115,27 @@ def save_incident_to_db(
     clip_path: Optional[str] = None,
     clip_annotated_path: Optional[str] = None,
     impact_offset_seconds: Optional[float] = None,
+    severity: Optional[str] = None,
+    severity_score: Optional[int] = None,
+    severity_breakdown: Optional[Union[str, dict]] = None,
+    recommended_units: Optional[Union[str, list]] = None,
     session: Optional[Session] = None,
 ) -> Incident:
     """Inserts or updates an incident record in SQLite."""
     keyframe_name = os.path.basename(image_path)
     kf_url = f"/media/keyframes/{keyframe_name}" if keyframe_name else ""
     created_epoch = parse_timestamp_to_epoch(start_timestamp)
+
+    breakdown_json = (
+        json.dumps(severity_breakdown)
+        if isinstance(severity_breakdown, dict)
+        else severity_breakdown
+    )
+    units_json = (
+        json.dumps(recommended_units)
+        if isinstance(recommended_units, list)
+        else recommended_units
+    )
 
     def _persist(s: Session) -> Incident:
         existing = s.exec(select(Incident).where(Incident.incident_id == incident_id)).first()
@@ -142,6 +157,14 @@ def save_incident_to_db(
                 existing.clip_annotated_path = clip_annotated_path
             if impact_offset_seconds is not None:
                 existing.impact_offset_seconds = impact_offset_seconds
+            if severity is not None:
+                existing.severity = severity
+            if severity_score is not None:
+                existing.severity_score = severity_score
+            if breakdown_json is not None:
+                existing.severity_breakdown = breakdown_json
+            if units_json is not None:
+                existing.recommended_units = units_json
             if status != "pending":
                 existing.status = status
             s.add(existing)
@@ -157,7 +180,10 @@ def save_incident_to_db(
             max_confidence=max_confidence,
             image_path=image_path,
             keyframe_url=kf_url,
-            severity="medium",
+            severity=severity or "medium",
+            severity_score=severity_score if severity_score is not None else 50,
+            severity_breakdown=breakdown_json,
+            recommended_units=units_json,
             status=status,
             verification_status=verification_status,
             vlm_confidence=vlm_confidence,

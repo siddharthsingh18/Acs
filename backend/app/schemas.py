@@ -59,6 +59,9 @@ class ConfigDefaults(BaseModel):
     clips_dir: str = Field(description="Directory storing incident video clips")
     clip_retention_days: int = Field(description="Days before stored video clips are deleted")
     clip_max_disk_usage_mb: int = Field(description="Maximum MB disk usage for stored clips")
+    severity_low_max: int = Field(default=35, description="Upper threshold score for low severity tier")
+    severity_medium_max: int = Field(default=70, description="Upper threshold score for medium severity tier")
+    severity_scorer_type: str = Field(default="rule_based", description="Active severity scorer implementation")
     temp_dir: str = Field(description="Directory storing temporary uploads")
 
 
@@ -139,6 +142,9 @@ class IncidentItem(BaseModel):
     duration: float
     keyframe_url: str
     verification_status: Optional[str] = None
+    severity: Optional[str] = None
+    severity_score: Optional[int] = None
+    recommended_units: Optional[List[str]] = None
     clip_url: Optional[str] = None
     clip_annotated_url: Optional[str] = None
 
@@ -168,6 +174,9 @@ class IncidentResponse(BaseModel):
     image_path: str
     keyframe_url: str
     severity: str
+    severity_score: Optional[int] = 50
+    severity_breakdown: Optional[dict] = None
+    recommended_units: Optional[List[str]] = None
     status: str
     reviewer_name: Optional[str] = None
     reviewed_at: Optional[str] = None

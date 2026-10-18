@@ -69,6 +69,10 @@ class AccidentIncident:
     clip_path: Optional[str] = None
     clip_annotated_path: Optional[str] = None
     impact_offset_seconds: Optional[float] = None
+    severity_score: Optional[int] = None
+    severity: Optional[str] = None
+    severity_breakdown: Optional[Dict[str, Any]] = None
+    recommended_units: Optional[List[str]] = None
 
 
 def load_model(weights_path: str) -> YOLO:
@@ -793,6 +797,25 @@ class AccidentEventManager:
             except Exception as v_err:
                 logger.warning(f"Auto-verification failed for incident {incident_id}: {v_err}")
                 incident.verification_status = "unverified"
+
+        # Multi-factor collision severity scoring and unit routing
+        try:
+            from acs.severity import evaluate_incident_severity
+            sev_result = evaluate_incident_severity(
+                incident=incident,
+                detection_history=history_detections,
+                vlm_severity=incident.vlm_severity,
+                vlm_confidence=incident.vlm_confidence,
+            )
+            incident.severity_score = sev_result.score
+            incident.severity = sev_result.level
+            incident.severity_breakdown = sev_result.to_dict()
+            incident.recommended_units = sev_result.recommended_units
+        except Exception as sev_err:
+            logger.warning("Severity evaluation failed for incident %s: %s", incident_id, sev_err)
+            incident.severity_score = 50
+            incident.severity = incident.vlm_severity or "medium"
+            incident.recommended_units = ["police", "tow"]
 
         self.incidents.append(incident)
         self.last_incident_end_time = end_time

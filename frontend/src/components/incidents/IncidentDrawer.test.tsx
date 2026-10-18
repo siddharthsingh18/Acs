@@ -96,9 +96,9 @@ describe('IncidentDrawer component', () => {
     renderDrawer()
 
     // Recommended units chips
-    expect(screen.getByText('EMS')).toBeInTheDocument()
-    expect(screen.getByText('POLICE')).toBeInTheDocument()
-    expect(screen.getByText('TOW')).toBeInTheDocument()
+    expect(screen.getAllByText('EMS').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('POLICE').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('TOW').length).toBeGreaterThanOrEqual(1)
 
     // Structured fields
     expect(screen.getByText('Sedan • SUV')).toBeInTheDocument()
@@ -159,5 +159,37 @@ describe('IncidentDrawer component', () => {
     // Arrow Left should go to previous
     fireEvent.keyDown(window, { key: 'ArrowLeft' })
     expect(onSelectIncident).toHaveBeenCalledWith('INC-2026-000')
+  })
+
+  it('renders collision severity score, tier, and breakdown factors', () => {
+    renderDrawer({
+      initialIncident: {
+        incident_id: 'INC-2026-001',
+        severity: 'high',
+        severity_score: 82,
+        severity_breakdown: {
+          score: 82,
+          level: 'high',
+          recommended_units: ['EMS', 'police', 'fire', 'tow'],
+          components: [
+            {
+              key: 'vulnerable_users',
+              label: 'Entities & Vulnerable Road Users',
+              score: 30,
+              max_score: 35,
+              weight_pct: 35,
+              explanation: '1 pedestrian involved (+20)',
+            },
+          ],
+          factors: ['Critical hazard: individual detected down on the roadway.'],
+          scorer_version: 'rule_based_v1',
+        },
+      },
+    })
+
+    expect(screen.getByText('Collision Severity & Unit Routing')).toBeInTheDocument()
+    expect(screen.getByText('82')).toBeInTheDocument()
+    expect(screen.getByText('Entities & Vulnerable Road Users')).toBeInTheDocument()
+    expect(screen.getByText(/individual detected down on the roadway/i)).toBeInTheDocument()
   })
 })

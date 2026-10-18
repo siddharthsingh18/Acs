@@ -553,6 +553,12 @@ export interface components {
             duration: number;
             /** Keyframe Url */
             keyframe_url: string;
+            /** Severity */
+            severity?: string | null;
+            /** Severity Score (0-100) */
+            severity_score?: number | null;
+            /** Recommended Emergency Units */
+            recommended_units?: string[] | null;
         };
         /**
          * IncidentListResponse
@@ -591,6 +597,14 @@ export interface components {
             keyframe_url: string;
             /** Severity */
             severity: string;
+            /** Severity Score (0-100) */
+            severity_score?: number | null;
+            /** Transparent Severity Breakdown */
+            severity_breakdown?: {
+                [key: string]: unknown;
+            } | null;
+            /** Recommended Emergency Units */
+            recommended_units?: string[] | null;
             /** Status */
             status: string;
             /** Reviewer Name */

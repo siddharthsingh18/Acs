@@ -91,6 +91,9 @@ def get_system_config(cfg: AppConfig) -> SystemConfigResponse:
         clips_dir=getattr(cfg, "clips_dir", "report_clips"),
         clip_retention_days=getattr(cfg, "clip_retention_days", 7),
         clip_max_disk_usage_mb=getattr(cfg, "clip_max_disk_usage_mb", 2048),
+        severity_low_max=getattr(cfg, "severity_low_max", 35),
+        severity_medium_max=getattr(cfg, "severity_medium_max", 70),
+        severity_scorer_type=getattr(cfg, "severity_scorer_type", "rule_based"),
         temp_dir=cfg.temp_dir,
     )
 
