@@ -81,12 +81,39 @@ class AppConfig:
         default_factory=lambda: os.getenv("INJURY_MODEL_PATH", "injury.pt")
     )
 
-    # Inference parameters
+    # Inference and Threshold Tuning Parameters (Environment-Overridable)
     confidence_threshold: float = field(
-        default_factory=lambda: float(os.getenv("CONFIDENCE_THRESHOLD", "0.72"))
+        default_factory=lambda: float(os.getenv("CONFIDENCE_THRESHOLD", "0.55"))
+    )
+    accident_confidence_threshold: float = field(
+        default_factory=lambda: float(os.getenv("ACCIDENT_CONFIDENCE_THRESHOLD", os.getenv("CONFIDENCE_THRESHOLD", "0.55")))
+    )
+    normal_confidence_threshold: float = field(
+        default_factory=lambda: float(os.getenv("NORMAL_CONFIDENCE_THRESHOLD", "0.35"))
     )
     injury_confidence_threshold: float = field(
         default_factory=lambda: float(os.getenv("INJURY_CONFIDENCE_THRESHOLD", "0.72"))
+    )
+    consecutive_frames_threshold: int = field(
+        default_factory=lambda: int(os.getenv("CONSECUTIVE_FRAMES_THRESHOLD", "5"))
+    )
+    timeout_seconds: float = field(
+        default_factory=lambda: float(os.getenv("TIMEOUT_SECONDS", "3.0"))
+    )
+    require_overlapping_entities: bool = field(
+        default_factory=lambda: os.getenv("REQUIRE_OVERLAPPING_ENTITIES", "false").lower() in ("true", "1", "yes")
+    )
+    overlap_iou_threshold: float = field(
+        default_factory=lambda: float(os.getenv("OVERLAP_IOU_THRESHOLD", "0.00"))
+    )
+    nms_iou: float = field(
+        default_factory=lambda: float(os.getenv("NMS_IOU", "0.50"))
+    )
+    tracker_track_buffer: int = field(
+        default_factory=lambda: int(os.getenv("TRACKER_TRACK_BUFFER", "30"))
+    )
+    tracker_match_thresh: float = field(
+        default_factory=lambda: float(os.getenv("TRACKER_MATCH_THRESH", "0.80"))
     )
 
     # Hardware compute device

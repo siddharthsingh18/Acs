@@ -79,6 +79,42 @@ def load_model(weights_path: str) -> YOLO:
         raise RuntimeError(f"Failed to load YOLO model from '{weights_path}': {exc}") from exc
 
 
+def compute_box_iou(box1: Tuple[float, float, float, float], box2: Tuple[float, float, float, float]) -> float:
+    """Computes Intersection over Union (IoU) between two (x1, y1, x2, y2) bounding boxes."""
+    x1 = max(box1[0], box2[0])
+    y1 = max(box1[1], box2[1])
+    x2 = min(box1[2], box2[2])
+    y2 = min(box1[3], box2[3])
+
+    inter_w = max(0.0, x2 - x1)
+    inter_h = max(0.0, y2 - y1)
+    inter_area = inter_w * inter_h
+
+    area1 = max(0.0, box1[2] - box1[0]) * max(0.0, box1[3] - box1[1])
+    area2 = max(0.0, box2[2] - box2[0]) * max(0.0, box2[3] - box2[1])
+    union_area = area1 + area2 - inter_area
+    if union_area <= 0.0:
+        return 0.0
+    return inter_area / union_area
+
+
+def compute_intersection_ratio(box_acc: Tuple[float, float, float, float], box_norm: Tuple[float, float, float, float]) -> float:
+    """Computes the ratio of intersection area to the area of the accident box."""
+    x1 = max(box_acc[0], box_norm[0])
+    y1 = max(box_acc[1], box_norm[1])
+    x2 = min(box_acc[2], box_norm[2])
+    y2 = min(box_acc[3], box_norm[3])
+
+    inter_w = max(0.0, x2 - x1)
+    inter_h = max(0.0, y2 - y1)
+    inter_area = inter_w * inter_h
+
+    area_acc = max(0.0, box_acc[2] - box_acc[0]) * max(0.0, box_acc[3] - box_acc[1])
+    if area_acc <= 0.0:
+        return 0.0
+    return inter_area / area_acc
+
+
 class AccidentDetector:
     """Encapsulates YOLO inference and ByteTrack object tracking."""
 
@@ -87,28 +123,80 @@ class AccidentDetector:
         model_path: Optional[str] = None,
         injury_model_path: Optional[str] = None,
         confidence_threshold: Optional[float] = None,
+        accident_confidence_threshold: Optional[float] = None,
+        normal_confidence_threshold: Optional[float] = None,
         injury_confidence_threshold: Optional[float] = None,
         device: Optional[str] = None,
         accident_classes: Optional[Set[str]] = None,
+        require_overlapping_entities: Optional[bool] = None,
+        overlap_iou_threshold: Optional[float] = None,
+        nms_iou: Optional[float] = None,
+        tracker_track_buffer: Optional[int] = None,
+        tracker_match_thresh: Optional[float] = None,
     ):
         """Initializes primary detection and optional secondary injury models.
 
         Args:
             model_path: Path to the primary detection model.
             injury_model_path: Optional path to the injury detection model.
-            confidence_threshold: Confidence cutoff for primary detections.
+            confidence_threshold: Legacy confidence cutoff (falls back to accident threshold).
+            accident_confidence_threshold: Confidence threshold for accident classes.
+            normal_confidence_threshold: Confidence threshold for normal traffic entities.
             injury_confidence_threshold: Confidence cutoff for injury detections.
             device: Target hardware device ('cuda:0', 'mps', or 'cpu').
             accident_classes: Set of class labels indicating an accident.
+            require_overlapping_entities: Whether accident boxes must overlap with road entities.
+            overlap_iou_threshold: Minimum overlap ratio to validate accident box.
+            nms_iou: Non-maximum suppression IoU threshold.
+            tracker_track_buffer: ByteTrack frame buffer for lost tracks.
+            tracker_match_thresh: ByteTrack association threshold.
         """
         self.model_path = model_path or config.model_path
         self.injury_model_path = injury_model_path or config.injury_model_path
-        self.confidence_threshold = confidence_threshold or config.confidence_threshold
+
+        self.accident_confidence_threshold = (
+            accident_confidence_threshold
+            if accident_confidence_threshold is not None
+            else getattr(config, "accident_confidence_threshold", confidence_threshold or config.confidence_threshold)
+        )
+        self.normal_confidence_threshold = (
+            normal_confidence_threshold
+            if normal_confidence_threshold is not None
+            else getattr(config, "normal_confidence_threshold", 0.35)
+        )
+        self.confidence_threshold = self.accident_confidence_threshold
+
         self.injury_confidence_threshold = (
             injury_confidence_threshold or config.injury_confidence_threshold
         )
         self.device = device or config.device
         self.accident_classes = accident_classes or set(ACCIDENT_CLASSES)
+
+        self.require_overlapping_entities = (
+            require_overlapping_entities
+            if require_overlapping_entities is not None
+            else getattr(config, "require_overlapping_entities", False)
+        )
+        self.overlap_iou_threshold = (
+            overlap_iou_threshold
+            if overlap_iou_threshold is not None
+            else getattr(config, "overlap_iou_threshold", 0.05)
+        )
+        self.nms_iou = (
+            nms_iou
+            if nms_iou is not None
+            else getattr(config, "nms_iou", 0.50)
+        )
+        self.tracker_track_buffer = (
+            tracker_track_buffer
+            if tracker_track_buffer is not None
+            else getattr(config, "tracker_track_buffer", 30)
+        )
+        self.tracker_match_thresh = (
+            tracker_match_thresh
+            if tracker_match_thresh is not None
+            else getattr(config, "tracker_match_thresh", 0.80)
+        )
 
         # Load primary YOLO model
         self.primary_model = load_model(self.model_path)
@@ -141,13 +229,26 @@ class AccidentDetector:
         else:
             processed_frame = frame
 
+        # Lowest threshold to extract both accident and normal entities
+        min_conf = min(self.accident_confidence_threshold, self.normal_confidence_threshold)
+
         # Run primary YOLO tracking or standard prediction
         if track:
+            tracker_cfg = "bytetrack.yaml"
+            if self.tracker_track_buffer != 30 or abs(self.tracker_match_thresh - 0.8) > 1e-4:
+                temp_tracker = os.path.join(config.temp_dir, f"bytetrack_b{self.tracker_track_buffer}_m{int(self.tracker_match_thresh*100)}.yaml")
+                if not os.path.exists(temp_tracker):
+                    os.makedirs(os.path.dirname(temp_tracker), exist_ok=True)
+                    with open(temp_tracker, "w", encoding="utf-8") as f:
+                        f.write(f"tracker_type: bytetrack\ntrack_high_thresh: 0.25\ntrack_low_thresh: 0.1\nnew_track_thresh: 0.25\ntrack_buffer: {self.tracker_track_buffer}\nmatch_thresh: {self.tracker_match_thresh}\nfuse_score: True\n")
+                tracker_cfg = temp_tracker
+
             results = self.primary_model.track(
                 source=processed_frame,
                 persist=True,
-                tracker="bytetrack.yaml",
-                conf=self.confidence_threshold,
+                tracker=tracker_cfg,
+                conf=min_conf,
+                iou=self.nms_iou,
                 device=self.device,
                 imgsz=640,
                 verbose=False,
@@ -155,7 +256,8 @@ class AccidentDetector:
         else:
             results = self.primary_model.predict(
                 source=processed_frame,
-                conf=self.confidence_threshold,
+                conf=min_conf,
+                iou=self.nms_iou,
                 device=self.device,
                 imgsz=640,
                 verbose=False,
@@ -163,9 +265,8 @@ class AccidentDetector:
 
         annotated_frame = results[0].plot()
         detected_boxes: List[DetectionBox] = []
-        detected_classes: Set[str] = set()
-        accident_classes: Set[str] = set()
-        accident_detected = False
+        candidate_accident_boxes: List[DetectionBox] = []
+        normal_entity_boxes: List[DetectionBox] = []
 
         boxes = results[0].boxes
         if boxes is not None and len(boxes) > 0:
@@ -188,12 +289,35 @@ class AccidentDetector:
                     is_accident=is_accident,
                     track_id=track_id,
                 )
-                detected_boxes.append(detection)
-                detected_classes.add(class_name)
 
                 if is_accident:
-                    accident_detected = True
-                    accident_classes.add(class_name)
+                    if confidence >= self.accident_confidence_threshold:
+                        candidate_accident_boxes.append(detection)
+                else:
+                    if confidence >= self.normal_confidence_threshold:
+                        normal_entity_boxes.append(detection)
+                        detected_boxes.append(detection)
+
+        # Validate accident boxes with overlapping entity rule if enabled
+        validated_accident_boxes: List[DetectionBox] = []
+        if self.require_overlapping_entities:
+            for acc_b in candidate_accident_boxes:
+                has_overlap = False
+                for norm_b in normal_entity_boxes:
+                    iou = compute_box_iou(acc_b.bbox, norm_b.bbox)
+                    ratio = compute_intersection_ratio(acc_b.bbox, norm_b.bbox)
+                    if max(iou, ratio) >= self.overlap_iou_threshold:
+                        has_overlap = True
+                        break
+                if has_overlap:
+                    validated_accident_boxes.append(acc_b)
+        else:
+            validated_accident_boxes = candidate_accident_boxes
+
+        detected_boxes.extend(validated_accident_boxes)
+        accident_detected = len(validated_accident_boxes) > 0
+        detected_classes = {b.class_name for b in detected_boxes}
+        accident_classes = {b.class_name for b in validated_accident_boxes}
 
         # Run secondary injury model if available and an accident was detected
         if accident_detected and self.injury_model is not None:
@@ -272,10 +396,11 @@ class AccidentEventManager:
 
     def __init__(
         self,
-        consecutive_frames_threshold: int = 5,
-        timeout_seconds: float = 3.0,
-        cooldown_seconds: float = 10.0,
+        consecutive_frames_threshold: Optional[int] = None,
+        timeout_seconds: Optional[float] = None,
+        cooldown_seconds: Optional[float] = None,
         confidence_threshold: Optional[float] = None,
+        accident_confidence_threshold: Optional[float] = None,
         accident_classes: Optional[Set[str]] = None,
         output_dir: Optional[str] = None,
         reports_dir: Optional[str] = None,
@@ -285,24 +410,38 @@ class AccidentEventManager:
         """Initializes the event manager with timing and storage parameters.
 
         Args:
-            consecutive_frames_threshold: Required consecutive accident frames to start (N=5).
-            timeout_seconds: Inactivity period before incident termination (M=3s).
-            cooldown_seconds: Minimum delay after incident end before a new one can start (10s).
+            consecutive_frames_threshold: Required consecutive accident frames to start (defaults to config).
+            timeout_seconds: Inactivity period before incident termination (defaults to config).
+            cooldown_seconds: Delay after incident end before new one can start (defaults to config).
             confidence_threshold: Confidence cutoff for an accident detection to count.
+            accident_confidence_threshold: Explicit threshold for accident classes (falls back to confidence_threshold).
             accident_classes: Set of class labels treated as accidents.
             output_dir: Directory to store incident keyframes.
             reports_dir: Directory to append the incidents CSV log.
             csv_filename: File name for the master incidents CSV.
             auto_save: Whether to automatically write keyframe and CSV row on incident end.
         """
-        self.consecutive_frames_threshold = consecutive_frames_threshold
-        self.timeout_seconds = timeout_seconds
-        self.cooldown_seconds = cooldown_seconds
-        self.confidence_threshold = (
-            confidence_threshold
-            if confidence_threshold is not None
-            else config.confidence_threshold
+        self.consecutive_frames_threshold = (
+            consecutive_frames_threshold
+            if consecutive_frames_threshold is not None
+            else config.consecutive_frames_threshold
         )
+        self.timeout_seconds = (
+            timeout_seconds
+            if timeout_seconds is not None
+            else config.timeout_seconds
+        )
+        self.cooldown_seconds = (
+            cooldown_seconds
+            if cooldown_seconds is not None
+            else config.cooldown_seconds
+        )
+        if accident_confidence_threshold is not None:
+            self.confidence_threshold = accident_confidence_threshold
+        elif confidence_threshold is not None:
+            self.confidence_threshold = confidence_threshold
+        else:
+            self.confidence_threshold = config.accident_confidence_threshold
         self.accident_classes = (
             accident_classes
             if accident_classes is not None
