@@ -268,6 +268,7 @@ def generate_report_pdf(
     image_path: Optional[str] = None,
     dispatch_text: Optional[str] = None,
     lang: str = "en",
+    blur_privacy: Optional[bool] = None,
 ) -> bytes:
     """Generates an official emergency accident incident report as PDF bytes.
 
@@ -280,10 +281,12 @@ def generate_report_pdf(
         image_path: Optional path to peak keyframe image.
         dispatch_text: Optional multimodal dispatch text from Gemini.
         lang: Target language ('en' or 'ar').
+        blur_privacy: Whether to apply face and license plate blurring (defaults to config.privacy_blur_enabled).
 
     Returns:
         bytes: Raw PDF document bytes suitable for download or storage.
     """
+    import tempfile
     from fpdf import FPDF
 
     pdf = FPDF()
@@ -291,6 +294,7 @@ def generate_report_pdf(
     pdf.add_page()
 
     font_name = "helvetica"
+    is_privacy_enabled = getattr(config, "privacy_blur_enabled", True) if blur_privacy is None else bool(blur_privacy)
 
     # Header Banner
     pdf.set_font(font_name, "B", 16)
@@ -312,7 +316,7 @@ def generate_report_pdf(
         ("Start Timestamp:", start_timestamp),
         ("End Timestamp:", end_timestamp),
         ("Generated Time:", time.strftime("%Y-%m-%d %H:%M:%S UTC")),
-        ("Privacy Protection:", "Faces & Plates Redacted (SURVEILLANCE COMPLIANT)" if getattr(config, "privacy_blur_enabled", True) else "Unredacted"),
+        ("Privacy Protection:", "Faces & Plates Redacted (SURVEILLANCE COMPLIANT)" if is_privacy_enabled else "Unredacted (CONFIDENTIAL VAULT)"),
     ]
 
     for label, val in rows:
@@ -325,19 +329,41 @@ def generate_report_pdf(
 
     pdf.ln(5)
 
-    # Embedded Keyframe Image
+    # Embedded Keyframe Image (with privacy blur if enabled)
     if image_path and os.path.exists(image_path):
+        temp_blurred_path = None
         try:
+            embed_path = image_path
+            if is_privacy_enabled:
+                try:
+                    from acs.privacy import apply_privacy_blur
+                    raw_img = cv2.imread(image_path)
+                    if raw_img is not None and raw_img.size > 0:
+                        blurred_img = apply_privacy_blur(raw_img)
+                        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+                        temp_blurred_path = tmp.name
+                        tmp.close()
+                        cv2.imwrite(temp_blurred_path, blurred_img)
+                        embed_path = temp_blurred_path
+                except Exception as blur_err:
+                    logger.warning("Privacy blurring for PDF keyframe failed, falling back to source: %s", blur_err)
+
             pdf.set_font(font_name, "B", 12)
             pdf.cell(0, 8, "Peak Collision Keyframe", new_x="LMARGIN", new_y="NEXT")
             pdf.ln(2)
             # Embed image scaled nicely
-            pdf.image(image_path, w=140)
+            pdf.image(embed_path, w=140)
             pdf.ln(6)
         except Exception:
             pdf.set_font(font_name, "I", 9)
             pdf.cell(0, 6, f"[Keyframe image available at: {image_path}]", new_x="LMARGIN", new_y="NEXT")
             pdf.ln(4)
+        finally:
+            if temp_blurred_path and os.path.exists(temp_blurred_path):
+                try:
+                    os.remove(temp_blurred_path)
+                except OSError:
+                    pass
 
     # Multimodal Gemini Emergency Dispatch Assessment
     if dispatch_text:

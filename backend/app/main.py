@@ -128,13 +128,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from backend.app.services.alert_escalation_service import run_escalation_worker
     escalation_task = asyncio.create_task(run_escalation_worker(interval_seconds=30.0))
 
+    # Start background automated retention policy worker
+    from backend.app.services.retention_service import run_retention_worker
+    retention_interval = float(os.getenv("RETENTION_CHECK_INTERVAL_SECONDS", "3600"))
+    retention_task = asyncio.create_task(run_retention_worker(interval_seconds=retention_interval))
+
     yield
     logger.info("Shutting down ACS Backend service and background workers.")
     escalation_task.cancel()
-    try:
-        await escalation_task
-    except asyncio.CancelledError:
-        pass
+    retention_task.cancel()
+    for task in (escalation_task, retention_task):
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
     camera_manager.shutdown()
 
 

@@ -3,6 +3,7 @@ backend.app.services.retention_service
 Incident retention policy enforcement, automatic expiration cleanup,
 individual incident ZIP bundle export, and full incident erasure.
 """
+import asyncio
 import glob
 import io
 import json
@@ -259,3 +260,43 @@ def delete_incident_and_media(session: Session, incident_id: str) -> Dict[str, A
         "deleted_files_count": deleted_files,
         "message": f"Incident '{incident_id}' and all associated media files have been permanently deleted.",
     }
+
+
+async def run_retention_worker(interval_seconds: float = 3600.0) -> None:
+    """Asynchronous background worker that periodically executes automated retention cleanup.
+
+    Purges expired incidents, keyframes, video clips, and LRU cache overflow
+    according to the configured retention lifecycle.
+
+    Args:
+        interval_seconds: Polling interval between automated cleanup sweeps (defaults to 3600s / 1hr).
+    """
+    logger.info("Automated retention worker initialized (sweep interval: %.1f seconds).", interval_seconds)
+    while True:
+        try:
+            from backend.app.db.database import get_session
+            for session in get_session():
+                try:
+                    stats = run_retention_cleanup(session)
+                    if stats.get("deleted_incidents", 0) > 0 or stats.get("deleted_clips", 0) > 0:
+                        logger.info(
+                            "Automated retention policy sweep executed: purged %d incidents, %d clips (%d bytes freed).",
+                            stats.get("deleted_incidents", 0),
+                            stats.get("deleted_clips", 0),
+                            stats.get("freed_bytes", 0),
+                        )
+                finally:
+                    session.close()
+                break
+        except asyncio.CancelledError:
+            logger.info("Automated retention worker cancelled for shutdown.")
+            break
+        except Exception as exc:
+            logger.error("Error during automated retention background sweep: %s", exc)
+
+        try:
+            await asyncio.sleep(interval_seconds)
+        except asyncio.CancelledError:
+            logger.info("Automated retention worker sleep interrupted for shutdown.")
+            break
+

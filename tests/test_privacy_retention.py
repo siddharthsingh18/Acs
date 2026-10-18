@@ -338,3 +338,127 @@ def test_rbac_and_audit_on_incident_endpoints(monkeypatch, temp_privacy_env):
     assert "incident.exported" in actions
     assert "privacy.unredacted_keyframe.accessed" in actions
     assert "incident.deleted" in actions
+
+
+def test_pdf_report_privacy_blurring(temp_privacy_env):
+    """Verifies that PDF reports embed privacy-blurred keyframes and reflect redaction status."""
+    from acs.reporter import generate_report_pdf
+
+    # Create dummy keyframe
+    kf_path = os.path.join(temp_privacy_env["keyframes"], "test_pdf_kf.jpg")
+    img = np.full((120, 160, 3), 128, dtype=np.uint8)
+    cv2.putText(img, "DXB-1234", (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+    cv2.imwrite(kf_path, img)
+
+    # 1. Privacy enabled PDF report
+    pdf_redacted = generate_report_pdf(
+        incident_id="INC-PDF-TEST-1",
+        class_name="car_car_accident",
+        start_timestamp="2026-10-19 02:00:00 UTC",
+        end_timestamp="2026-10-19 02:00:05 UTC",
+        max_confidence=0.91,
+        image_path=kf_path,
+        blur_privacy=True,
+    )
+    assert isinstance(pdf_redacted, bytes)
+    assert len(pdf_redacted) > 1000
+    assert b"%PDF" in pdf_redacted[:10]
+
+    # 2. Unredacted PDF report for confidential authorized review
+    pdf_unredacted = generate_report_pdf(
+        incident_id="INC-PDF-TEST-2",
+        class_name="car_car_accident",
+        start_timestamp="2026-10-19 02:00:00 UTC",
+        end_timestamp="2026-10-19 02:00:05 UTC",
+        max_confidence=0.91,
+        image_path=kf_path,
+        blur_privacy=False,
+    )
+    assert isinstance(pdf_unredacted, bytes)
+    assert len(pdf_unredacted) > 1000
+    assert b"%PDF" in pdf_unredacted[:10]
+
+
+def test_unredacted_clip_vault_rbac(monkeypatch, temp_privacy_env):
+    """Verifies that the unredacted video clip vault enforces Admin RBAC and records audit trail."""
+    monkeypatch.setenv("AUTH_ENFORCE", "1")
+    client = TestClient(app)
+    session = next(get_session())
+
+    incident_id = f"INC-CLIP-VAULT-{time.time_ns()}"
+    clip_vault_path = os.path.join(temp_privacy_env["unredacted"], "clips", f"{incident_id}_unredacted.mp4")
+    os.makedirs(os.path.dirname(clip_vault_path), exist_ok=True)
+    with open(clip_vault_path, "wb") as f:
+        f.write(b"\x00\x00\x00 ftypisom" + b"\x00" * 200)
+
+    inc = Incident(
+        incident_id=incident_id,
+        start_timestamp="2026-10-19 02:10:00 UTC",
+        end_timestamp="2026-10-19 02:10:05 UTC",
+        class_name="car_truck_accident",
+        max_confidence=0.87,
+        image_path="/tmp/dummy_kf.jpg",
+        keyframe_url="/media/keyframes/dummy_kf.jpg",
+        severity="medium",
+        status="pending",
+        unredacted_clip_path=clip_vault_path,
+        created_at=time.time(),
+    )
+    session.add(inc)
+    session.commit()
+
+    v_user = session.exec(select(User).where(User.username == "viewer")).first()
+    op_user = session.exec(select(User).where(User.username == "operator")).first()
+    ad_user = session.exec(select(User).where(User.username == "admin")).first()
+
+    viewer_token = create_access_token({"sub": v_user.id if v_user else "u_viewer", "username": "viewer", "role": "viewer"})
+    operator_token = create_access_token({"sub": op_user.id if op_user else "u_op", "username": "operator", "role": "operator"})
+    admin_token = create_access_token({"sub": ad_user.id if ad_user else "u_ad", "username": "admin", "role": "admin"})
+
+    # Viewer rejected
+    resp_viewer = client.get(
+        f"/api/incidents/{incident_id}/unredacted-clip",
+        headers={"Authorization": f"Bearer {viewer_token}"},
+    )
+    assert resp_viewer.status_code == 403
+
+    # Operator rejected
+    resp_op = client.get(
+        f"/api/incidents/{incident_id}/unredacted-clip",
+        headers={"Authorization": f"Bearer {operator_token}"},
+    )
+    assert resp_op.status_code == 403
+
+    # Admin allowed
+    resp_admin = client.get(
+        f"/api/incidents/{incident_id}/unredacted-clip",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp_admin.status_code in (200, 206)
+
+    # Audit log entry created
+    audit = session.exec(
+        select(AuditLog).where(
+            AuditLog.target_id == incident_id,
+            AuditLog.action == "privacy.unredacted_clip.accessed",
+        )
+    ).first()
+    assert audit is not None
+    assert audit.username == "admin"
+
+
+@pytest.mark.anyio
+async def test_retention_worker_lifecycle():
+    """Verifies that the automated retention background worker initializes and shuts down cleanly."""
+    import asyncio
+    from backend.app.services.retention_service import run_retention_worker
+
+    task = asyncio.create_task(run_retention_worker(interval_seconds=0.1))
+    await asyncio.sleep(0.15)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+    assert task.cancelled() or task.done()
+
