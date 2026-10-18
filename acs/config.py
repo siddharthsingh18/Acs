@@ -244,13 +244,41 @@ class AppConfig:
         default_factory=lambda: os.getenv("SMTP_USE_TLS", "true").lower() in ("true", "1", "yes")
     )
 
+    # Privacy Protection & Retention Configuration
+    privacy_blur_enabled: bool = field(
+        default_factory=lambda: os.getenv("PRIVACY_BLUR_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    privacy_blur_faces: bool = field(
+        default_factory=lambda: os.getenv("PRIVACY_BLUR_FACES", "true").lower() in ("true", "1", "yes")
+    )
+    privacy_blur_plates: bool = field(
+        default_factory=lambda: os.getenv("PRIVACY_BLUR_PLATES", "true").lower() in ("true", "1", "yes")
+    )
+    privacy_preserve_unblurred_original: bool = field(
+        default_factory=lambda: os.getenv("PRIVACY_PRESERVE_UNBLURRED_ORIGINAL", "true").lower() in ("true", "1", "yes")
+    )
+    privacy_unredacted_dir: str = field(
+        default_factory=lambda: os.getenv("PRIVACY_UNREDACTED_DIR", "media/unredacted")
+    )
+    incident_retention_days: int = field(
+        default_factory=lambda: int(os.getenv("INCIDENT_RETENTION_DAYS", "30"))
+    )
+
     # Class definitions
     class_names: List[str] = field(default_factory=lambda: list(CLASS_NAMES))
     accident_classes: Set[str] = field(default_factory=lambda: set(ACCIDENT_CLASSES))
 
     def ensure_directories(self) -> None:
         """Create required output directories if they do not exist."""
-        for directory in [self.reports_dir, self.report_images_dir, self.clips_dir, self.temp_dir]:
+        for directory in [
+            self.reports_dir,
+            self.report_images_dir,
+            self.clips_dir,
+            self.temp_dir,
+            self.privacy_unredacted_dir,
+            os.path.join(self.privacy_unredacted_dir, "keyframes"),
+            os.path.join(self.privacy_unredacted_dir, "clips"),
+        ]:
             os.makedirs(directory, exist_ok=True)
 
 

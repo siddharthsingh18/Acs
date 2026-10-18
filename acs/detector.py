@@ -840,9 +840,27 @@ class AccidentEventManager:
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.reports_dir, exist_ok=True)
 
-        # 1. Save exactly one keyframe image
+        # 1. Save keyframe image (with optional privacy blur & vault)
         if incident.keyframe is not None:
-            cv2.imwrite(incident.image_path, incident.keyframe)
+            if getattr(config, "privacy_blur_enabled", True):
+                try:
+                    from acs.privacy import protect_keyframe
+                    boxes = incident.detection_history[-1].boxes if incident.detection_history and hasattr(incident.detection_history[-1], "boxes") else None
+                    out_path, unredacted_path = protect_keyframe(
+                        keyframe=incident.keyframe,
+                        incident_id=incident.incident_id,
+                        output_path=incident.image_path,
+                        detected_boxes=boxes,
+                        preserve_unblurred=getattr(config, "privacy_preserve_unblurred_original", True),
+                        unredacted_dir=getattr(config, "privacy_unredacted_dir", "media/unredacted"),
+                    )
+                    incident.is_privacy_blurred = True
+                    incident.unredacted_keyframe_path = unredacted_path
+                except Exception as priv_err:
+                    logger.warning("Privacy keyframe protection failed: %s", priv_err)
+                    cv2.imwrite(incident.image_path, incident.keyframe)
+            else:
+                cv2.imwrite(incident.image_path, incident.keyframe)
         else:
             # Fallback placeholder if no keyframe frame was stored
             blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -861,7 +879,11 @@ class AccidentEventManager:
                 v_fname = f"{incident.incident_id}_frame_{idx + 1:02d}_{role}.jpg"
                 v_path = os.path.join(self.output_dir, v_fname)
                 if vf is not None and isinstance(vf, np.ndarray) and vf.size > 0:
-                    cv2.imwrite(v_path, vf)
+                    if getattr(config, "privacy_blur_enabled", True):
+                        from acs.privacy import apply_privacy_blur
+                        cv2.imwrite(v_path, apply_privacy_blur(vf))
+                    else:
+                        cv2.imwrite(v_path, vf)
                     v_paths.append(v_path)
             incident.verification_frame_paths = v_paths
 

@@ -312,6 +312,7 @@ def generate_report_pdf(
         ("Start Timestamp:", start_timestamp),
         ("End Timestamp:", end_timestamp),
         ("Generated Time:", time.strftime("%Y-%m-%d %H:%M:%S UTC")),
+        ("Privacy Protection:", "Faces & Plates Redacted (SURVEILLANCE COMPLIANT)" if getattr(config, "privacy_blur_enabled", True) else "Unredacted"),
     ]
 
     for label, val in rows:

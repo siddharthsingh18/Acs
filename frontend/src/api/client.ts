@@ -386,6 +386,9 @@ export const api = {
     retention_days?: number
     max_disk_usage_mb?: number
     trigger_cleanup?: boolean
+    privacy_blur_enabled?: boolean
+    privacy_preserve_unblurred_original?: boolean
+    incident_retention_days?: number
   }): Promise<RetentionSettings> => {
     const response = await authFetch('/api/retention', {
       method: 'POST',
@@ -504,6 +507,61 @@ export const api = {
       throw new Error(err.detail || 'Failed to delete user')
     }
   },
+
+  // Incident Privacy & Retention Operations
+  exportIncidentBundle: async (incidentId: string): Promise<Blob> => {
+    const response = await authFetch(`/api/incidents/${incidentId}/export`)
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'Failed to export incident bundle' }))
+      throw new Error(err.detail || 'Failed to export incident bundle')
+    }
+    return await response.blob()
+  },
+
+  deleteIncident: async (
+    incidentId: string
+  ): Promise<{ status: string; incident_id: string; deleted_files_count: number }> => {
+    const response = await authFetch(`/api/incidents/${incidentId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'Failed to delete incident' }))
+      throw new Error(err.detail || 'Failed to delete incident')
+    }
+    return await response.json()
+  },
+
+  getUnredactedKeyframeUrl: (incidentId: string): string => {
+    return `/api/incidents/${incidentId}/unredacted-keyframe`
+  },
+
+  getUnredactedClipUrl: (incidentId: string): string => {
+    return `/api/incidents/${incidentId}/unredacted-clip`
+  },
+
+  runRetentionCleanup: async (params?: {
+    retention_days?: number
+    max_disk_mb?: number
+  }): Promise<{
+    expired_incidents_deleted: number
+    expired_clips_deleted: number
+    disk_cap_clips_deleted: number
+    freed_disk_mb: number
+    remaining_disk_mb: number
+  }> => {
+    const query = new URLSearchParams()
+    if (params?.retention_days !== undefined) query.set('retention_days', String(params.retention_days))
+    if (params?.max_disk_mb !== undefined) query.set('max_disk_mb', String(params.max_disk_mb))
+    const qs = query.toString() ? `?${query.toString()}` : ''
+    const response = await authFetch(`/api/incidents/retention/cleanup${qs}`, {
+      method: 'POST',
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'Failed to execute retention cleanup' }))
+      throw new Error(err.detail || 'Failed to execute retention cleanup')
+    }
+    return await response.json()
+  },
 }
 
 
@@ -513,6 +571,9 @@ export interface RetentionSettings {
   current_disk_usage_mb: number
   total_clips_count: number
   clips_dir: string
+  privacy_blur_enabled?: boolean
+  privacy_preserve_unblurred_original?: boolean
+  incident_retention_days?: number
 }
 
 export interface ReviewQueueItem {

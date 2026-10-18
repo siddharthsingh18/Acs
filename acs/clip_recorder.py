@@ -474,10 +474,34 @@ class IncidentClipRecorder:
         raw_path = os.path.join(target_dir, f"{incident_id}_raw.mp4")
         ann_path = os.path.join(target_dir, f"{incident_id}_annotated.mp4")
 
+        # Privacy Protection & Vaulting
+        privacy_enabled = getattr(config, "privacy_blur_enabled", True)
+        preserve_unblurred = getattr(config, "privacy_preserve_unblurred_original", True)
+        unredacted_dir = getattr(config, "privacy_unredacted_dir", "media/unredacted")
+
+        if privacy_enabled and session.raw_frames:
+            try:
+                if preserve_unblurred:
+                    vault_clip_dir = os.path.join(unredacted_dir, "clips")
+                    os.makedirs(vault_clip_dir, exist_ok=True)
+                    vault_path = os.path.join(vault_clip_dir, f"{incident_id}_unredacted.mp4")
+                    save_h264_clip(session.raw_frames, vault_path, fps=session.fps)
+
+                from acs.privacy import apply_privacy_blur
+                raw_to_encode = [apply_privacy_blur(f) for f in session.raw_frames]
+                ann_to_encode = [apply_privacy_blur(f) for f in session.annotated_frames]
+            except Exception as priv_clip_err:
+                logger.warning("Privacy clip blur failed: %s", priv_clip_err)
+                raw_to_encode = session.raw_frames
+                ann_to_encode = session.annotated_frames
+        else:
+            raw_to_encode = session.raw_frames
+            ann_to_encode = session.annotated_frames
+
         # Encode raw clip
-        raw_ok = save_h264_clip(session.raw_frames, raw_path, fps=session.fps)
+        raw_ok = save_h264_clip(raw_to_encode, raw_path, fps=session.fps)
         # Encode annotated clip with bounding boxes burned in
-        ann_ok = save_h264_clip(session.annotated_frames, ann_path, fps=session.fps)
+        ann_ok = save_h264_clip(ann_to_encode, ann_path, fps=session.fps)
 
         session.is_finalized = True
         session.clip_raw_path = raw_path if raw_ok else None

@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session
 
+from acs.config import config
 from acs.reporter import generate_report_pdf
 from backend.app.db.database import get_session
 from backend.app.db.models import Incident
@@ -97,6 +98,13 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
         corrected_boxes=inc.corrected_boxes,
         created_at=inc.created_at,
         duration=inc.duration,
+        is_privacy_blurred=getattr(inc, "is_privacy_blurred", True),
+        has_unredacted_original=bool(
+            getattr(inc, "unredacted_keyframe_path", None)
+            or getattr(inc, "unredacted_clip_path", None)
+            or os.path.exists(os.path.join(getattr(config, "privacy_unredacted_dir", "media/unredacted"), "keyframes", f"{inc.incident_id}_unredacted.jpg"))
+            or os.path.exists(os.path.join(getattr(config, "privacy_unredacted_dir", "media/unredacted"), "clips", f"{inc.incident_id}_unredacted.mp4"))
+        ),
     )
 
 
@@ -223,7 +231,7 @@ def get_incident_pdf_endpoint(
 
 
 from backend.app.db.models import Incident, User
-from backend.app.deps import extract_client_ip, require_operator, require_viewer
+from backend.app.deps import extract_client_ip, require_admin, require_operator, require_viewer
 from backend.app.services.audit_service import log_audit_event
 
 
@@ -418,4 +426,167 @@ def get_incident_clip_endpoint(
         )
 
     return serve_file_with_range_support(file_path, request)
+
+
+@router.get("/{incident_id}/export")
+def export_incident_bundle_endpoint(
+    incident_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_operator),
+) -> Response:
+    """Exports a specific incident bundle as a ZIP file including metadata, blurred media, PDF report, and audit logs."""
+    from backend.app.services.retention_service import export_incident_bundle
+    try:
+        zip_bytes, filename = export_incident_bundle(session, incident_id)
+        log_audit_event(
+            session=session,
+            username=current_user.username,
+            user_role=current_user.role,
+            action="incident.exported",
+            target_type="incident",
+            target_id=incident_id,
+            ip_address=extract_client_ip(request),
+            details={"filename": filename, "size_bytes": len(zip_bytes)},
+            user_id=current_user.id,
+        )
+        return Response(
+            content=zip_bytes,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except ValueError as val_err:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(val_err))
+    except Exception as exc:
+        logger.error("Failed to export incident bundle for %s: %s", incident_id, exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Export failed: {exc}")
+
+
+@router.delete("/{incident_id}")
+def delete_incident_endpoint(
+    incident_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+) -> dict:
+    """Permanently deletes an incident, associated review data, and all disk media. Enforces Admin role."""
+    from backend.app.services.retention_service import delete_incident_and_media
+    try:
+        result = delete_incident_and_media(session, incident_id)
+        log_audit_event(
+            session=session,
+            username=admin_user.username,
+            user_role=admin_user.role,
+            action="incident.deleted",
+            target_type="incident",
+            target_id=incident_id,
+            ip_address=extract_client_ip(request),
+            details={"deleted_files_count": result.get("deleted_files_count", 0)},
+            user_id=admin_user.id,
+        )
+        return result
+    except ValueError as val_err:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(val_err))
+    except Exception as exc:
+        logger.error("Failed to delete incident %s: %s", incident_id, exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Deletion failed: {exc}")
+
+
+@router.get("/{incident_id}/unredacted-keyframe")
+def get_unredacted_keyframe_endpoint(
+    incident_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+) -> Response:
+    """Serves the unredacted original keyframe from the access-controlled vault. Enforces Admin role."""
+    from fastapi.responses import FileResponse
+    from acs.config import config
+    inc = get_incident_by_id(session, incident_id)
+    if not inc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Incident '{incident_id}' not found.")
+
+    vault_dir = getattr(config, "privacy_unredacted_dir", "media/unredacted")
+    path = getattr(inc, "unredacted_keyframe_path", None) or os.path.join(vault_dir, "keyframes", f"{incident_id}_unredacted.jpg")
+
+    if not path or not os.path.isfile(path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No unredacted original keyframe stored for incident '{incident_id}'.",
+        )
+
+    log_audit_event(
+        session=session,
+        username=admin_user.username,
+        user_role=admin_user.role,
+        action="privacy.unredacted_keyframe.accessed",
+        target_type="incident",
+        target_id=incident_id,
+        ip_address=extract_client_ip(request),
+        details={"path": path},
+        user_id=admin_user.id,
+    )
+    return FileResponse(path, media_type="image/jpeg", filename=f"{incident_id}_unredacted.jpg")
+
+
+@router.get("/{incident_id}/unredacted-clip")
+def get_unredacted_clip_endpoint(
+    incident_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+) -> Response:
+    """Serves the unredacted original video clip from the access-controlled vault. Enforces Admin role."""
+    from acs.config import config
+    inc = get_incident_by_id(session, incident_id)
+    if not inc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Incident '{incident_id}' not found.")
+
+    vault_dir = getattr(config, "privacy_unredacted_dir", "media/unredacted")
+    path = getattr(inc, "unredacted_clip_path", None) or os.path.join(vault_dir, "clips", f"{incident_id}_unredacted.mp4")
+
+    if not path or not os.path.isfile(path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No unredacted original clip stored for incident '{incident_id}'.",
+        )
+
+    log_audit_event(
+        session=session,
+        username=admin_user.username,
+        user_role=admin_user.role,
+        action="privacy.unredacted_clip.accessed",
+        target_type="incident",
+        target_id=incident_id,
+        ip_address=extract_client_ip(request),
+        details={"path": path},
+        user_id=admin_user.id,
+    )
+    return serve_file_with_range_support(path, request)
+
+
+@router.post("/retention/cleanup")
+def run_retention_cleanup_endpoint(
+    request: Request,
+    retention_days: Optional[int] = Query(None, ge=1, description="Override retention days"),
+    max_disk_mb: Optional[int] = Query(None, ge=10, description="Override max disk usage in MB"),
+    session: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+) -> dict:
+    """Executes automatic retention cleanup policy. Enforces Admin role."""
+    from backend.app.services.retention_service import run_retention_cleanup
+    stats = run_retention_cleanup(session, retention_days=retention_days, max_disk_usage_mb=max_disk_mb)
+    log_audit_event(
+        session=session,
+        username=admin_user.username,
+        user_role=admin_user.role,
+        action="retention.cleanup.executed",
+        target_type="system",
+        target_id="retention_policy",
+        ip_address=extract_client_ip(request),
+        details=stats,
+        user_id=admin_user.id,
+    )
+    return stats
+
 

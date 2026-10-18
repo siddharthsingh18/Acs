@@ -1097,6 +1097,10 @@ export interface components {
             created_at: number;
             /** Duration */
             duration: number;
+            /** Is Privacy Blurred */
+            is_privacy_blurred?: boolean | null;
+            /** Has Unredacted Original */
+            has_unredacted_original?: boolean | null;
         };
         /**
          * IncidentStatusUpdateRequest
@@ -1262,6 +1266,21 @@ export interface components {
              * @description Filesystem directory where video clips are stored
              */
             clips_dir: string;
+            /**
+             * Privacy Blur Enabled
+             * @description Whether automated face and license plate blurring is enabled
+             */
+            privacy_blur_enabled?: boolean;
+            /**
+             * Privacy Preserve Unblurred Original
+             * @description Whether to preserve original unblurred media in access-controlled vault
+             */
+            privacy_preserve_unblurred_original?: boolean;
+            /**
+             * Incident Retention Days
+             * @description Days before incident records and all associated media are automatically deleted
+             */
+            incident_retention_days?: number;
         };
         /**
          * RetentionSettingsUpdateRequest
@@ -1283,7 +1302,22 @@ export interface components {
              * @description Whether to run cleanup immediately upon save
              * @default true
              */
-            trigger_cleanup: boolean | null;
+            trigger_cleanup?: boolean | null;
+            /**
+             * Privacy Blur Enabled
+             * @description Whether automated face and license plate blurring is enabled
+             */
+            privacy_blur_enabled?: boolean | null;
+            /**
+             * Privacy Preserve Unblurred Original
+             * @description Whether to preserve original unblurred media in access-controlled vault
+             */
+            privacy_preserve_unblurred_original?: boolean | null;
+            /**
+             * Incident Retention Days
+             * @description Days before incident records and all associated media are automatically deleted
+             */
+            incident_retention_days?: number | null;
         };
         /**
          * ReviewDecisionRequest

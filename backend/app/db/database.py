@@ -48,6 +48,9 @@ def init_db() -> None:
                     "reviewed_label": "TEXT",
                     "corrected_class": "TEXT",
                     "corrected_boxes": "TEXT",
+                    "is_privacy_blurred": "BOOLEAN DEFAULT 1",
+                    "unredacted_keyframe_path": "TEXT",
+                    "unredacted_clip_path": "TEXT",
                 }
                 for col_name, col_type in cols_to_add.items():
                     if col_name not in existing_cols:

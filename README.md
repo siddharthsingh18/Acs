@@ -285,10 +285,16 @@ uvicorn backend.app.main:app --reload --port 8000
   - `GET http://localhost:8000/media/keyframes/{filename}`: Static keyframe image delivery.
 - **Incident Management & Persistence (SQLite)**:
   - `GET http://localhost:8000/api/incidents`: Paginated list of incidents with filters (class, date, severity, status) and sorting.
-  - `GET http://localhost:8000/api/incidents/{id}`: Full incident record with keyframe URL and review metadata.
-  - `POST http://localhost:8000/api/incidents/{id}/status`: Human-in-the-loop review (`approved`, `rejected`, `dispatched`) with reviewer name and timestamp.
+  - `GET http://localhost:8000/api/incidents/{id}`: Full incident record with keyframe URL, review metadata, and privacy redaction flags.
+  - `POST http://localhost:8000/api/incidents/{id}/status`: Human-in-the-loop review (`approved`, `rejected`, `dispatched`) with authenticated operator identity.
   - `POST http://localhost:8000/api/incidents/{id}/dispatch-report`: Generates and caches Gemini multimodal dispatch assessment in SQLite.
-  - `GET http://localhost:8000/api/incidents/{id}/pdf`: Downloads vector PDF accident report.
+  - `GET http://localhost:8000/api/incidents/{id}/pdf`: Downloads vector PDF accident report with privacy redaction notice.
+  - `GET http://localhost:8000/api/incidents/{id}/export`: Exports specific incident bundle as a `.zip` archive containing metadata, blurred media, PDF report, and audit logs.
+  - `DELETE http://localhost:8000/api/incidents/{id}`: Permanently deletes incident row, review history, and all disk media (Admin only).
+  - `GET http://localhost:8000/api/incidents/{id}/unredacted-keyframe`: Serves original unblurred keyframe from access-controlled vault (Admin only, audit logged).
+  - `GET http://localhost:8000/api/incidents/{id}/unredacted-clip`: Streams original unblurred video clip from vault (Admin only, audit logged).
+  - `POST http://localhost:8000/api/incidents/retention/cleanup`: Triggers manual or scheduled lifecycle retention cleanup (Admin only).
+  - `GET / POST http://localhost:8000/api/retention`: Inspects and updates retention days, disk caps, and privacy blur switches (Admin only).
   - `GET http://localhost:8000/api/incidents/export.csv`: Exports master incident records as CSV.
 - **Live CCTV Camera Feeds & Camera Wall (RTSP, Webcam, HTTP, Video)**:
   - `GET http://localhost:8000/api/cameras`: List registered cameras with masked credentials and real-time health (FPS, connection status, last frame age, dropped frames, active incidents).
@@ -302,6 +308,68 @@ uvicorn backend.app.main:app --reload --port 8000
   - `POST http://localhost:8000/api/alerts/test`: Verify Telegram and SMTP notification channels.
   - `GET / PUT http://localhost:8000/api/alerts/settings`: Inspect or update alert toggles and simulation mode.
   - `GET http://localhost:8000/api/stats`: Real-time incident analytics (incidents today, class distribution, average confidence, average review time).
+
+## Data Privacy, Storage & Retention Policy
+
+CCTV video footage captures personal biometric identifiers (human faces) and motor vehicle identifiers (license plates). To guarantee surveillance compliance and data protection, the Automated CCTV Accident Detection System (ACS) implements automated privacy blurring, strict role-based access control (RBAC), and automated lifecycle retention policies.
+
+### 1. What Is Stored
+
+| Artifact / Asset | Storage Location | Content & Privacy Treatment |
+| :--- | :--- | :--- |
+| **Peak Keyframes** | `media/keyframes/{incident_id}.jpg` | Peak collision frame with **faces and license plates automatically blurred** via lightweight edge-aware Gaussian filtering. Delivered publicly via `/media/keyframes/`. |
+| **Video Clips (Raw & Annotated)** | `media/clips/{incident_id}.mp4` & `media/clips/{incident_id}_annotated.mp4` | Rolling 18-second pre/post-incident H.264 video clips with **privacy blurring applied** across all frames. |
+| **PDF Dispatch Reports** | Generated on-the-fly via `/api/incidents/{id}/pdf` | Official dispatch dossiers featuring redacted keyframes and marked with `"Privacy Protection: Faces & Plates Redacted (SURVEILLANCE COMPLIANT)"`. |
+| **Incident Metadata & Review History** | SQLite (`acs.db`: `incidents`, `review_feedback`) | Bounding boxes, severity scores, timestamps, AI dispatch analysis, and operator review decisions. |
+| **Audit Logs** | SQLite (`acs.db`: `audit_logs`) | Append-only immutable log of all operator approvals, rejects, dispatches, settings changes, and unredacted media access events with client IP and timestamps. |
+| **Unredacted Originals (Vault)** | `media/unredacted/keyframes/` & `media/unredacted/clips/` | *Optional* original unblurred media, enabled via `privacy_preserve_unblurred_original=True`. Excluded from static web mounts and protected by strict Administrator RBAC. |
+
+### 2. How Long Data Is Stored (Retention Lifecycle)
+
+- **Incident Record Retention (`incident_retention_days`)**: Default **30 days** (configurable from 1 to 3650 days). Once an incident exceeds this threshold, automated retention cleanup deletes the database record, review history, keyframe, raw clip, annotated clip, and unredacted vault copies.
+- **Standalone Video Clip Retention (`clip_retention_days`)**: Default **30 days**. Clips older than this are deleted during cleanup cycles.
+- **Disk Usage Cap (`clip_max_disk_usage_mb`)**: Default **5,000 MB** (configurable). If total stored clips exceed this limit, ACS applies a Least-Recently-Used (LRU) eviction policy, purging the oldest video clips until disk consumption returns below the limit.
+- **Per-Incident Deletion (`DELETE /api/incidents/{id}`)**: Administrators can immediately and permanently delete any specific incident and all associated disk media upon request.
+- **Per-Incident Export (`GET /api/incidents/{id}/export`)**: Operators and Administrators can export an incident bundle as a single `.zip` archive containing `metadata.json`, `keyframe.jpg`, `clip.mp4`, `report.pdf`, and `audit_trail.json` for legal handoff or archival before deletion.
+
+### 3. Who Can Access Stored Data (Role-Based Access Control)
+
+Access to data is strictly enforced on the backend via JWT / HTTP-only Bearer authentication and cryptographically hashed credentials (Argon2):
+
+| Role | Permissions & Access Boundaries |
+| :--- | :--- |
+| **Viewer** | Read-only access to live streams, cameras, statistics, and **privacy-blurred** keyframes/clips. Cannot access audit logs, unredacted vaults, or modify settings. |
+| **Operator** | All Viewer privileges, plus review queue triage (approve/reject/dispatch), generating dispatch reports, downloading PDF reports, and exporting `.zip` incident bundles. |
+| **Admin** | Full system control: camera registration, alert channels, retention policy modification, manual cleanup triggers, audit log inspection, incident deletion, and **access to the unredacted originals vault**. |
+
+Every access to unredacted original media (`/api/incidents/{id}/unredacted-keyframe` and `/api/incidents/{id}/unredacted-clip`) is permanently recorded in the immutable audit log with the administrator's username, timestamp, and IP address.
+
+### 4. Configuration Switches
+
+Configure privacy and retention in `.env` or dynamically via `POST /api/retention`:
+
+```env
+# Enable/disable automated face & license plate blurring (default: true)
+ACS_PRIVACY_BLUR_ENABLED=true
+ACS_PRIVACY_BLUR_FACES=true
+ACS_PRIVACY_BLUR_PLATES=true
+
+# Keep unblurred original in access-controlled media/unredacted/ vault (default: true)
+ACS_PRIVACY_PRESERVE_UNBLURRED_ORIGINAL=true
+ACS_PRIVACY_UNREDACTED_DIR=media/unredacted
+
+# Lifecycle retention periods (in days) and disk quota (in MB)
+ACS_INCIDENT_RETENTION_DAYS=30
+ACS_CLIP_RETENTION_DAYS=30
+ACS_CLIP_MAX_DISK_USAGE_MB=5000
+```
+
+### ⚠️ Legal Compliance & Surveillance Notice
+
+> **IMPORTANT REGULATORY & DEPLOYMENT MANDATE**:
+> CCTV video streams capture identifiable human individuals and motor vehicle registrations in public and private spaces.
+> **Real-world deployments of this software must strictly comply with applicable local, regional, and national privacy legislation** (such as the European Union General Data Protection Regulation [GDPR], California Consumer Privacy Act [CCPA], UAE Federal Decree-Law on Personal Data Protection, and statutory public surveillance regulations).
+> Furthermore, system operators must adhere to the **camera facility owner's data protection policy**, including mandatory conspicuous signage, lawful basis for processing, data subject rights (access and erasure), and maximum lawful retention limits. Unredacted original footage should only be accessed for substantiated legal, insurance, or law enforcement proceedings.
 
 ### 2. Running the Streamlit Dashboard
 Start the original Streamlit application:

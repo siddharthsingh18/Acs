@@ -25,6 +25,10 @@ import {
   MapPin,
   Plus,
   Trash2,
+  HardDrive,
+  EyeOff,
+  FolderArchive,
+  Info,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -154,6 +158,75 @@ export const SettingsPage: React.FC = () => {
       setTimeout(() => setCameraFeedbackMsg(null), 3500)
     },
   })
+
+  // Privacy & Retention Policy Query and Mutations
+  const { data: retentionData, refetch: refetchRetention } = useQuery({
+    queryKey: ['retentionSettings'],
+    queryFn: () => api.getRetentionSettings(),
+  })
+
+  const [privacyBlur, setPrivacyBlur] = useState(true)
+  const [preserveOriginal, setPreserveOriginal] = useState(true)
+  const [incidentRetentionDays, setIncidentRetentionDays] = useState(30)
+  const [clipRetentionDays, setClipRetentionDays] = useState(30)
+  const [maxDiskMb, setMaxDiskMb] = useState(5000)
+  const [retentionFeedback, setRetentionFeedback] = useState<string | null>(null)
+  const [cleanupResult, setCleanupResult] = useState<string | null>(null)
+  const [isCleaningUp, setIsCleaningUp] = useState(false)
+
+  useEffect(() => {
+    if (retentionData) {
+      setPrivacyBlur(retentionData.privacy_blur_enabled ?? true)
+      setPreserveOriginal(retentionData.privacy_preserve_unblurred_original ?? true)
+      setIncidentRetentionDays(retentionData.incident_retention_days ?? 30)
+      setClipRetentionDays(retentionData.retention_days ?? 30)
+      setMaxDiskMb(retentionData.max_disk_usage_mb ?? 5000)
+    }
+  }, [retentionData])
+
+  const updateRetentionMutation = useMutation({
+    mutationFn: (payload: {
+      privacy_blur_enabled?: boolean
+      privacy_preserve_unblurred_original?: boolean
+      incident_retention_days?: number
+      retention_days?: number
+      max_disk_usage_mb?: number
+    }) => api.updateRetentionSettings(payload),
+    onSuccess: () => {
+      setRetentionFeedback('Privacy & retention policies saved successfully.')
+      setTimeout(() => setRetentionFeedback(null), 4000)
+      queryClient.invalidateQueries({ queryKey: ['retentionSettings'] })
+    },
+    onError: (err: any) => {
+      setRetentionFeedback(`Failed to save retention settings: ${err?.message || 'Error'}`)
+    },
+  })
+
+  const handleRunCleanup = async () => {
+    try {
+      setIsCleaningUp(true)
+      const res = await api.runRetentionCleanup()
+      setCleanupResult(
+        `Cleanup executed: purged ${res.expired_incidents_deleted} expired incidents, ${res.expired_clips_deleted} expired clips, and freed ${res.freed_disk_mb?.toFixed(1) ?? '0'} MB.`
+      )
+      refetchRetention()
+      setTimeout(() => setCleanupResult(null), 7000)
+    } catch (err: any) {
+      setCleanupResult(`Cleanup error: ${err.message || 'Failed'}`)
+    } finally {
+      setIsCleaningUp(false)
+    }
+  }
+
+  const handleSaveRetention = () => {
+    updateRetentionMutation.mutate({
+      privacy_blur_enabled: privacyBlur,
+      privacy_preserve_unblurred_original: preserveOriginal,
+      incident_retention_days: incidentRetentionDays,
+      retention_days: clipRetentionDays,
+      max_disk_usage_mb: maxDiskMb,
+    })
+  }
 
   // React Hook Form initialized with zod validation
   const {
@@ -1308,6 +1381,209 @@ export const SettingsPage: React.FC = () => {
               />
               <p className="text-[11px] text-muted-foreground">
                 Controls canvas background, contrast ratios, and color palette tokens across all pages.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ========================================================================= */}
+      {/* SECTION 5: PRIVACY PROTECTION & DATA RETENTION                            */}
+      {/* ========================================================================= */}
+      <Card className="border-border shadow-sm">
+        <CardHeader className="py-4 px-6 border-b border-border bg-muted/20">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <span>Privacy Protection & CCTV Retention Policy</span>
+            </CardTitle>
+            <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+              Surveillance Compliant
+            </Badge>
+          </div>
+          <CardDescription className="text-xs">
+            Automated face & license plate blurring, access-controlled vault for unblurred footage, and lifecycle cleanup.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-6 space-y-6">
+          {retentionFeedback && (
+            <div className="p-3.5 rounded-lg bg-[var(--status-ok)]/15 border border-[var(--status-ok)]/30 text-[var(--status-ok)] text-xs flex items-center gap-2 font-medium">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{retentionFeedback}</span>
+            </div>
+          )}
+
+          {cleanupResult && (
+            <div className="p-3.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs flex items-center gap-2 font-mono">
+              <HardDrive className="h-4 w-4 shrink-0 text-cyan-400" />
+              <span>{cleanupResult}</span>
+            </div>
+          )}
+
+          {/* Privacy Redaction Toggles */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-border bg-card/60">
+            {/* Automated Blur Toggle */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={privacyBlur}
+                  disabled={!isAdmin}
+                  onChange={(e) => setPrivacyBlur(e.target.checked)}
+                  className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                />
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <EyeOff className="h-3.5 w-3.5 text-emerald-400" />
+                  Blur Faces & License Plates
+                </span>
+              </label>
+              <p className="text-[11px] text-muted-foreground">
+                Applies edge-aware Gaussian blur to all human faces and vehicle license plates on stored keyframes, clips, and PDF reports.
+              </p>
+            </div>
+
+            {/* Unredacted Original Vault Toggle */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={preserveOriginal}
+                  disabled={!isAdmin}
+                  onChange={(e) => setPreserveOriginal(e.target.checked)}
+                  className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                />
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5 text-amber-400" />
+                  Vault Unblurred Originals
+                </span>
+              </label>
+              <p className="text-[11px] text-muted-foreground">
+                Saves unmodified originals into the access-controlled vault (<code className="text-[10px] text-primary">media/unredacted/</code>). Accessible strictly to Administrators for authorized legal/court reviews.
+              </p>
+            </div>
+          </div>
+
+          {/* Retention Thresholds */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-primary" />
+                Incident Record Retention
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={3650}
+                  disabled={!isAdmin}
+                  value={incidentRetentionDays}
+                  onChange={(e) => setIncidentRetentionDays(Number(e.target.value))}
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground font-mono"
+                />
+                <span className="text-xs text-muted-foreground font-mono">days</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Automatic deletion of incident records, review notes, and media.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <FolderArchive className="h-3.5 w-3.5 text-primary" />
+                Clip Age Retention
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  disabled={!isAdmin}
+                  value={clipRetentionDays}
+                  onChange={(e) => setClipRetentionDays(Number(e.target.value))}
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground font-mono"
+                />
+                <span className="text-xs text-muted-foreground font-mono">days</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Maximum age before standalone MP4 video clips are purged.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <HardDrive className="h-3.5 w-3.5 text-primary" />
+                Max Disk Usage Cap
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={100}
+                  max={1000000}
+                  step={100}
+                  disabled={!isAdmin}
+                  value={maxDiskMb}
+                  onChange={(e) => setMaxDiskMb(Number(e.target.value))}
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-border bg-background text-foreground font-mono"
+                />
+                <span className="text-xs text-muted-foreground font-mono">MB</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Triggers LRU deletion if stored clips exceed disk limit.
+              </p>
+            </div>
+          </div>
+
+          {/* Storage Metrics & Manual Purge */}
+          <div className="p-4 rounded-xl border border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1 text-xs">
+              <div className="font-semibold text-foreground flex items-center gap-2">
+                <HardDrive className="h-4 w-4 text-cyan-400" />
+                <span>Disk Storage:</span>
+                <span className="font-mono text-cyan-300">
+                  {retentionData ? `${retentionData.current_disk_usage_mb.toFixed(1)} MB` : 'Loading...'}
+                </span>
+                <span className="text-muted-foreground">/</span>
+                <span className="font-mono text-muted-foreground">{maxDiskMb} MB cap</span>
+              </div>
+              <div className="text-[11px] text-muted-foreground font-mono">
+                Stored Clips: {retentionData?.total_clips_count ?? 0} files | Vault Dir: {retentionData?.clips_dir || 'media/clips'}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isCleaningUp || !isAdmin}
+                onClick={handleRunCleanup}
+                className="gap-1.5 text-xs border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/20"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-cyan-400" />
+                <span>{isCleaningUp ? 'Purging...' : 'Execute Retention Cleanup Now'}</span>
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                disabled={updateRetentionMutation.isPending || !isAdmin}
+                onClick={handleSaveRetention}
+                className="gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>Save Retention Policy</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Legal Compliance Disclaimer */}
+          <div className="p-3.5 rounded-lg bg-blue-950/30 border border-blue-500/30 text-blue-300 text-xs flex items-start gap-2.5">
+            <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <span className="font-semibold text-blue-200">Legal Compliance & Surveillance Privacy Notice:</span>
+              <p className="text-[11px] text-blue-300/90 leading-relaxed">
+                CCTV video streams inherently record identifiable individuals and motor vehicles. Real-world deployments must strictly comply with applicable municipal, national, and international privacy laws (including GDPR, CCPA, and statutory surveillance mandates), as well as the camera facility owner's internal data governance policies.
               </p>
             </div>
           </div>

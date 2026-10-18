@@ -31,6 +31,9 @@ import {
   Film,
   Activity,
   Gauge,
+  Archive,
+  Trash2,
+  Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -83,10 +86,51 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
   const streamingTimerRef = useRef<any>(null)
 
   // Media view mode & Video timeline state
-  const [mediaTab, setMediaTab] = useState<'annotated' | 'raw' | 'keyframe'>('annotated')
+  const [mediaTab, setMediaTab] = useState<'annotated' | 'raw' | 'keyframe' | 'unredacted'>('annotated')
   const [videoDuration, setVideoDuration] = useState(0)
   const [videoCurrentTime, setVideoCurrentTime] = useState(0)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  // Export and Deletion State
+  const [isExporting, setIsExporting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const handleExportBundle = async () => {
+    if (!incidentId) return
+    try {
+      setIsExporting(true)
+      const blob = await api.exportIncidentBundle(incidentId)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${incidentId}_export_bundle.zip`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err: any) {
+      console.error('Failed to export incident bundle:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleDeleteIncident = async () => {
+    if (!incidentId) return
+    try {
+      setIsDeleting(true)
+      await api.deleteIncident(incidentId)
+      queryClient.invalidateQueries({ queryKey: ['incidents'] })
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+      setShowDeleteConfirm(false)
+      onClose()
+    } catch (err: any) {
+      console.error('Failed to delete incident:', err)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const formatSeconds = (sec: number) => {
     if (!Number.isFinite(sec) || sec < 0) return '00:00.0'
@@ -156,10 +200,11 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
     if (!isOpen) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (confirmAction !== null || isLightboxOpen) {
+      if (confirmAction !== null || isLightboxOpen || showDeleteConfirm) {
         if (e.key === 'Escape') {
           setConfirmAction(null)
           setIsLightboxOpen(false)
+          setShowDeleteConfirm(false)
         }
         return
       }
@@ -177,7 +222,7 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, confirmAction, isLightboxOpen, isArabic, goToPrevious, goToNext, onClose])
+  }, [isOpen, confirmAction, isLightboxOpen, showDeleteConfirm, isArabic, goToPrevious, goToNext, onClose])
 
   // Optimistic status mutation with rollback
   const statusMutation = useMutation({
@@ -404,6 +449,12 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                         {incident?.incident_id || incidentId}
                       </h3>
                       {incident?.severity && getSeverityBadge(incident.severity, incident?.severity_score)}
+                      {incident?.is_privacy_blurred && (
+                        <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px] font-mono">
+                          <ShieldCheck className="h-3 w-3 text-emerald-400" />
+                          Privacy Blurred
+                        </Badge>
+                      )}
                     </div>
                     <span className="text-xs text-muted-foreground font-mono">
                       {incident?.start_timestamp?.replace('T', ' ') || 'Live Event'}
@@ -522,6 +573,22 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                                 <Radio className="h-3.5 w-3.5 text-amber-400" />
                                 Peak Keyframe
                               </button>
+                              {incident?.has_unredacted_original && user?.role === 'admin' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setMediaTab('unredacted')}
+                                  className={cn(
+                                    'px-2.5 py-1 text-xs font-mono font-medium rounded-md transition-all flex items-center gap-1.5',
+                                    mediaTab === 'unredacted'
+                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                                      : 'text-amber-400/80 hover:text-amber-300'
+                                  )}
+                                  title="Access-controlled unblurred original (Admin Review Only)"
+                                >
+                                  <Lock className="h-3.5 w-3.5 text-amber-400" />
+                                  Vault Original
+                                </button>
+                              )}
                             </div>
 
                             {/* Controls: Jump to Impact, Zoom, Lightbox */}
@@ -538,7 +605,7 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                                   <span>Jump to Impact</span>
                                 </Button>
                               )}
-                              {mediaTab === 'keyframe' && (
+                              {(mediaTab === 'keyframe' || mediaTab === 'unredacted') && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -566,11 +633,26 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                             dir="ltr"
                             className={cn(
                               'relative aspect-video w-full rounded-xl bg-black/95 overflow-hidden border border-border/80 shadow-md transition-all select-none',
-                              mediaTab === 'keyframe' && (isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in')
+                              (mediaTab === 'keyframe' || mediaTab === 'unredacted') && (isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in')
                             )}
-                            onClick={mediaTab === 'keyframe' ? () => setIsZoomed((z) => !z) : undefined}
+                            onClick={(mediaTab === 'keyframe' || mediaTab === 'unredacted') ? () => setIsZoomed((z) => !z) : undefined}
                           >
-                            {isVideo && activeVideoSrc ? (
+                            {mediaTab === 'unredacted' && incident ? (
+                              <div className="w-full h-full relative flex items-center justify-center">
+                                <img
+                                  src={api.getUnredactedKeyframeUrl(incident.incident_id)}
+                                  alt={`${incident.incident_id} unredacted original`}
+                                  className={cn(
+                                    'w-full h-full object-contain transition-transform duration-300',
+                                    isZoomed && 'scale-175 origin-center'
+                                  )}
+                                />
+                                <div className="absolute top-2.5 start-2.5 px-2.5 py-1 rounded bg-amber-950/85 border border-amber-500/50 text-amber-300 text-[10px] font-mono flex items-center gap-1.5 shadow-md">
+                                  <Lock className="h-3.5 w-3.5 text-amber-400" />
+                                  <span>VAULT UNREDACTED (ADMIN REVIEW ONLY)</span>
+                                </div>
+                              </div>
+                            ) : isVideo && activeVideoSrc ? (
                               <video
                                 ref={videoRef}
                                 key={activeVideoSrc}
@@ -600,7 +682,9 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
 
                             <div className="absolute bottom-2.5 start-2.5 px-2 py-0.5 rounded bg-black/75 text-cyan-400 font-mono text-[10px] border border-cyan-500/30 pointer-events-none">
                               {incident?.class_name?.replace(/_/g, ' ') || 'Incident'}
-                              {isVideo && (
+                              {mediaTab === 'unredacted' ? (
+                                <span className="ms-1.5 text-amber-400 font-semibold">[Vault Unredacted]</span>
+                              ) : isVideo && (
                                 <span className="ms-1.5 text-zinc-400">
                                   [{mediaTab === 'annotated' ? 'H.264 Annotated' : 'H.264 Raw'}]
                                 </span>
@@ -1029,7 +1113,7 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                       )}
                     </div>
 
-                    {/* SECTION 4: Quick Action Toolbar (PDF, Copy, Alert) */}
+                    {/* SECTION 4: Quick Action Toolbar (PDF, Export, Alert, Delete) */}
                     <div className="flex flex-wrap items-center gap-2 pt-2">
                       {/* Copy Text */}
                       <Button
@@ -1055,6 +1139,19 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                         </Button>
                       </a>
 
+                      {/* Export ZIP Bundle */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isExporting}
+                        onClick={handleExportBundle}
+                        className="gap-1.5 text-xs border-indigo-500/30 text-indigo-400 hover:border-indigo-500 hover:text-indigo-300 hover:bg-indigo-950/20"
+                        title="Export bundle (.zip) with metadata, media, PDF report, and audit trail"
+                      >
+                        <Archive className="h-3.5 w-3.5 text-indigo-400" />
+                        <span>{isExporting ? 'Exporting...' : 'Export Bundle (.zip)'}</span>
+                      </Button>
+
                       {/* Send Alert */}
                       <Button
                         variant="outline"
@@ -1071,6 +1168,21 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                           </span>
                         )}
                       </Button>
+
+                      {/* Admin Delete Incident */}
+                      {user?.role === 'admin' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isDeleting}
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="gap-1.5 text-xs border-red-500/30 text-red-400 hover:border-red-500 hover:text-red-300 hover:bg-red-950/20"
+                          title="Permanently delete incident and erase all disk media"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                          <span>Delete</span>
+                        </Button>
+                      )}
 
                       <Link to={`/incidents/${incidentId}`} className="ms-auto inline-flex">
                         <Button variant="ghost" size="sm" className="gap-1 text-xs text-primary hover:text-primary">
@@ -1225,8 +1337,56 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
             </div>
           )}
 
+          {/* Permanent Incident Deletion Confirmation Modal */}
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                onClick={() => setShowDeleteConfirm(false)}
+              />
+              <div className="relative bg-card border border-red-500/30 rounded-xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">
+                    <Trash2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-foreground">
+                      Delete Incident Record
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Incident {incident?.incident_id || incidentId}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to permanently delete this incident? All stored keyframes, video clips, and audit links will be erased from disk. This action is irreversible.
+                </p>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="text-xs border-border"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={isDeleting}
+                    onClick={handleDeleteIncident}
+                    className="text-xs font-bold bg-red-600 hover:bg-red-500 text-white"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Permanently Delete'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Fullscreen Lightbox Modal */}
-          {isLightboxOpen && incident?.keyframe_url && (
+          {isLightboxOpen && (incident?.keyframe_url || mediaTab === 'unredacted') && (
             <div
               className="fixed inset-0 z-70 bg-black/95 flex flex-col items-center justify-center p-4 cursor-pointer"
               onClick={() => setIsLightboxOpen(false)}
@@ -1240,12 +1400,12 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                 <X className="h-6 w-6" />
               </Button>
               <img
-                src={incident.keyframe_url}
+                src={mediaTab === 'unredacted' && incident ? api.getUnredactedKeyframeUrl(incident.incident_id) : incident?.keyframe_url}
                 alt="Enlarged Keyframe"
                 className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
               />
               <span className="text-xs text-slate-400 font-mono mt-3">
-                {incident.incident_id} • Click anywhere to exit fullscreen
+                {incident?.incident_id} • {mediaTab === 'unredacted' ? 'Unredacted Original' : 'Privacy Redacted'} • Click anywhere to exit fullscreen
               </span>
             </div>
           )}

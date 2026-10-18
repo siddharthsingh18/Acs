@@ -12,6 +12,10 @@ vi.mock('@/api/client', () => ({
     updateIncidentStatus: vi.fn(),
     testAlerts: vi.fn(),
     getIncidentPdfUrl: vi.fn((id: string) => `/api/incidents/${id}/pdf`),
+    exportIncidentBundle: vi.fn().mockResolvedValue(new Blob(['mock-zip'])),
+    deleteIncident: vi.fn().mockResolvedValue({ status: 'deleted', incident_id: 'INC-2026-001', deleted_files_count: 3 }),
+    getUnredactedKeyframeUrl: vi.fn((id: string) => `/api/incidents/${id}/unredacted-keyframe`),
+    getUnredactedClipUrl: vi.fn((id: string) => `/api/incidents/${id}/unredacted-clip`),
     getAlertSettings: vi.fn().mockResolvedValue({
       enabled: true,
       dry_run: true,
@@ -191,5 +195,17 @@ describe('IncidentDrawer component', () => {
     expect(screen.getByText('82')).toBeInTheDocument()
     expect(screen.getByText('Entities & Vulnerable Road Users')).toBeInTheDocument()
     expect(screen.getByText(/individual detected down on the roadway/i)).toBeInTheDocument()
+  })
+
+  it('renders privacy blurred badge and export bundle button', () => {
+    renderDrawer({
+      initialIncident: {
+        ...mockIncident,
+        is_privacy_blurred: true,
+      },
+    })
+
+    expect(screen.getByText(/Privacy Blurred/i)).toBeInTheDocument()
+    expect(screen.getByText(/Export Bundle/i)).toBeInTheDocument()
   })
 })

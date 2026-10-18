@@ -197,6 +197,8 @@ class IncidentResponse(BaseModel):
     corrected_boxes: Optional[str] = None
     created_at: float
     duration: float
+    is_privacy_blurred: Optional[bool] = True
+    has_unredacted_original: Optional[bool] = False
 
 
 class IncidentListResponse(BaseModel):
@@ -438,6 +440,9 @@ class RetentionSettingsResponse(BaseModel):
     current_disk_usage_mb: float = Field(description="Current disk storage in MB used by clips")
     total_clips_count: int = Field(description="Total number of stored video clip files")
     clips_dir: str = Field(description="Filesystem directory where video clips are stored")
+    privacy_blur_enabled: Optional[bool] = Field(default=True, description="Whether face and plate privacy blur is active")
+    privacy_preserve_unblurred_original: Optional[bool] = Field(default=True, description="Whether unredacted originals are vaulted")
+    incident_retention_days: Optional[int] = Field(default=30, description="Days before incident database records and keyframes are purged")
 
 
 class RetentionSettingsUpdateRequest(BaseModel):
@@ -446,6 +451,9 @@ class RetentionSettingsUpdateRequest(BaseModel):
     retention_days: Optional[int] = Field(default=None, ge=1, le=365, description="New max clip age in days")
     max_disk_usage_mb: Optional[int] = Field(default=None, ge=50, le=1000000, description="New max clip disk usage cap in MB")
     trigger_cleanup: Optional[bool] = Field(default=True, description="Whether to run cleanup immediately upon save")
+    privacy_blur_enabled: Optional[bool] = Field(default=None, description="Toggle privacy blurring")
+    privacy_preserve_unblurred_original: Optional[bool] = Field(default=None, description="Toggle unredacted vaulting")
+    incident_retention_days: Optional[int] = Field(default=None, ge=1, le=3650, description="New max incident database age in days")
 
 
 class UserResponse(BaseModel):

@@ -308,3 +308,29 @@ Both dependency trees are continuously audited:
 # Node.js frontend dependencies
 cd frontend && npm audit
 ```
+
+---
+
+## 8. Surveillance Privacy, Vault Hardening & Retention
+
+### Vault Directory Permissions
+Unredacted original footage is saved to `media/unredacted/` and deliberately not mounted to any public static web paths. In production, ensure restricted operating system permissions:
+
+```bash
+# Secure media directories: only the backend system user can access unredacted media
+chmod 700 /var/www/acs/media/unredacted
+chmod 750 /var/www/acs/media/clips
+chmod 750 /var/www/acs/media/keyframes
+```
+
+### Scheduled Lifecycle Retention Job
+In addition to runtime retention checks, configure a daily systemd timer or cron job to execute automated cleanup:
+
+```bash
+# Optional daily automated cleanup trigger via curl
+0 3 * * * curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://127.0.0.1:8000/api/incidents/retention/cleanup
+```
+
+### Legal & Regulatory Compliance
+CCTV operations recording individuals and vehicles require strict adherence to local surveillance legislation (e.g. GDPR, CCPA, UAE Personal Data Protection Law) and the physical premises owner's policy. Ensure public disclosure signage is installed and that unredacted vault footage is accessed exclusively for formal law enforcement or judicial inquiries.
+

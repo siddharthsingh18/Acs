@@ -43,6 +43,9 @@ def get_retention_settings_endpoint(
         current_disk_usage_mb=stats["total_mb"],
         total_clips_count=stats["total_files"],
         clips_dir=cfg.clips_dir,
+        privacy_blur_enabled=getattr(cfg, "privacy_blur_enabled", True),
+        privacy_preserve_unblurred_original=getattr(cfg, "privacy_preserve_unblurred_original", True),
+        incident_retention_days=getattr(cfg, "incident_retention_days", 30),
     )
 
 
@@ -54,7 +57,7 @@ def update_retention_settings_endpoint(
     session: Session = Depends(get_session),
     admin_user: User = Depends(require_admin),
 ) -> RetentionSettingsResponse:
-    """Updates video clip retention settings and optionally triggers storage cleanup (Admin only)."""
+    """Updates video clip and privacy retention settings and optionally triggers storage cleanup (Admin only)."""
     changes = {}
     if body.retention_days is not None:
         cfg.clip_retention_days = body.retention_days
@@ -62,14 +65,24 @@ def update_retention_settings_endpoint(
     if body.max_disk_usage_mb is not None:
         cfg.clip_max_disk_usage_mb = body.max_disk_usage_mb
         changes["clip_max_disk_usage_mb"] = body.max_disk_usage_mb
+    if body.privacy_blur_enabled is not None:
+        cfg.privacy_blur_enabled = body.privacy_blur_enabled
+        changes["privacy_blur_enabled"] = body.privacy_blur_enabled
+    if body.privacy_preserve_unblurred_original is not None:
+        cfg.privacy_preserve_unblurred_original = body.privacy_preserve_unblurred_original
+        changes["privacy_preserve_unblurred_original"] = body.privacy_preserve_unblurred_original
+    if body.incident_retention_days is not None:
+        cfg.incident_retention_days = body.incident_retention_days
+        changes["incident_retention_days"] = body.incident_retention_days
 
     if body.trigger_cleanup:
-        cleanup_expired_clips(
-            clips_dir=cfg.clips_dir,
-            retention_days=cfg.clip_retention_days,
+        from backend.app.services.retention_service import run_retention_cleanup
+        cleanup_stats = run_retention_cleanup(
+            session=session,
+            retention_days=cfg.incident_retention_days,
             max_disk_usage_mb=cfg.clip_max_disk_usage_mb,
         )
-        changes["cleanup_triggered"] = True
+        changes["cleanup_stats"] = cleanup_stats
 
     client_ip = extract_client_ip(request)
     log_audit_event(
@@ -91,6 +104,9 @@ def update_retention_settings_endpoint(
         current_disk_usage_mb=stats["total_mb"],
         total_clips_count=stats["total_files"],
         clips_dir=cfg.clips_dir,
+        privacy_blur_enabled=getattr(cfg, "privacy_blur_enabled", True),
+        privacy_preserve_unblurred_original=getattr(cfg, "privacy_preserve_unblurred_original", True),
+        incident_retention_days=getattr(cfg, "incident_retention_days", 30),
     )
 
 

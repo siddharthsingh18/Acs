@@ -38,6 +38,9 @@ class Incident(SQLModel, table=True):
     corrected_boxes: Optional[str] = None  # JSON string of bounding boxes
     created_at: float = Field(index=True)
     duration: float = Field(default=0.0)
+    is_privacy_blurred: bool = Field(default=True, index=True)
+    unredacted_keyframe_path: Optional[str] = None
+    unredacted_clip_path: Optional[str] = None
 
 
 class ReviewFeedback(SQLModel, table=True):
