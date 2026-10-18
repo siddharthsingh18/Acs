@@ -71,6 +71,14 @@ promote:
 	@echo "Running automated promotion gate pipeline..."
 	$(PYTHON) ml/scripts/promote.py
 
+export-feedback:
+	@echo "Exporting operator review feedback to YOLO staging dataset..."
+	$(PYTHON) ml/scripts/export_feedback.py
+
+retrain:
+	@echo "Executing monthly retraining workflow with staging merge and frozen test protection..."
+	$(PYTHON) ml/scripts/retrain_workflow.py
+
 test: test-unit test-e2e
 
 test-unit:

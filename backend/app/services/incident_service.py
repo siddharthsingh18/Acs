@@ -16,7 +16,7 @@ from sqlmodel import Session, func, select
 from acs.llm import generate_dispatch_report
 from acs.reporter import read_incidents_csv
 from backend.app.db.database import engine
-from backend.app.db.models import Incident
+from backend.app.db.models import Incident, ReviewFeedback
 
 logger = logging.getLogger("acs.backend.incident_service")
 
@@ -261,19 +261,261 @@ def update_incident_status(
     incident_id: str,
     new_status: str,
     reviewer_name: Optional[str] = None,
+    notes: Optional[str] = None,
+    corrected_class: Optional[str] = None,
+    corrected_boxes: Optional[Union[str, list]] = None,
+    decision: Optional[str] = None,
 ) -> Optional[Incident]:
-    """Updates human-in-the-loop review status on an incident."""
+    """Updates human-in-the-loop review status on an incident and logs training feedback."""
     incident = get_incident_by_id(session, incident_id)
     if not incident:
         return None
 
-    incident.status = new_status.lower()
+    normalized_status = new_status.lower()
+    incident.status = normalized_status
     incident.reviewer_name = reviewer_name or "Dispatch Supervisor"
-    incident.reviewed_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    reviewed_at_str = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    incident.reviewed_at = reviewed_at_str
+
+    # Determine feedback decision label
+    if decision is not None:
+        actual_decision = decision.lower()
+    elif normalized_status in ("approved", "dispatched"):
+        actual_decision = "accident"
+    elif normalized_status == "rejected":
+        actual_decision = "not_accident"
+    elif normalized_status == "wrong_class":
+        actual_decision = "wrong_class"
+    else:
+        actual_decision = normalized_status
+
+    incident.reviewed_label = actual_decision
+    if corrected_class:
+        incident.corrected_class = corrected_class
+    if corrected_boxes:
+        incident.corrected_boxes = (
+            json.dumps(corrected_boxes)
+            if not isinstance(corrected_boxes, str)
+            else corrected_boxes
+        )
+
     session.add(incident)
+
+    # Store or update ReviewFeedback record capturing label with keyframe and clips
+    boxes_str = incident.corrected_boxes
+    existing_fb = session.exec(
+        select(ReviewFeedback).where(ReviewFeedback.incident_id == incident_id)
+    ).first()
+
+    if existing_fb:
+        existing_fb.decision = actual_decision
+        existing_fb.original_class = incident.class_name
+        existing_fb.corrected_class = incident.corrected_class
+        existing_fb.confidence = incident.max_confidence
+        existing_fb.image_path = incident.image_path
+        existing_fb.clip_path = incident.clip_path
+        existing_fb.clip_annotated_path = incident.clip_annotated_path
+        existing_fb.reviewer_name = incident.reviewer_name
+        existing_fb.reviewed_at = reviewed_at_str
+        if notes is not None:
+            existing_fb.notes = notes
+        if boxes_str is not None:
+            existing_fb.corrected_boxes = boxes_str
+        existing_fb.is_exported = False  # Mark for staging re-export
+        session.add(existing_fb)
+    else:
+        new_fb = ReviewFeedback(
+            incident_id=incident.incident_id,
+            decision=actual_decision,
+            original_class=incident.class_name,
+            corrected_class=incident.corrected_class,
+            confidence=incident.max_confidence,
+            image_path=incident.image_path,
+            clip_path=incident.clip_path,
+            clip_annotated_path=incident.clip_annotated_path,
+            reviewer_name=incident.reviewer_name,
+            reviewed_at=reviewed_at_str,
+            notes=notes,
+            corrected_boxes=boxes_str,
+            is_exported=False,
+            created_at=time.time(),
+        )
+        session.add(new_fb)
+
     session.commit()
     session.refresh(incident)
     return incident
+
+
+def record_review_decision(
+    session: Session,
+    incident_id: str,
+    decision: str,
+    corrected_class: Optional[str] = None,
+    corrected_boxes: Optional[Union[str, list]] = None,
+    reviewer_name: str = "Operator",
+    notes: Optional[str] = None,
+) -> Optional[ReviewFeedback]:
+    """Records a review decision (accident, not_accident, wrong_class) from the review queue."""
+    incident = get_incident_by_id(session, incident_id)
+    if not incident:
+        return None
+
+    decision_norm = decision.lower()
+    if decision_norm == "accident":
+        new_status = "approved"
+    elif decision_norm == "not_accident":
+        new_status = "rejected"
+    elif decision_norm == "wrong_class":
+        new_status = "approved"
+    else:
+        new_status = "approved"
+
+    update_incident_status(
+        session=session,
+        incident_id=incident_id,
+        new_status=new_status,
+        reviewer_name=reviewer_name,
+        notes=notes,
+        corrected_class=corrected_class,
+        corrected_boxes=corrected_boxes,
+        decision=decision_norm,
+    )
+
+    fb = session.exec(
+        select(ReviewFeedback).where(ReviewFeedback.incident_id == incident_id)
+    ).first()
+    return fb
+
+
+def undo_review_decision(session: Session, incident_id: str) -> Optional[Incident]:
+    """Reverts an incident back to pending status and clears unexported review feedback."""
+    incident = get_incident_by_id(session, incident_id)
+    if not incident:
+        return None
+
+    incident.status = "pending"
+    incident.reviewed_label = None
+    incident.reviewer_name = None
+    incident.reviewed_at = None
+    incident.corrected_class = None
+    incident.corrected_boxes = None
+    session.add(incident)
+
+    fb = session.exec(
+        select(ReviewFeedback).where(ReviewFeedback.incident_id == incident_id)
+    ).first()
+    if fb and not fb.is_exported:
+        session.delete(fb)
+
+    session.commit()
+    session.refresh(incident)
+    return incident
+
+
+def get_review_queue_items(
+    session: Session, include_reviewed: bool = False
+) -> List[Dict[str, Any]]:
+    """Fetches uncertain detections qualifying for fast swipe review.
+
+    Criteria:
+    1. Confidence is in the borderline window: 0.30 to 0.60, OR
+    2. YOLO and VLM disagreement (e.g. verification_status == 'needs_review', or significant conf delta).
+    """
+    stmt = select(Incident)
+    if not include_reviewed:
+        stmt = stmt.where(Incident.reviewed_label == None)  # noqa: E711
+        stmt = stmt.where(Incident.status == "pending")
+
+    incidents = list(session.exec(stmt.order_by(Incident.created_at.desc())).all())
+    queue_items: List[Dict[str, Any]] = []
+
+    for inc in incidents:
+        conf = inc.max_confidence
+        vlm_conf = inc.vlm_confidence
+        verif_status = inc.verification_status
+
+        # Condition A: Uncertain confidence between 0.30 and 0.60
+        is_uncertain_conf = 0.30 <= conf <= 0.60
+
+        # Condition B: YOLO / VLM disagreement
+        is_disagreement = False
+        reasons: List[str] = []
+
+        if is_uncertain_conf:
+            reasons.append(f"Borderline YOLO confidence ({conf:.0%})")
+
+        if verif_status == "needs_review":
+            is_disagreement = True
+            reasons.append("YOLO/VLM verification flagged for human dispatch review")
+        elif verif_status == "unverified":
+            if conf >= 0.30:
+                is_disagreement = True
+                reasons.append("Verification unverified (fallback from API/budget)")
+        elif vlm_conf is not None:
+            # Significant disagreement between YOLO and VLM
+            delta = abs(conf - vlm_conf)
+            if delta >= 0.25:
+                is_disagreement = True
+                reasons.append(f"YOLO/VLM divergence: YOLO={conf:.0%} vs VLM={vlm_conf:.0%}")
+            elif conf >= 0.35 and vlm_conf < 0.40:
+                is_disagreement = True
+                reasons.append(f"VLM did not confirm collision (VLM={vlm_conf:.0%})")
+
+        if not inc.physics_passed and inc.physics_passed is not None:
+            reasons.append("Pre-check motion/physics heuristic failed")
+
+        if is_uncertain_conf or is_disagreement:
+            reason_str = " • ".join(reasons) if reasons else f"Borderline confidence ({conf:.0%})"
+            keyframe_name = os.path.basename(inc.image_path) if inc.image_path else ""
+            kf_url = f"/media/keyframes/{keyframe_name}" if keyframe_name else inc.keyframe_url
+            clip_url = f"/api/incidents/{inc.incident_id}/clip" if inc.clip_path and os.path.exists(inc.clip_path) else None
+            clip_ann_url = (
+                f"/api/incidents/{inc.incident_id}/clip?annotated=true"
+                if inc.clip_annotated_path and os.path.exists(inc.clip_annotated_path)
+                else None
+            )
+
+            queue_items.append({
+                "incident_id": inc.incident_id,
+                "class_name": inc.class_name,
+                "max_confidence": inc.max_confidence,
+                "image_path": inc.image_path,
+                "keyframe_url": kf_url,
+                "clip_path": inc.clip_path,
+                "clip_url": clip_url,
+                "clip_annotated_path": inc.clip_annotated_path,
+                "clip_annotated_url": clip_ann_url,
+                "verification_status": inc.verification_status,
+                "vlm_confidence": inc.vlm_confidence,
+                "vlm_reason": inc.vlm_reason,
+                "physics_passed": inc.physics_passed,
+                "uncertainty_reason": reason_str,
+                "start_timestamp": inc.start_timestamp,
+                "severity": inc.severity,
+                "severity_score": inc.severity_score if inc.severity_score is not None else 50,
+                "duration": inc.duration,
+            })
+
+    return queue_items
+
+
+def get_review_stats(session: Session) -> Dict[str, Any]:
+    """Calculates statistics on operator review decisions and export readiness."""
+    feedbacks = list(session.exec(select(ReviewFeedback)).all())
+    total_reviewed = len(feedbacks)
+    accidents_approved = sum(1 for fb in feedbacks if fb.decision == "accident")
+    hard_negatives = sum(1 for fb in feedbacks if fb.decision == "not_accident")
+    wrong_class_count = sum(1 for fb in feedbacks if fb.decision == "wrong_class")
+    staging_pending = sum(1 for fb in feedbacks if not fb.is_exported)
+
+    return {
+        "total_reviewed": total_reviewed,
+        "accidents_approved": accidents_approved,
+        "hard_negatives": hard_negatives,
+        "wrong_class_count": wrong_class_count,
+        "staging_pending_export": staging_pending,
+    }
 
 
 def get_or_generate_dispatch_report(

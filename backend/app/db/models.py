@@ -32,8 +32,32 @@ class Incident(SQLModel, table=True):
     severity_score: Optional[int] = Field(default=50, index=True)  # 0 to 100
     severity_breakdown: Optional[str] = None  # JSON string of breakdown components and factors
     recommended_units: Optional[str] = None  # JSON string list of recommended responder units
+    reviewed_label: Optional[str] = Field(default=None, index=True)  # "accident", "not_accident", "wrong_class"
+    corrected_class: Optional[str] = None
+    corrected_boxes: Optional[str] = None  # JSON string of bounding boxes
     created_at: float = Field(index=True)
     duration: float = Field(default=0.0)
+
+
+class ReviewFeedback(SQLModel, table=True):
+    """Stores operator review decisions and ground-truth corrections for model retraining."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    incident_id: str = Field(index=True)
+    decision: str = Field(index=True)  # "accident" (approved), "not_accident" (rejected / hard negative), "wrong_class"
+    original_class: str
+    corrected_class: Optional[str] = None
+    confidence: float = Field(default=0.0)
+    image_path: str
+    clip_path: Optional[str] = None
+    clip_annotated_path: Optional[str] = None
+    reviewer_name: str = Field(default="Operator")
+    reviewed_at: str  # ISO timestamp
+    notes: Optional[str] = None
+    corrected_boxes: Optional[str] = None  # JSON string of bounding boxes
+    is_exported: bool = Field(default=False, index=True)
+    exported_at: Optional[str] = None
+    created_at: float = Field(index=True)
 
 
 class Camera(SQLModel, table=True):

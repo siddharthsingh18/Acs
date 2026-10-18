@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Radio,
   FileSpreadsheet,
+  Layers,
   BarChart3,
   Sliders,
   Info,
@@ -23,6 +24,11 @@ const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
     labelKey: 'nav.live',
     icon: Radio,
     isLive: true,
+  },
+  {
+    to: '/review',
+    labelKey: 'nav.review',
+    icon: Layers,
   },
   {
     to: '/incidents',

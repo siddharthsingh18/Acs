@@ -40,6 +40,9 @@ def init_db() -> None:
                     "severity_score": "INTEGER",
                     "severity_breakdown": "TEXT",
                     "recommended_units": "TEXT",
+                    "reviewed_label": "TEXT",
+                    "corrected_class": "TEXT",
+                    "corrected_boxes": "TEXT",
                 }
                 for col_name, col_type in cols_to_add.items():
                     if col_name not in existing_cols:

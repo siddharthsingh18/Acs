@@ -91,6 +91,9 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
         clip_annotated_path=inc.clip_annotated_path,
         clip_annotated_url=clip_ann_url,
         impact_offset_seconds=inc.impact_offset_seconds if inc.impact_offset_seconds is not None else 8.0,
+        reviewed_label=inc.reviewed_label,
+        corrected_class=inc.corrected_class,
+        corrected_boxes=inc.corrected_boxes,
         created_at=inc.created_at,
         duration=inc.duration,
     )
@@ -230,6 +233,9 @@ def update_incident_status_endpoint(
         incident_id=incident_id,
         new_status=body.status,
         reviewer_name=body.reviewer_name,
+        notes=body.notes,
+        corrected_class=body.corrected_class,
+        corrected_boxes=body.corrected_boxes,
     )
     if not inc:
         raise HTTPException(

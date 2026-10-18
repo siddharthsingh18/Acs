@@ -2,7 +2,7 @@
 backend.app.schemas
 Pydantic v2 schemas for API requests and responses.
 """
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 
 
@@ -191,6 +191,9 @@ class IncidentResponse(BaseModel):
     clip_annotated_path: Optional[str] = None
     clip_annotated_url: Optional[str] = None
     impact_offset_seconds: Optional[float] = None
+    reviewed_label: Optional[str] = None
+    corrected_class: Optional[str] = None
+    corrected_boxes: Optional[str] = None
     created_at: float
     duration: float
 
@@ -216,6 +219,95 @@ class IncidentStatusUpdateRequest(BaseModel):
         default="Reviewing Officer",
         description="Name or badge number of reviewer",
     )
+    notes: Optional[str] = None
+    corrected_class: Optional[str] = None
+    corrected_boxes: Optional[Union[str, List[Any]]] = None
+
+
+class ReviewDecisionRequest(BaseModel):
+    """Review decision submitted from the fast swipe-style review queue."""
+
+    decision: str = Field(
+        pattern="^(accident|not_accident|wrong_class)$",
+        description="Decision: 'accident' (approve), 'not_accident' (hard negative), or 'wrong_class'",
+    )
+    corrected_class: Optional[str] = Field(
+        default=None,
+        description="Corrected class label if wrong_class or specified",
+    )
+    corrected_boxes: Optional[Union[str, List[Any]]] = Field(
+        default=None,
+        description="Optional corrected bounding boxes (YOLO format or normalized JSON)",
+    )
+    reviewer_name: Optional[str] = Field(
+        default="Operator",
+        description="Name or badge number of operator",
+    )
+    notes: Optional[str] = Field(
+        default=None,
+        description="Optional reviewer notes or context",
+    )
+
+
+class ReviewFeedbackResponse(BaseModel):
+    """Record of an operator review decision stored for ML dataset export."""
+
+    id: Optional[int] = None
+    incident_id: str
+    decision: str
+    original_class: str
+    corrected_class: Optional[str] = None
+    confidence: float
+    image_path: str
+    clip_path: Optional[str] = None
+    clip_annotated_path: Optional[str] = None
+    reviewer_name: str
+    reviewed_at: str
+    notes: Optional[str] = None
+    corrected_boxes: Optional[str] = None
+    is_exported: bool
+    exported_at: Optional[str] = None
+    created_at: float
+
+
+class ReviewQueueItem(BaseModel):
+    """Candidate detection item presented in the fast review queue."""
+
+    incident_id: str
+    class_name: str
+    max_confidence: float
+    image_path: str
+    keyframe_url: str
+    clip_path: Optional[str] = None
+    clip_url: Optional[str] = None
+    clip_annotated_path: Optional[str] = None
+    clip_annotated_url: Optional[str] = None
+    verification_status: Optional[str] = None
+    vlm_confidence: Optional[float] = None
+    vlm_reason: Optional[str] = None
+    physics_passed: Optional[bool] = None
+    uncertainty_reason: str
+    start_timestamp: str
+    severity: Optional[str] = None
+    severity_score: Optional[int] = None
+    duration: float = 0.0
+
+
+class ReviewQueueResponse(BaseModel):
+    """List of uncertain detections queued for review."""
+
+    items: List[ReviewQueueItem]
+    total: int
+
+
+class ReviewStatsResponse(BaseModel):
+    """Summary of review decisions and dataset staging readiness."""
+
+    total_reviewed: int
+    accidents_approved: int
+    hard_negatives: int
+    wrong_class_count: int
+    staging_pending_export: int
 
 
 class AlertTestRequest(BaseModel):

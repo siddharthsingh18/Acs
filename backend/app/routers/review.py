@@ -1,0 +1,117 @@
+"""
+backend.app.routers.review
+Fast swipe-style review queue API for triage of uncertain detections and feedback collection.
+"""
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlmodel import Session
+
+from backend.app.db.database import get_session
+from backend.app.db.models import Incident
+from backend.app.schemas import (
+    IncidentResponse,
+    ReviewDecisionRequest,
+    ReviewFeedbackResponse,
+    ReviewQueueItem,
+    ReviewQueueResponse,
+    ReviewStatsResponse,
+)
+from backend.app.services.incident_service import (
+    get_incident_by_id,
+    get_review_queue_items,
+    get_review_stats,
+    record_review_decision,
+    undo_review_decision,
+)
+from backend.app.routers.incidents import _to_incident_response
+
+logger = logging.getLogger("acs.backend.routers.review")
+router = APIRouter(prefix="/api/review-queue", tags=["Review Queue"])
+
+
+@router.get("", response_model=ReviewQueueResponse)
+def get_review_queue_endpoint(
+    include_reviewed: bool = Query(
+        False, description="Whether to include already reviewed items"
+    ),
+    session: Session = Depends(get_session),
+) -> ReviewQueueResponse:
+    """Retrieves uncertain detections (confidence 0.3-0.6 or YOLO/VLM disagreement) for review."""
+    raw_items = get_review_queue_items(session=session, include_reviewed=include_reviewed)
+    items = [ReviewQueueItem(**it) for it in raw_items]
+    return ReviewQueueResponse(items=items, total=len(items))
+
+
+@router.get("/stats", response_model=ReviewStatsResponse)
+def get_review_stats_endpoint(
+    session: Session = Depends(get_session),
+) -> ReviewStatsResponse:
+    """Returns analytics on operator decisions and training dataset staging readiness."""
+    stats = get_review_stats(session=session)
+    return ReviewStatsResponse(**stats)
+
+
+@router.post("/{incident_id}/decision", response_model=ReviewFeedbackResponse)
+def submit_review_decision_endpoint(
+    incident_id: str,
+    payload: ReviewDecisionRequest,
+    session: Session = Depends(get_session),
+) -> ReviewFeedbackResponse:
+    """Submits a fast review decision: Accident (approved), Not accident (hard negative), or Wrong class."""
+    inc = get_incident_by_id(session, incident_id)
+    if not inc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident with ID '{incident_id}' not found.",
+        )
+
+    feedback = record_review_decision(
+        session=session,
+        incident_id=incident_id,
+        decision=payload.decision,
+        corrected_class=payload.corrected_class,
+        corrected_boxes=payload.corrected_boxes,
+        reviewer_name=payload.reviewer_name or "Operator",
+        notes=payload.notes,
+    )
+    if not feedback:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to record review decision feedback.",
+        )
+
+    return ReviewFeedbackResponse(
+        id=feedback.id,
+        incident_id=feedback.incident_id,
+        decision=feedback.decision,
+        original_class=feedback.original_class,
+        corrected_class=feedback.corrected_class,
+        confidence=feedback.confidence,
+        image_path=feedback.image_path,
+        clip_path=feedback.clip_path,
+        clip_annotated_path=feedback.clip_annotated_path,
+        reviewer_name=feedback.reviewer_name,
+        reviewed_at=feedback.reviewed_at,
+        notes=feedback.notes,
+        corrected_boxes=feedback.corrected_boxes,
+        is_exported=feedback.is_exported,
+        exported_at=feedback.exported_at,
+        created_at=feedback.created_at,
+    )
+
+
+@router.post("/{incident_id}/undo", response_model=IncidentResponse)
+def undo_review_decision_endpoint(
+    incident_id: str,
+    session: Session = Depends(get_session),
+) -> IncidentResponse:
+    """Reverts an incident's review status back to pending and removes unexported feedback."""
+    inc = undo_review_decision(session=session, incident_id=incident_id)
+    if not inc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident with ID '{incident_id}' not found.",
+        )
+    return _to_incident_response(inc)

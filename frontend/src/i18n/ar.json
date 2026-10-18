@@ -10,6 +10,7 @@
   },
   "nav": {
     "live": "التحليل المباشر",
+    "review": "قائمة المراجعة",
     "incidents": "سجل الحوادث",
     "analytics": "الإحصائيات",
     "settings": "إعدادات المنظومة",
@@ -163,5 +164,30 @@
     "car_object_accident": "حادث سيارة مع جسم",
     "car_person_accident": "حادث سيارة مع شخص",
     "accident": "حادث تصادم مروري"
+  },
+  "review_queue": {
+    "title": "قائمة مراجعة الاكتشافات غير المؤكدة",
+    "subtitle": "فرز التعلم النشط: تصنيف الحالات الحدية (الثقة 0.3-0.6 أو اختلاف YOLO/VLM) إلى عينات تدريب ونماذج سلبية صعبة.",
+    "accident": "حادث حقيقي",
+    "not_accident": "ليس حادثاً",
+    "wrong_class": "فئة خاطئة",
+    "skip": "تخطي",
+    "undo": "تراجع",
+    "card_counter": "عنصر {{current}} من {{total}}",
+    "remaining": "متبقي {{count}}",
+    "all_caught_up": "تمت مراجعة جميع العناصر",
+    "all_caught_up_desc": "لا توجد اكتشافات غير مؤكدة بحاجة للمراجعة حالياً.",
+    "view_all": "تضمين العناصر المراجعة سابقاً",
+    "stats_title": "إحصائيات إعداد بيانات التدريب",
+    "candidates_staged": "العينات المعتمدة",
+    "hard_negatives": "السلبيات الصعبة",
+    "wrong_class_count": "تصحيحات الفئة",
+    "pending_export": "بانتظار التصدير للمرحلة الانتقالية",
+    "select_class_prompt": "حدد الفئة الصحيحة للحادث",
+    "original_class": "الفئة المكتشفة",
+    "confidence": "ثقة النموذج (YOLO)",
+    "vlm_opinion": "رأي نموذج الرؤية (VLM)",
+    "play_clip": "تشغيل المقطع",
+    "view_keyframe": "عرض الإطار الرئيسي"
   }
 }

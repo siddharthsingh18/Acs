@@ -29,6 +29,7 @@ from backend.app.routers import config as config_router
 from backend.app.routers import health as health_router
 from backend.app.routers import incidents as incidents_router
 from backend.app.routers import jobs as jobs_router
+from backend.app.routers import review as review_router
 from backend.app.routers import stats as stats_router
 from backend.app.services.camera_manager import camera_manager
 from backend.app.services.incident_service import import_csv_to_db
@@ -180,6 +181,7 @@ app.include_router(incidents_router.router)
 app.include_router(alerts_router.router)
 app.include_router(stats_router.router)
 app.include_router(cameras_router.router)
+app.include_router(review_router.router)
 
 # -----------------------------------------------------------------------------
 # Mount Frontend Static Build (Production / Docker)

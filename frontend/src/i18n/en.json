@@ -10,6 +10,7 @@
   },
   "nav": {
     "live": "Live Analysis",
+    "review": "Review Queue",
     "incidents": "Incident Logs",
     "analytics": "Analytics",
     "settings": "System Settings",
@@ -163,5 +164,30 @@
     "car_object_accident": "Car-Obstacle Collision",
     "car_person_accident": "Car-Pedestrian Collision",
     "accident": "Vehicle Accident"
+  },
+  "review_queue": {
+    "title": "Uncertain Detection Review Queue",
+    "subtitle": "Active learning triage: label borderline detections (confidence 0.3–0.6 or YOLO/VLM disagreement) into training candidates and hard negatives.",
+    "accident": "Accident",
+    "not_accident": "Not Accident",
+    "wrong_class": "Wrong Class",
+    "skip": "Skip",
+    "undo": "Undo",
+    "card_counter": "Item {{current}} of {{total}}",
+    "remaining": "{{count}} remaining",
+    "all_caught_up": "Review Queue Caught Up",
+    "all_caught_up_desc": "No uncertain detections currently need review. All borderline cases have been triaged.",
+    "view_all": "Include already reviewed",
+    "stats_title": "Dataset Staging Telemetry",
+    "candidates_staged": "Approved Candidates",
+    "hard_negatives": "Hard Negatives",
+    "wrong_class_count": "Class Corrections",
+    "pending_export": "Pending Staging Export",
+    "select_class_prompt": "Select Correct Collision Class",
+    "original_class": "Flagged Class",
+    "confidence": "YOLO Confidence",
+    "vlm_opinion": "VLM Opinion",
+    "play_clip": "Play Clip",
+    "view_keyframe": "View Keyframe"
   }
 }

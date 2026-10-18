@@ -4,6 +4,30 @@
  */
 
 export interface paths {
+    "/media/clips/{filename}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream Media Clip
+         * @description Streams video clips with full HTTP Range request support.
+         */
+        get: operations["stream_media_clip_media_clips__filename__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        /**
+         * Stream Media Clip
+         * @description Streams video clips with full HTTP Range request support.
+         */
+        head: operations["stream_media_clip_media_clips__filename__head"];
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -38,6 +62,30 @@ export interface paths {
         get: operations["get_config_endpoint_api_config_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Retention Settings Endpoint
+         * @description Returns current video clip retention policies and storage usage metrics.
+         */
+        get: operations["get_retention_settings_endpoint_api_retention_get"];
+        put?: never;
+        /**
+         * Update Retention Settings Endpoint
+         * @description Updates video clip retention settings and optionally triggers storage cleanup.
+         */
+        post: operations["update_retention_settings_endpoint_api_retention_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -232,6 +280,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/incidents/{incident_id}/clip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Incident Clip Endpoint
+         * @description Streams the raw or annotated H.264 MP4 clip with full HTTP Range request support.
+         */
+        get: operations["get_incident_clip_endpoint_api_incidents__incident_id__clip_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        /**
+         * Get Incident Clip Endpoint
+         * @description Streams the raw or annotated H.264 MP4 clip with full HTTP Range request support.
+         */
+        head: operations["get_incident_clip_endpoint_api_incidents__incident_id__clip_head"];
+        patch?: never;
+        trace?: never;
+    };
     "/api/alerts/test": {
         parameters: {
             query?: never;
@@ -290,6 +362,160 @@ export interface paths {
         get: operations["get_stats_endpoint_api_stats_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cameras": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Cameras
+         * @description Retrieves all registered CCTV cameras with masked credentials and live health.
+         */
+        get: operations["list_cameras_api_cameras_get"];
+        put?: never;
+        /**
+         * Create Camera
+         * @description Registers a new CCTV camera feed.
+         *
+         *     Credentials in RTSP/HTTP URLs are securely encrypted at rest.
+         */
+        post: operations["create_camera_api_cameras_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cameras/{camera_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Camera
+         * @description Retrieves single camera metadata and live health status.
+         */
+        get: operations["get_camera_api_cameras__camera_id__get"];
+        /**
+         * Update Camera
+         * @description Updates camera parameters, toggles worker state, or alters confidence threshold.
+         */
+        put: operations["update_camera_api_cameras__camera_id__put"];
+        post?: never;
+        /**
+         * Delete Camera
+         * @description Deletes camera registration and terminates its dedicated background worker.
+         */
+        delete: operations["delete_camera_api_cameras__camera_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cameras/{camera_id}/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Camera Health
+         * @description Returns direct health indicators (connected, fps, last frame age, dropped frames).
+         */
+        get: operations["get_camera_health_api_cameras__camera_id__health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Review Queue Endpoint
+         * @description Retrieves uncertain detections (confidence 0.3-0.6 or YOLO/VLM disagreement) for review.
+         */
+        get: operations["get_review_queue_endpoint_api_review_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Review Stats Endpoint
+         * @description Returns analytics on operator decisions and training dataset staging readiness.
+         */
+        get: operations["get_review_stats_endpoint_api_review_queue_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/{incident_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Review Decision Endpoint
+         * @description Submits a fast review decision: Accident (approved), Not accident (hard negative), or Wrong class.
+         */
+        post: operations["submit_review_decision_endpoint_api_review_queue__incident_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/{incident_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Review Decision Endpoint
+         * @description Reverts an incident's review status back to pending and removes unexported feedback.
+         */
+        post: operations["undo_review_decision_endpoint_api_review_queue__incident_id__undo_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -366,6 +592,188 @@ export interface components {
             };
             /** Message */
             message: string;
+        };
+        /**
+         * CameraCreateRequest
+         * @description Payload for registering a new live CCTV camera feed.
+         */
+        CameraCreateRequest: {
+            /**
+             * Name
+             * @description Human-readable camera title or intersection name
+             */
+            name: string;
+            /**
+             * Source Url
+             * @description Connection URL or device index (e.g. '0', 'rtsp://...', 'http://...', or file path)
+             */
+            source_url: string;
+            /**
+             * Location Lat
+             * @description Camera GPS latitude coordinate
+             */
+            location_lat?: number | null;
+            /**
+             * Location Lng
+             * @description Camera GPS longitude coordinate
+             */
+            location_lng?: number | null;
+            /**
+             * Enabled
+             * @description Whether camera worker should be active
+             * @default true
+             */
+            enabled: boolean | null;
+            /**
+             * Confidence Override
+             * @description Optional per-camera accident confidence threshold override
+             */
+            confidence_override?: number | null;
+        };
+        /**
+         * CameraHealth
+         * @description Live telemetry and health indicators for an active camera worker.
+         */
+        CameraHealth: {
+            /**
+             * Connected
+             * @description Whether the camera stream is currently open and delivering frames
+             */
+            connected: boolean;
+            /**
+             * Fps
+             * @description Current processing throughput frames-per-second
+             */
+            fps: number;
+            /**
+             * Last Frame Age
+             * @description Elapsed seconds since the most recent frame was received
+             */
+            last_frame_age: number;
+            /**
+             * Dropped Frames
+             * @description Cumulative count of skipped or dropped frames under load
+             */
+            dropped_frames: number;
+            /**
+             * Reconnect Count
+             * @description Number of stream disconnect & auto-reconnect attempts
+             */
+            reconnect_count: number;
+            /**
+             * Is Incident Active
+             * @description True if an accident incident is actively ongoing on this camera
+             */
+            is_incident_active: boolean;
+            /**
+             * Active Incident Id
+             * @description Active incident tracking ID if ongoing
+             */
+            active_incident_id?: string | null;
+            /**
+             * Last Accident Class
+             * @description Class label of the most recent accident
+             */
+            last_accident_class?: string | null;
+            /**
+             * Last Accident Confidence
+             * @description Peak confidence of active accident
+             */
+            last_accident_confidence?: number | null;
+        };
+        /**
+         * CameraResponse
+         * @description Camera descriptor with credentials safely masked and live health metrics attached.
+         */
+        CameraResponse: {
+            /**
+             * Id
+             * @description Unique camera identifier
+             */
+            id: string;
+            /**
+             * Name
+             * @description Camera title
+             */
+            name: string;
+            /**
+             * Source Type
+             * @description Source classification: 'file', 'webcam', 'rtsp', or 'http'
+             */
+            source_type: string;
+            /**
+             * Source Url
+             * @description Masked connection string (passwords & usernames are strictly redacted)
+             */
+            source_url: string;
+            /**
+             * Location Lat
+             * @description GPS latitude
+             */
+            location_lat?: number | null;
+            /**
+             * Location Lng
+             * @description GPS longitude
+             */
+            location_lng?: number | null;
+            /**
+             * Enabled
+             * @description Whether camera is currently active
+             */
+            enabled: boolean;
+            /**
+             * Confidence Override
+             * @description Custom confidence override
+             */
+            confidence_override?: number | null;
+            /**
+             * Created At
+             * @description Creation epoch timestamp
+             */
+            created_at: number;
+            /**
+             * Updated At
+             * @description Last update epoch timestamp
+             */
+            updated_at: number;
+            /** @description Real-time stream health telemetry */
+            health?: components["schemas"]["CameraHealth"] | null;
+        };
+        /**
+         * CameraUpdateRequest
+         * @description Payload for updating camera configuration attributes.
+         */
+        CameraUpdateRequest: {
+            /**
+             * Name
+             * @description Updated camera title
+             */
+            name?: string | null;
+            /**
+             * Source Url
+             * @description Updated connection string/URL
+             */
+            source_url?: string | null;
+            /**
+             * Location Lat
+             * @description Updated latitude
+             */
+            location_lat?: number | null;
+            /**
+             * Location Lng
+             * @description Updated longitude
+             */
+            location_lng?: number | null;
+            /**
+             * Enabled
+             * @description Enable or disable camera worker
+             */
+            enabled?: boolean | null;
+            /**
+             * Confidence Override
+             * @description Updated confidence override
+             */
+            confidence_override?: number | null;
         };
         /**
          * ChannelStatusInfo
@@ -465,6 +873,39 @@ export interface components {
              */
             report_images_dir: string;
             /**
+             * Clips Dir
+             * @description Directory storing incident video clips
+             */
+            clips_dir: string;
+            /**
+             * Clip Retention Days
+             * @description Days before stored video clips are deleted
+             */
+            clip_retention_days: number;
+            /**
+             * Clip Max Disk Usage Mb
+             * @description Maximum MB disk usage for stored clips
+             */
+            clip_max_disk_usage_mb: number;
+            /**
+             * Severity Low Max
+             * @description Upper threshold score for low severity tier
+             * @default 35
+             */
+            severity_low_max: number;
+            /**
+             * Severity Medium Max
+             * @description Upper threshold score for medium severity tier
+             * @default 70
+             */
+            severity_medium_max: number;
+            /**
+             * Severity Scorer Type
+             * @description Active severity scorer implementation
+             * @default rule_based
+             */
+            severity_scorer_type: string;
+            /**
              * Temp Dir
              * @description Directory storing temporary uploads
              */
@@ -553,12 +994,18 @@ export interface components {
             duration: number;
             /** Keyframe Url */
             keyframe_url: string;
+            /** Verification Status */
+            verification_status?: string | null;
             /** Severity */
             severity?: string | null;
-            /** Severity Score (0-100) */
+            /** Severity Score */
             severity_score?: number | null;
-            /** Recommended Emergency Units */
+            /** Recommended Units */
             recommended_units?: string[] | null;
+            /** Clip Url */
+            clip_url?: string | null;
+            /** Clip Annotated Url */
+            clip_annotated_url?: string | null;
         };
         /**
          * IncidentListResponse
@@ -597,13 +1044,16 @@ export interface components {
             keyframe_url: string;
             /** Severity */
             severity: string;
-            /** Severity Score (0-100) */
-            severity_score?: number | null;
-            /** Transparent Severity Breakdown */
+            /**
+             * Severity Score
+             * @default 50
+             */
+            severity_score: number | null;
+            /** Severity Breakdown */
             severity_breakdown?: {
                 [key: string]: unknown;
             } | null;
-            /** Recommended Emergency Units */
+            /** Recommended Units */
             recommended_units?: string[] | null;
             /** Status */
             status: string;
@@ -619,22 +1069,28 @@ export interface components {
             dispatch_text?: string | null;
             /** Verification Status */
             verification_status?: string | null;
-            /** VLM Confidence */
+            /** Vlm Confidence */
             vlm_confidence?: number | null;
-            /** VLM Reason */
+            /** Vlm Reason */
             vlm_reason?: string | null;
             /** Physics Passed */
             physics_passed?: boolean | null;
-            /** Raw Clip Path */
+            /** Clip Path */
             clip_path?: string | null;
-            /** Raw Clip Stream URL */
+            /** Clip Url */
             clip_url?: string | null;
-            /** Annotated Clip Path */
+            /** Clip Annotated Path */
             clip_annotated_path?: string | null;
-            /** Annotated Clip Stream URL */
+            /** Clip Annotated Url */
             clip_annotated_url?: string | null;
-            /** Impact Moment Offset in Seconds */
+            /** Impact Offset Seconds */
             impact_offset_seconds?: number | null;
+            /** Reviewed Label */
+            reviewed_label?: string | null;
+            /** Corrected Class */
+            corrected_class?: string | null;
+            /** Corrected Boxes */
+            corrected_boxes?: string | null;
             /** Created At */
             created_at: number;
             /** Duration */
@@ -656,6 +1112,12 @@ export interface components {
              * @default Reviewing Officer
              */
             reviewer_name: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Corrected Class */
+            corrected_class?: string | null;
+            /** Corrected Boxes */
+            corrected_boxes?: string | unknown[] | null;
         };
         /**
          * JobCancelResponse
@@ -769,6 +1231,200 @@ export interface components {
             dir: string;
         };
         /**
+         * RetentionSettingsResponse
+         * @description Current clip retention rules and disk storage metrics.
+         */
+        RetentionSettingsResponse: {
+            /**
+             * Retention Days
+             * @description Days before stored video clips are deleted
+             */
+            retention_days: number;
+            /**
+             * Max Disk Usage Mb
+             * @description Maximum disk storage in MB allocated for clips
+             */
+            max_disk_usage_mb: number;
+            /**
+             * Current Disk Usage Mb
+             * @description Current disk storage in MB used by clips
+             */
+            current_disk_usage_mb: number;
+            /**
+             * Total Clips Count
+             * @description Total number of stored video clip files
+             */
+            total_clips_count: number;
+            /**
+             * Clips Dir
+             * @description Filesystem directory where video clips are stored
+             */
+            clips_dir: string;
+        };
+        /**
+         * RetentionSettingsUpdateRequest
+         * @description Payload to update video clip retention policies and trigger manual cleanup.
+         */
+        RetentionSettingsUpdateRequest: {
+            /**
+             * Retention Days
+             * @description New max clip age in days
+             */
+            retention_days?: number | null;
+            /**
+             * Max Disk Usage Mb
+             * @description New max clip disk usage cap in MB
+             */
+            max_disk_usage_mb?: number | null;
+            /**
+             * Trigger Cleanup
+             * @description Whether to run cleanup immediately upon save
+             * @default true
+             */
+            trigger_cleanup: boolean | null;
+        };
+        /**
+         * ReviewDecisionRequest
+         * @description Review decision submitted from the fast swipe-style review queue.
+         */
+        ReviewDecisionRequest: {
+            /**
+             * Decision
+             * @description Decision: 'accident' (approve), 'not_accident' (hard negative), or 'wrong_class'
+             */
+            decision: string;
+            /**
+             * Corrected Class
+             * @description Corrected class label if wrong_class or specified
+             */
+            corrected_class?: string | null;
+            /**
+             * Corrected Boxes
+             * @description Optional corrected bounding boxes (YOLO format or normalized JSON)
+             */
+            corrected_boxes?: string | unknown[] | null;
+            /**
+             * Reviewer Name
+             * @description Name or badge number of operator
+             * @default Operator
+             */
+            reviewer_name: string | null;
+            /**
+             * Notes
+             * @description Optional reviewer notes or context
+             */
+            notes?: string | null;
+        };
+        /**
+         * ReviewFeedbackResponse
+         * @description Record of an operator review decision stored for ML dataset export.
+         */
+        ReviewFeedbackResponse: {
+            /** Id */
+            id?: number | null;
+            /** Incident Id */
+            incident_id: string;
+            /** Decision */
+            decision: string;
+            /** Original Class */
+            original_class: string;
+            /** Corrected Class */
+            corrected_class?: string | null;
+            /** Confidence */
+            confidence: number;
+            /** Image Path */
+            image_path: string;
+            /** Clip Path */
+            clip_path?: string | null;
+            /** Clip Annotated Path */
+            clip_annotated_path?: string | null;
+            /** Reviewer Name */
+            reviewer_name: string;
+            /** Reviewed At */
+            reviewed_at: string;
+            /** Notes */
+            notes?: string | null;
+            /** Corrected Boxes */
+            corrected_boxes?: string | null;
+            /** Is Exported */
+            is_exported: boolean;
+            /** Exported At */
+            exported_at?: string | null;
+            /** Created At */
+            created_at: number;
+        };
+        /**
+         * ReviewQueueItem
+         * @description Candidate detection item presented in the fast review queue.
+         */
+        ReviewQueueItem: {
+            /** Incident Id */
+            incident_id: string;
+            /** Class Name */
+            class_name: string;
+            /** Max Confidence */
+            max_confidence: number;
+            /** Image Path */
+            image_path: string;
+            /** Keyframe Url */
+            keyframe_url: string;
+            /** Clip Path */
+            clip_path?: string | null;
+            /** Clip Url */
+            clip_url?: string | null;
+            /** Clip Annotated Path */
+            clip_annotated_path?: string | null;
+            /** Clip Annotated Url */
+            clip_annotated_url?: string | null;
+            /** Verification Status */
+            verification_status?: string | null;
+            /** Vlm Confidence */
+            vlm_confidence?: number | null;
+            /** Vlm Reason */
+            vlm_reason?: string | null;
+            /** Physics Passed */
+            physics_passed?: boolean | null;
+            /** Uncertainty Reason */
+            uncertainty_reason: string;
+            /** Start Timestamp */
+            start_timestamp: string;
+            /** Severity */
+            severity?: string | null;
+            /** Severity Score */
+            severity_score?: number | null;
+            /**
+             * Duration
+             * @default 0
+             */
+            duration: number;
+        };
+        /**
+         * ReviewQueueResponse
+         * @description List of uncertain detections queued for review.
+         */
+        ReviewQueueResponse: {
+            /** Items */
+            items: components["schemas"]["ReviewQueueItem"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * ReviewStatsResponse
+         * @description Summary of review decisions and dataset staging readiness.
+         */
+        ReviewStatsResponse: {
+            /** Total Reviewed */
+            total_reviewed: number;
+            /** Accidents Approved */
+            accidents_approved: number;
+            /** Hard Negatives */
+            hard_negatives: number;
+            /** Wrong Class Count */
+            wrong_class_count: number;
+            /** Staging Pending Export */
+            staging_pending_export: number;
+        };
+        /**
          * StatsResponse
          * @description Aggregated analytical KPIs across incidents.
          */
@@ -837,6 +1493,68 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    stream_media_clip_media_clips__filename__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_media_clip_media_clips__filename__head: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_health_api_health_get: {
         parameters: {
             query?: never;
@@ -873,6 +1591,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SystemConfigResponse"];
+                };
+            };
+        };
+    };
+    get_retention_settings_endpoint_api_retention_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_retention_settings_endpoint_api_retention_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionSettingsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1163,6 +1934,74 @@ export interface operations {
             };
         };
     };
+    get_incident_clip_endpoint_api_incidents__incident_id__clip_get: {
+        parameters: {
+            query?: {
+                /** @description Whether to stream the annotated clip with bounding boxes burned in */
+                annotated?: boolean;
+            };
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_incident_clip_endpoint_api_incidents__incident_id__clip_head: {
+        parameters: {
+            query?: {
+                /** @description Whether to stream the annotated clip with bounding boxes burned in */
+                annotated?: boolean;
+            };
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     send_test_alert_endpoint_api_alerts_test_post: {
         parameters: {
             query?: never;
@@ -1265,6 +2104,303 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StatsResponse"];
+                };
+            };
+        };
+    };
+    list_cameras_api_cameras_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraResponse"][];
+                };
+            };
+        };
+    };
+    create_camera_api_cameras_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CameraCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_camera_api_cameras__camera_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_camera_api_cameras__camera_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CameraUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_camera_api_cameras__camera_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_camera_health_api_cameras__camera_id__health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                camera_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraHealth"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_queue_endpoint_api_review_queue_get: {
+        parameters: {
+            query?: {
+                /** @description Whether to include already reviewed items */
+                include_reviewed?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewQueueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_review_stats_endpoint_api_review_queue_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewStatsResponse"];
+                };
+            };
+        };
+    };
+    submit_review_decision_endpoint_api_review_queue__incident_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewFeedbackResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_review_decision_endpoint_api_review_queue__incident_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

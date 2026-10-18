@@ -372,6 +372,43 @@ export const api = {
     if (!response.ok) throw new Error('Failed to update retention settings')
     return (await response.json()) as RetentionSettings
   },
+
+  // Review Queue & Active Learning Endpoints
+  getReviewQueue: async (includeReviewed = false): Promise<ReviewQueueResponse> => {
+    const response = await fetch(`/api/review-queue?include_reviewed=${includeReviewed}`)
+    if (!response.ok) throw new Error('Failed to fetch review queue')
+    return (await response.json()) as ReviewQueueResponse
+  },
+
+  getReviewStats: async (): Promise<ReviewStatsResponse> => {
+    const response = await fetch('/api/review-queue/stats')
+    if (!response.ok) throw new Error('Failed to fetch review stats')
+    return (await response.json()) as ReviewStatsResponse
+  },
+
+  submitReviewDecision: async (
+    incidentId: string,
+    payload: ReviewDecisionPayload
+  ): Promise<ReviewFeedbackResponse> => {
+    const response = await fetch(`/api/review-queue/${incidentId}/decision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(err.detail || 'Failed to submit review decision')
+    }
+    return (await response.json()) as ReviewFeedbackResponse
+  },
+
+  undoReviewDecision: async (incidentId: string): Promise<IncidentResponse> => {
+    const response = await fetch(`/api/review-queue/${incidentId}/undo`, {
+      method: 'POST',
+    })
+    if (!response.ok) throw new Error('Failed to undo review decision')
+    return (await response.json()) as IncidentResponse
+  },
 }
 
 export interface RetentionSettings {
@@ -380,5 +417,66 @@ export interface RetentionSettings {
   current_disk_usage_mb: number
   total_clips_count: number
   clips_dir: string
+}
+
+export interface ReviewQueueItem {
+  incident_id: string
+  class_name: string
+  max_confidence: number
+  image_path: string
+  keyframe_url: string
+  clip_path?: string | null
+  clip_url?: string | null
+  clip_annotated_path?: string | null
+  clip_annotated_url?: string | null
+  verification_status?: string | null
+  vlm_confidence?: number | null
+  vlm_reason?: string | null
+  physics_passed?: boolean | null
+  uncertainty_reason: string
+  start_timestamp: string
+  severity?: string | null
+  severity_score?: number | null
+  duration: number
+}
+
+export interface ReviewQueueResponse {
+  items: ReviewQueueItem[]
+  total: number
+}
+
+export interface ReviewStatsResponse {
+  total_reviewed: number
+  accidents_approved: number
+  hard_negatives: number
+  wrong_class_count: number
+  staging_pending_export: number
+}
+
+export interface ReviewDecisionPayload {
+  decision: 'accident' | 'not_accident' | 'wrong_class'
+  corrected_class?: string | null
+  corrected_boxes?: any | null
+  reviewer_name?: string
+  notes?: string | null
+}
+
+export interface ReviewFeedbackResponse {
+  id?: number | null
+  incident_id: string
+  decision: string
+  original_class: string
+  corrected_class?: string | null
+  confidence: number
+  image_path: string
+  clip_path?: string | null
+  clip_annotated_path?: string | null
+  reviewer_name: string
+  reviewed_at: string
+  notes?: string | null
+  corrected_boxes?: string | null
+  is_exported: boolean
+  exported_at?: string | null
+  created_at: number
 }
 
