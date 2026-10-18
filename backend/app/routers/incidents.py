@@ -222,28 +222,66 @@ def get_incident_pdf_endpoint(
     )
 
 
+from backend.app.db.models import Incident, User
+from backend.app.deps import extract_client_ip, require_operator, require_viewer
+from backend.app.services.audit_service import log_audit_event
+
+
 @router.post("/{incident_id}/status", response_model=IncidentResponse)
 def update_incident_status_endpoint(
     incident_id: str,
     body: IncidentStatusUpdateRequest,
+    request: Request,
     session: Session = Depends(get_session),
+    operator_user: User = Depends(require_operator),
 ) -> IncidentResponse:
-    """Updates human-in-the-loop review status (approved, rejected, or dispatched)."""
+    """Updates human-in-the-loop review status (approved, rejected, or dispatched).
+
+    Enforces operator role and replaces free-text reviewer name with authenticated operator identity.
+    """
+    from backend.app.deps import is_auth_enforced
+    if is_auth_enforced() or not body.reviewer_name:
+        authenticated_reviewer = operator_user.full_name or operator_user.username
+    else:
+        authenticated_reviewer = body.reviewer_name
+
     inc = update_incident_status(
         session=session,
         incident_id=incident_id,
         new_status=body.status,
-        reviewer_name=body.reviewer_name,
+        reviewer_name=authenticated_reviewer,
         notes=body.notes,
         corrected_class=body.corrected_class,
         corrected_boxes=body.corrected_boxes,
     )
+
     if not inc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident with ID '{incident_id}' not found.",
         )
+
+    # Append-only audit trail logging
+    client_ip = extract_client_ip(request)
+    log_audit_event(
+        session=session,
+        username=operator_user.username,
+        user_role=operator_user.role,
+        action=f"incident_{body.status}",
+        target_type="incident",
+        target_id=incident_id,
+        ip_address=client_ip,
+        details={
+            "status": body.status,
+            "reviewer": authenticated_reviewer,
+            "notes": body.notes,
+            "corrected_class": body.corrected_class,
+        },
+        user_id=operator_user.id,
+    )
+
     return _to_incident_response(inc)
+
 
 
 def serve_file_with_range_support(file_path: str, request: Optional[Request] = None) -> Response:

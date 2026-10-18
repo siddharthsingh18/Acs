@@ -75,3 +75,34 @@ class Camera(SQLModel, table=True):
     created_at: float = Field(index=True)
     updated_at: float
 
+
+class User(SQLModel, table=True):
+    """User account model with Argon2 password hash and role-based permissions."""
+
+    id: str = Field(primary_key=True, index=True)
+    username: str = Field(unique=True, index=True)
+    hashed_password: str
+    full_name: str
+    role: str = Field(default="viewer", index=True)  # "viewer", "operator", "admin"
+    is_active: bool = Field(default=True, index=True)
+    created_at: float = Field(index=True)
+    last_login_at: Optional[float] = None
+
+
+class AuditLog(SQLModel, table=True):
+    """Append-only audit trail recording sensitive system and operator actions."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    timestamp: str = Field(index=True)  # ISO 8601 string
+    epoch: float = Field(index=True)
+    user_id: Optional[str] = Field(default=None, index=True)
+    username: str = Field(index=True)
+    user_role: str = Field(index=True)
+    action: str = Field(index=True)  # "incident_approved", "incident_rejected", "settings_updated", etc.
+    target_type: str = Field(index=True)  # "incident", "settings", "alert", "camera", "user", "auth"
+    target_id: Optional[str] = Field(default=None, index=True)
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    details: Optional[str] = None  # JSON string
+
+

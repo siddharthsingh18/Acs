@@ -37,6 +37,7 @@ import {
 import { CameraLocationPicker } from '@/components/map/CameraLocationPicker'
 import { AddCameraModal } from '@/components/live/AddCameraModal'
 import { useAppStore } from '@/store/appStore'
+import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
 // Zod validation schema with strict boundary constraints
@@ -86,6 +87,8 @@ export const SettingsPage: React.FC = () => {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const { activeModel, setActiveModel, theme, setTheme } = useAppStore()
+  const { user } = useAuthStore()
+  const isAdmin = user ? user.role === 'admin' : true
 
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null)
   const [testState, setTestState] = useState<TestResultState>({ status: 'idle' })
@@ -332,9 +335,17 @@ export const SettingsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {isAdmin && (
+            <a href="/audit">
+              <Button type="button" variant="outline" size="sm" className="gap-1.5 text-xs font-semibold">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <span>Audit Trail</span>
+              </Button>
+            </a>
+          )}
           <Button
             type="submit"
-            disabled={isSubmitting || updateMutation.isPending}
+            disabled={isSubmitting || updateMutation.isPending || (user ? !isAdmin : false)}
             className="gap-2 text-xs font-bold px-5 shadow-sm"
           >
             <Save className="h-4 w-4" />
@@ -344,6 +355,21 @@ export const SettingsPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Role restriction banner */}
+      {user && !isAdmin && (
+        <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs flex items-center justify-between gap-2.5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4 shrink-0 text-amber-400" />
+            <span>
+              Operating in <strong>read-only mode</strong> ({user.role.toUpperCase()}). Modifying cameras, dispatch credentials, or thresholds requires <strong>Administrator</strong> privileges.
+            </span>
+          </div>
+          <Badge variant="outline" className="text-[10px] uppercase font-mono border-amber-500/40 text-amber-400">
+            {user.role}
+          </Badge>
+        </div>
+      )}
 
       {/* Global Success / Validation Banner */}
       {saveSuccessMsg && (
@@ -547,7 +573,7 @@ export const SettingsPage: React.FC = () => {
                   type="button"
                   variant="outline"
                   onClick={() => testMutation.mutate()}
-                  disabled={testMutation.isPending}
+                  disabled={testMutation.isPending || (user ? !isAdmin : false)}
                   className="shrink-0 gap-2 text-xs font-semibold border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400"
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -985,6 +1011,7 @@ export const SettingsPage: React.FC = () => {
               type="button"
               variant="outline"
               size="sm"
+              disabled={user ? !isAdmin : false}
               onClick={() => setIsAddCameraModalOpen(true)}
               className="gap-1.5 text-xs font-semibold shrink-0"
             >

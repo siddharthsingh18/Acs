@@ -448,5 +448,84 @@ class RetentionSettingsUpdateRequest(BaseModel):
     trigger_cleanup: Optional[bool] = Field(default=True, description="Whether to run cleanup immediately upon save")
 
 
+class UserResponse(BaseModel):
+    """Public user descriptor without password hash."""
+
+    id: str = Field(description="Unique user ID")
+    username: str = Field(description="User login username")
+    full_name: str = Field(description="User display full name")
+    role: str = Field(description="Security role: viewer, operator, admin")
+    is_active: bool = Field(description="Whether account is active")
+    created_at: float = Field(description="Account creation epoch")
+    last_login_at: Optional[float] = Field(default=None, description="Last successful login epoch")
+
+
+class LoginRequest(BaseModel):
+    """Credentials payload for JWT authentication."""
+
+    username: str = Field(description="Account username")
+    password: str = Field(description="Account password")
+
+
+class TokenResponse(BaseModel):
+    """OAuth2 compatible JWT token response with user profile."""
+
+    access_token: str = Field(description="Signed JWT access token")
+    refresh_token: str = Field(description="Signed JWT refresh token")
+    token_type: str = Field(default="bearer", description="Token type descriptor")
+    user: UserResponse = Field(description="Authenticated user details")
+
+
+class RefreshTokenRequest(BaseModel):
+    """Payload to exchange a refresh token for a fresh access token."""
+
+    refresh_token: Optional[str] = Field(default=None, description="Refresh token string (if not in cookie)")
+
+
+class UserCreateRequest(BaseModel):
+    """Payload to register a new user (Admin only)."""
+
+    username: str = Field(min_length=3, max_length=50, description="Unique username")
+    password: str = Field(min_length=8, description="Initial account password")
+    full_name: str = Field(min_length=2, max_length=100, description="User full name")
+    role: str = Field(default="viewer", description="Role: viewer, operator, or admin")
+
+
+class UserUpdateRequest(BaseModel):
+    """Payload to modify existing user details or credentials (Admin only)."""
+
+    full_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    role: Optional[str] = Field(default=None, description="viewer, operator, or admin")
+    is_active: Optional[bool] = Field(default=None)
+    password: Optional[str] = Field(default=None, min_length=8, description="Optional new password")
+
+
+class AuditLogResponse(BaseModel):
+    """Single audit event log entry."""
+
+    id: int = Field(description="Unique audit event sequence ID")
+    timestamp: str = Field(description="ISO 8601 UTC timestamp")
+    epoch: float = Field(description="Event timestamp epoch")
+    user_id: Optional[str] = Field(default=None, description="ID of acting user")
+    username: str = Field(description="Username of actor")
+    user_role: str = Field(description="Role of actor at time of action")
+    action: str = Field(description="Action name identifier")
+    target_type: str = Field(description="Category of affected resource")
+    target_id: Optional[str] = Field(default=None, description="Resource identifier")
+    ip_address: Optional[str] = Field(default=None, description="Client IPv4 or IPv6 address")
+    user_agent: Optional[str] = Field(default=None, description="Client HTTP user-agent")
+    details: Optional[str] = Field(default=None, description="JSON string with additional contextual parameters")
+
+
+class AuditLogListResponse(BaseModel):
+    """Paginated collection of audit log events."""
+
+    items: List[AuditLogResponse] = Field(description="List of audit log records")
+    total: int = Field(description="Total matching audit records")
+    skip: int = Field(description="Pagination offset")
+    limit: int = Field(description="Pagination limit")
+
+
+
 
 

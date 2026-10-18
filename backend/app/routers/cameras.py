@@ -17,7 +17,7 @@ import time
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from sqlmodel import Session, select
 
 from backend.app.db.database import get_session
@@ -68,8 +68,16 @@ def _to_camera_response(cam: Camera) -> CameraResponse:
     )
 
 
+from backend.app.db.models import Camera, User
+from backend.app.deps import extract_client_ip, require_admin, require_viewer
+from backend.app.services.audit_service import log_audit_event
+
+
 @router.get("", response_model=List[CameraResponse])
-def list_cameras(session: Session = Depends(get_session)) -> List[CameraResponse]:
+def list_cameras(
+    session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
+) -> List[CameraResponse]:
     """Retrieves all registered CCTV cameras with masked credentials and live health."""
     cameras = session.exec(select(Camera).order_by(Camera.created_at.desc())).all()
     return [_to_camera_response(c) for c in cameras]
@@ -78,9 +86,11 @@ def list_cameras(session: Session = Depends(get_session)) -> List[CameraResponse
 @router.post("", response_model=CameraResponse, status_code=status.HTTP_201_CREATED)
 def create_camera(
     payload: CameraCreateRequest,
+    request: Request,
     session: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
 ) -> CameraResponse:
-    """Registers a new CCTV camera feed.
+    """Registers a new CCTV camera feed (Admin only).
 
     Credentials in RTSP/HTTP URLs are securely encrypted at rest.
     """
@@ -117,6 +127,19 @@ def create_camera(
     if cam.enabled:
         camera_manager.start_worker_for_camera(cam)
 
+    client_ip = extract_client_ip(request)
+    log_audit_event(
+        session=session,
+        username=admin_user.username,
+        user_role=admin_user.role,
+        action="camera_created",
+        target_type="camera",
+        target_id=cam.id,
+        ip_address=client_ip,
+        details={"name": cam.name, "source_type": cam.source_type},
+        user_id=admin_user.id,
+    )
+
     logger.info("Registered new camera '%s' (%s)", cam.name, cam.id)
     return _to_camera_response(cam)
 
@@ -125,6 +148,7 @@ def create_camera(
 def get_camera(
     camera_id: str,
     session: Session = Depends(get_session),
+    viewer: User = Depends(require_viewer),
 ) -> CameraResponse:
     """Retrieves single camera metadata and live health status."""
     cam = session.get(Camera, camera_id)
@@ -137,9 +161,11 @@ def get_camera(
 def update_camera(
     camera_id: str,
     payload: CameraUpdateRequest,
+    request: Request,
     session: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
 ) -> CameraResponse:
-    """Updates camera parameters, toggles worker state, or alters confidence threshold."""
+    """Updates camera parameters, toggles worker state, or alters confidence threshold (Admin only)."""
     cam = session.get(Camera, camera_id)
     if not cam:
         raise HTTPException(status_code=404, detail=f"Camera '{camera_id}' not found.")
@@ -175,6 +201,19 @@ def update_camera(
     else:
         camera_manager.start_worker_for_camera(cam)
 
+    client_ip = extract_client_ip(request)
+    log_audit_event(
+        session=session,
+        username=admin_user.username,
+        user_role=admin_user.role,
+        action="camera_updated",
+        target_type="camera",
+        target_id=cam.id,
+        ip_address=client_ip,
+        details={"name": cam.name, "enabled": cam.enabled},
+        user_id=admin_user.id,
+    )
+
     logger.info("Updated camera '%s' (%s)", cam.name, cam.id)
     return _to_camera_response(cam)
 
@@ -182,9 +221,11 @@ def update_camera(
 @router.delete("/{camera_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_camera(
     camera_id: str,
+    request: Request,
     session: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
 ) -> None:
-    """Deletes camera registration and terminates its dedicated background worker."""
+    """Deletes camera registration and terminates its dedicated background worker (Admin only)."""
     cam = session.get(Camera, camera_id)
     if not cam:
         raise HTTPException(status_code=404, detail=f"Camera '{camera_id}' not found.")
@@ -192,7 +233,22 @@ def delete_camera(
     camera_manager.stop_worker(camera_id)
     session.delete(cam)
     session.commit()
+
+    client_ip = extract_client_ip(request)
+    log_audit_event(
+        session=session,
+        username=admin_user.username,
+        user_role=admin_user.role,
+        action="camera_deleted",
+        target_type="camera",
+        target_id=camera_id,
+        ip_address=client_ip,
+        details={"name": cam.name},
+        user_id=admin_user.id,
+    )
+
     logger.info("Deleted camera '%s' (%s)", cam.name, camera_id)
+
 
 
 @router.get("/{camera_id}/health", response_model=CameraHealth)

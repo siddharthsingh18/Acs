@@ -15,6 +15,7 @@
     "incidents": "Incident Logs",
     "analytics": "Analytics",
     "settings": "System Settings",
+    "audit": "Audit Trail",
     "about": "System Architecture",
     "collapse": "Collapse Sidebar",
     "expand": "Expand Sidebar"

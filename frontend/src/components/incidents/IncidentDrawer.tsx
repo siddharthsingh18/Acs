@@ -36,6 +36,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { api, type IncidentResponse } from '@/api/client'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/authStore'
+
 
 export interface IncidentDrawerProps {
   incidentId: string | null
@@ -67,13 +69,14 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
   const [confirmAction, setConfirmAction] = useState<
     'approved' | 'rejected' | 'dispatched' | null
   >(null)
-  const [reviewerName, setReviewerName] = useState(() => {
-    return localStorage.getItem('acs_reviewer_name') || 'Traffic Desk Officer'
-  })
+  const { user } = useAuthStore()
+  const reviewerName = user?.full_name || user?.username || 'Traffic Desk Officer'
+  const isOperatorOrAdmin = user ? (user.role === 'operator' || user.role === 'admin') : true
 
   // State: Alert dispatch message / feedback
   const [alertFeedback, setAlertFeedback] = useState<string | null>(null)
   const [isSendingAlert, setIsSendingAlert] = useState(false)
+
 
   // Streaming-style loading steps for Gemini report generation
   const [streamingStep, setStreamingStep] = useState<string | null>(null)
@@ -128,12 +131,6 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
     queryFn: () => api.getAlertSettings(),
     enabled: isOpen,
   })
-
-  // Save reviewer name on change
-  const handleReviewerChange = (name: string) => {
-    setReviewerName(name)
-    localStorage.setItem('acs_reviewer_name', name)
-  }
 
   // Navigation between incidents
   const currentIndex = incidentList.findIndex(
@@ -1099,12 +1096,20 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                   <span className="text-xs text-muted-foreground whitespace-nowrap font-mono">
                     Officer:
                   </span>
-                  <input
-                    type="text"
-                    value={reviewerName}
-                    onChange={(e) => handleReviewerChange(e.target.value)}
-                    className="px-2.5 py-1 rounded border border-border bg-background text-xs font-mono text-foreground focus:ring-1 focus:ring-primary outline-none w-44"
-                  />
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border bg-background text-xs font-mono text-foreground shadow-2xs">
+                    <UserCheck className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-semibold">{reviewerName}</span>
+                    {user?.role && (
+                      <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
+                  {!isOperatorOrAdmin && (
+                    <span className="text-[11px] text-amber-500 font-mono hidden sm:inline">
+                      (Read-only)
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -1112,7 +1117,7 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={statusMutation.isPending || incident?.status === 'rejected'}
+                    disabled={statusMutation.isPending || incident?.status === 'rejected' || !isOperatorOrAdmin}
                     onClick={() => setConfirmAction('rejected')}
                     className="gap-1.5 text-xs border-border hover:border-slate-500 text-muted-foreground"
                   >
@@ -1124,7 +1129,7 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={statusMutation.isPending || incident?.status === 'approved'}
+                    disabled={statusMutation.isPending || incident?.status === 'approved' || !isOperatorOrAdmin}
                     onClick={() => setConfirmAction('approved')}
                     className="gap-1.5 text-xs border-border hover:border-[var(--status-ok)] text-[var(--status-ok)] hover:bg-[var(--status-ok)]/10"
                   >
@@ -1135,7 +1140,7 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                   {/* Dispatch 911 */}
                   <Button
                     size="sm"
-                    disabled={statusMutation.isPending || incident?.status === 'dispatched'}
+                    disabled={statusMutation.isPending || incident?.status === 'dispatched' || !isOperatorOrAdmin}
                     onClick={() => setConfirmAction('dispatched')}
                     className="gap-1.5 text-xs font-bold bg-[var(--status-alert)] hover:bg-[var(--status-alert)]/90 text-white shadow-sm"
                   >
@@ -1143,6 +1148,7 @@ export const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                     <span>{t('incidents.dispatch')}</span>
                   </Button>
                 </div>
+
               </div>
             </motion.div>
           </div>

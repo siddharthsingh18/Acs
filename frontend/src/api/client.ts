@@ -8,6 +8,29 @@ export const apiClient = createClient<paths>({
   baseUrl: '',
 })
 
+/**
+ * Fetch wrapper that automatically injects the Authorization Bearer header.
+ */
+export const authFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const token = localStorage.getItem('acs_access_token')
+  const headers = new Headers(init?.headers || {})
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  return fetch(input, { ...init, headers })
+}
+
+apiClient.use({
+  async onRequest({ request }) {
+    const token = localStorage.getItem('acs_access_token')
+    if (token) {
+      request.headers.set('Authorization', `Bearer ${token}`)
+    }
+    return request
+  },
+})
+
+
 // Schema type exports
 export type HealthResponse = components['schemas']['HealthResponse']
 export type ConfigResponse = components['schemas']['SystemConfigResponse']
@@ -247,7 +270,7 @@ export const api = {
     confidence?: number
     use_injury_model?: boolean
   }) => {
-    const response = await fetch('/api/jobs', {
+    const response = await authFetch('/api/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -280,7 +303,7 @@ export const api = {
     if (options?.use_injury_model !== undefined)
       formData.append('use_injury_model', options.use_injury_model.toString())
 
-    const response = await fetch('/api/jobs', {
+    const response = await authFetch('/api/jobs', {
       method: 'POST',
       body: formData,
     })
@@ -304,19 +327,19 @@ export const api = {
 
   // Camera Management Endpoints
   getCameras: async (): Promise<CameraItem[]> => {
-    const response = await fetch('/api/cameras')
+    const response = await authFetch('/api/cameras')
     if (!response.ok) throw new Error('Failed to fetch cameras')
     return (await response.json()) as CameraItem[]
   },
 
   getCamera: async (id: string): Promise<CameraItem> => {
-    const response = await fetch(`/api/cameras/${id}`)
+    const response = await authFetch(`/api/cameras/${id}`)
     if (!response.ok) throw new Error(`Failed to fetch camera ${id}`)
     return (await response.json()) as CameraItem
   },
 
   createCamera: async (payload: CameraCreatePayload): Promise<CameraItem> => {
-    const response = await fetch('/api/cameras', {
+    const response = await authFetch('/api/cameras', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -329,7 +352,7 @@ export const api = {
   },
 
   updateCamera: async (id: string, payload: Partial<CameraCreatePayload>): Promise<CameraItem> => {
-    const response = await fetch(`/api/cameras/${id}`, {
+    const response = await authFetch(`/api/cameras/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -342,7 +365,7 @@ export const api = {
   },
 
   deleteCamera: async (id: string): Promise<void> => {
-    const response = await fetch(`/api/cameras/${id}`, {
+    const response = await authFetch(`/api/cameras/${id}`, {
       method: 'DELETE',
     })
     if (!response.ok) throw new Error(`Failed to delete camera ${id}`)
@@ -354,7 +377,7 @@ export const api = {
   },
 
   getRetentionSettings: async (): Promise<RetentionSettings> => {
-    const response = await fetch('/api/retention')
+    const response = await authFetch('/api/retention')
     if (!response.ok) throw new Error('Failed to fetch retention settings')
     return (await response.json()) as RetentionSettings
   },
@@ -364,7 +387,7 @@ export const api = {
     max_disk_usage_mb?: number
     trigger_cleanup?: boolean
   }): Promise<RetentionSettings> => {
-    const response = await fetch('/api/retention', {
+    const response = await authFetch('/api/retention', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -375,13 +398,13 @@ export const api = {
 
   // Review Queue & Active Learning Endpoints
   getReviewQueue: async (includeReviewed = false): Promise<ReviewQueueResponse> => {
-    const response = await fetch(`/api/review-queue?include_reviewed=${includeReviewed}`)
+    const response = await authFetch(`/api/review-queue?include_reviewed=${includeReviewed}`)
     if (!response.ok) throw new Error('Failed to fetch review queue')
     return (await response.json()) as ReviewQueueResponse
   },
 
   getReviewStats: async (): Promise<ReviewStatsResponse> => {
-    const response = await fetch('/api/review-queue/stats')
+    const response = await authFetch('/api/review-queue/stats')
     if (!response.ok) throw new Error('Failed to fetch review stats')
     return (await response.json()) as ReviewStatsResponse
   },
@@ -390,7 +413,7 @@ export const api = {
     incidentId: string,
     payload: ReviewDecisionPayload
   ): Promise<ReviewFeedbackResponse> => {
-    const response = await fetch(`/api/review-queue/${incidentId}/decision`, {
+    const response = await authFetch(`/api/review-queue/${incidentId}/decision`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -403,13 +426,86 @@ export const api = {
   },
 
   undoReviewDecision: async (incidentId: string): Promise<IncidentResponse> => {
-    const response = await fetch(`/api/review-queue/${incidentId}/undo`, {
+    const response = await authFetch(`/api/review-queue/${incidentId}/undo`, {
       method: 'POST',
     })
     if (!response.ok) throw new Error('Failed to undo review decision')
     return (await response.json()) as IncidentResponse
   },
+
+  // Audit Logs (Admin only)
+  getAuditLogs: async (params?: {
+    skip?: number
+    limit?: number
+    action?: string
+    target_type?: string
+    username?: string
+  }): Promise<AuditLogListResponse> => {
+    const query = new URLSearchParams()
+    if (params?.skip !== undefined) query.set('skip', String(params.skip))
+    if (params?.limit !== undefined) query.set('limit', String(params.limit))
+    if (params?.action) query.set('action', params.action)
+    if (params?.target_type) query.set('target_type', params.target_type)
+    if (params?.username) query.set('username', params.username)
+
+    const qs = query.toString() ? `?${query.toString()}` : ''
+    const response = await authFetch(`/api/audit-logs${qs}`)
+    if (!response.ok) throw new Error('Failed to fetch audit logs')
+    return (await response.json()) as AuditLogListResponse
+  },
+
+  // User Management (Admin only)
+  getUsers: async (): Promise<UserItem[]> => {
+    const response = await authFetch('/api/users')
+    if (!response.ok) throw new Error('Failed to fetch users')
+    return (await response.json()) as UserItem[]
+  },
+
+  createUser: async (payload: {
+    username: string
+    password: string
+    full_name: string
+    role: string
+  }): Promise<UserItem> => {
+    const response = await authFetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'Failed to create user' }))
+      throw new Error(err.detail || 'Failed to create user')
+    }
+    return (await response.json()) as UserItem
+  },
+
+  updateUser: async (
+    id: string,
+    payload: { full_name?: string; role?: string; is_active?: boolean; password?: string }
+  ): Promise<UserItem> => {
+    const response = await authFetch(`/api/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'Failed to update user' }))
+      throw new Error(err.detail || 'Failed to update user')
+    }
+    return (await response.json()) as UserItem
+  },
+
+  deleteUser: async (id: string): Promise<void> => {
+    const response = await authFetch(`/api/users/${id}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'Failed to delete user' }))
+      throw new Error(err.detail || 'Failed to delete user')
+    }
+  },
 }
+
 
 export interface RetentionSettings {
   retention_days: number
@@ -479,4 +575,37 @@ export interface ReviewFeedbackResponse {
   exported_at?: string | null
   created_at: number
 }
+
+export interface AuditLogItem {
+  id: number
+  timestamp: string
+  epoch: number
+  user_id?: string | null
+  username: string
+  user_role: string
+  action: string
+  target_type: string
+  target_id?: string | null
+  ip_address?: string | null
+  user_agent?: string | null
+  details?: string | null
+}
+
+export interface AuditLogListResponse {
+  items: AuditLogItem[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export interface UserItem {
+  id: string
+  username: string
+  full_name: string
+  role: 'viewer' | 'operator' | 'admin'
+  is_active: boolean
+  created_at: number
+  last_login_at?: number | null
+}
+
 

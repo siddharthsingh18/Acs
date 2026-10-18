@@ -25,6 +25,9 @@ const AnalyticsPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
 )
+const AuditLogsPage = lazy(() =>
+  import('@/pages/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage }))
+)
 const AboutPage = lazy(() =>
   import('@/pages/AboutPage').then((m) => ({ default: m.AboutPage }))
 )
@@ -100,6 +103,14 @@ const AnimatedRoutes: React.FC = () => {
             element={
               <PageTransition>
                 <SettingsPage />
+              </PageTransition>
+            }
+          />
+          <Route
+            path="audit"
+            element={
+              <PageTransition>
+                <AuditLogsPage />
               </PageTransition>
             }
           />

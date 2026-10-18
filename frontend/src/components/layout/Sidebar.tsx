@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Map,
+  ShieldCheck,
 } from 'lucide-react'
 import { useAppStore } from '@/store/appStore'
 import { cn } from '@/lib/utils'
@@ -56,6 +57,11 @@ const NAV_ITEMS: NavItem[] = [
     to: '/settings',
     labelKey: 'nav.settings',
     icon: Sliders,
+  },
+  {
+    to: '/audit',
+    labelKey: 'nav.audit',
+    icon: ShieldCheck,
   },
   {
     to: '/about',
