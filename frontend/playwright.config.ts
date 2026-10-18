@@ -12,7 +12,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5183',
     trace: 'on-first-retry',
     viewport: { width: 1280, height: 720 },
   },
@@ -23,9 +23,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: true,
+    command: 'npm run dev -- --port 5183',
+    url: 'http://localhost:5183',
+    reuseExistingServer: false,
     timeout: 30000,
   },
 })
+

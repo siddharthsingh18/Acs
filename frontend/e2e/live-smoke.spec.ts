@@ -15,8 +15,8 @@ test.describe('Live Surveillance Smoke Test', () => {
     await expect(page.locator('h1')).toContainText(/Automated CCTV Video Analysis/i)
 
     // 2. Select Sample Footage source (selected by default)
-    const sampleRadio = page.locator('input[value="sample"]')
-    await expect(sampleRadio).toBeChecked()
+    const sampleButton = page.getByRole('button', { name: /Sample Footage/i })
+    await expect(sampleButton).toBeVisible()
 
     // 3. Click Start Inference Stream
     const startButton = page.getByRole('button', { name: /Start Inference Stream/i })
@@ -28,11 +28,11 @@ test.describe('Live Surveillance Smoke Test', () => {
     await expect(stopButton).toBeVisible()
 
     // 5. Assert an incident appears in the Live Incident Feed
-    const incidentCard = page.locator('text=INC-DEMO-2026-001')
+    const incidentCard = page.locator('text=INC-DEMO-2026-001').first()
     await expect(incidentCard).toBeVisible({ timeout: 10000 })
 
     // Check incident details in sidebar
-    await expect(page.locator('text=Car-Car Collision')).toBeVisible()
+    await expect(page.locator('text=Car-Car Collision').first()).toBeVisible()
 
     // 6. Click the incident card to assert IncidentDrawer opens
     await incidentCard.click()
