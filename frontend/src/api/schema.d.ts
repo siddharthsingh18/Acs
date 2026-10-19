@@ -935,6 +935,21 @@ export interface components {
              * @description Directory storing temporary uploads
              */
             temp_dir: string;
+            /**
+             * Demo Mode
+             * @description Whether demo presentation mode is enabled
+             */
+            demo_mode?: boolean;
+            /**
+             * Public Demo
+             * @description Whether public cloud demo mode is active
+             */
+            public_demo?: boolean;
+            /**
+             * Store Uploads
+             * @description Whether uploaded media is stored persistently to disk
+             */
+            store_uploads?: boolean;
         };
         /**
          * DeviceInfo

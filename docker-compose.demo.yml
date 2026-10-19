@@ -1,0 +1,44 @@
+# =============================================================================
+# Automated CCTV Accident Detection System (ACS)
+# Standalone Public Demo Docker Compose Configuration (Demo-Only Mode)
+# =============================================================================
+# Features:
+# - Self-contained single container hosting both FastAPI backend and Vite frontend
+# - Strict DEMO mode: Synthetic incidents only, no external alert delivery, no stored uploads
+# - Zero external dependencies (built-in SQLite, CPU inference)
+# - Run command: docker compose -f docker-compose.demo.yml up -d
+# =============================================================================
+
+services:
+  acs-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: acs-public-demo
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=production
+      - DEMO_MODE=true
+      - PUBLIC_DEMO=true
+      - ALERTS_DRY_RUN=true
+      - ALERTS_ENABLED=false
+      - STORE_UPLOADS=false
+      - STRICT_SECRETS=false
+      - DEVICE=cpu
+      - CAMERA_WORKER_DEVICE=cpu
+      - MODEL_PATH=best.pt
+      - FRONTEND_DIST=/app/frontend/dist
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    resources:
+      limits:
+        cpus: '2.0'
+        memory: 2048M

@@ -480,6 +480,15 @@ class JobManager:
                 "incidents_count": len(job.incidents),
                 "elapsed_seconds": round(total_elapsed, 2),
             }
+            # Purge ephemeral uploaded video if store_uploads is disabled (Demo Mode)
+            if (not getattr(config, "store_uploads", True) or getattr(config, "public_demo", False)) and job.video_path.startswith(config.temp_dir):
+                try:
+                    if os.path.exists(job.video_path):
+                        os.remove(job.video_path)
+                        logger.info("Purged ephemeral demo upload: %s", job.video_path)
+                except Exception as purge_err:
+                    logger.warning("Could not purge ephemeral upload %s: %s", job.video_path, purge_err)
+
             job.summary = summary
             logger.info("Job %s ended with status '%s' [Summary: %s]", job.job_id, final_status, summary)
             self.broadcast(job.job_id, {"type": "done", "summary": summary})

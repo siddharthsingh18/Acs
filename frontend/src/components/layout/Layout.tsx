@@ -10,7 +10,7 @@ import { api } from '@/api/client'
 import { useAppStore } from '@/store/appStore'
 
 export const Layout: React.FC = () => {
-  const { setIsConnected, setDevice, setActiveModel, isDemoMode } = useAppStore()
+  const { setIsConnected, setDevice, setActiveModel, isDemoMode, setIsPublicDemo } = useAppStore()
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
 
   // Global Cmd+K / Ctrl+K keyboard shortcut listener
@@ -58,8 +58,11 @@ export const Layout: React.FC = () => {
         const modelName = configQuery.data.defaults.model_path.split('/').pop() || 'best.pt'
         setActiveModel(modelName)
       }
+      if (configQuery.data.defaults?.public_demo) {
+        setIsPublicDemo(true)
+      }
     }
-  }, [configQuery.data, setDevice, setActiveModel])
+  }, [configQuery.data, setDevice, setActiveModel, setIsPublicDemo])
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/20 selection:text-primary">

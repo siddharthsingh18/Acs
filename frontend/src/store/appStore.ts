@@ -26,6 +26,9 @@ interface AppState {
   isDemoMode: boolean
   setDemoMode: (isDemoMode: boolean) => void
   toggleDemoMode: () => void
+
+  isPublicDemo: boolean
+  setIsPublicDemo: (isPublicDemo: boolean) => void
 }
 
 const getInitialTheme = (): ThemeMode => {
@@ -96,4 +99,7 @@ export const useAppStore = create<AppState>((set) => ({
       return { isDemoMode: nextDemo }
     })
   },
+
+  isPublicDemo: false,
+  setIsPublicDemo: (isPublicDemo) => set({ isPublicDemo }),
 }))

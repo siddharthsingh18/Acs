@@ -1,43 +1,44 @@
+# =============================================================================
+# Automated CCTV Accident Detection System (ACS) - Pinned Dependencies
+# =============================================================================
+
 # Core Deep Learning & Computer Vision
-torch>=2.2.0
-torchvision>=0.17.0
-ultralytics>=8.3.0
-opencv-python-headless>=4.8.0
-numpy>=1.24.0
-Pillow>=10.0.0
+torch==2.14.1
+torchvision==0.29.1
+ultralytics==8.4.173
+opencv-python-headless==5.0.0.93
+numpy==2.3.5
+Pillow==12.3.0
+lap==0.5.13
 
 # Web Application & Data Processing
-streamlit>=1.35.0
-pandas>=2.0.0
-arabic-reshaper>=3.0.0
-python-bidi>=0.4.2
-streamlit-arabic-support-wrapper>=0.1.0
-fpdf2>=2.8.0
-lap>=0.5.12
+streamlit==1.65.0
+pandas==3.0.6
+arabic-reshaper==3.0.1
+python-bidi==0.6.11
+streamlit-arabic-support-wrapper==1.1
+fpdf2==2.8.9
 
 # Google Gemini Multimodal LLM & Environment Configuration
-# Note: google-genai is Google's current unified SDK (google-generativeai is deprecated)
-google-genai>=1.0.0
-python-dotenv>=1.0.0
+google-genai==2.29.0
+python-dotenv==1.2.4
 
 # Testing & Code Quality
-pytest>=8.0.0
-ruff>=0.4.0
+pytest==9.1.1
+ruff==0.16.10
 
-# FastAPI Backend
-fastapi>=0.110.0
-uvicorn[standard]>=0.28.0
-pydantic>=2.7.0
-httpx>=0.27.0
-python-multipart>=0.0.9
-sqlmodel>=0.0.40
-cryptography>=42.0.0
-pywebpush>=2.0.0
+# FastAPI Production Backend
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+httpx==0.28.1
+python-multipart==0.0.32
+sqlmodel==0.0.48
+cryptography==50.0.2
+pywebpush==2.5.0
 
 # Observability, Monitoring & Experiment Tracking
-prometheus-client>=0.20.0
-sentry-sdk>=2.0.0
-mlflow>=2.10.0
-scipy>=1.11.0
-
-
+prometheus-client==0.26.0
+sentry-sdk==2.72.0
+mlflow==3.17.1
+scipy==1.17.1

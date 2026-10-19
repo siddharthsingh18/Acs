@@ -95,6 +95,9 @@ def get_system_config(cfg: AppConfig) -> SystemConfigResponse:
         severity_medium_max=getattr(cfg, "severity_medium_max", 70),
         severity_scorer_type=getattr(cfg, "severity_scorer_type", "rule_based"),
         temp_dir=cfg.temp_dir,
+        demo_mode=getattr(cfg, "demo_mode", False),
+        public_demo=getattr(cfg, "public_demo", False),
+        store_uploads=getattr(cfg, "store_uploads", True),
     )
 
     return SystemConfigResponse(

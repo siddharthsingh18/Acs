@@ -1,9 +1,9 @@
-fastapi>=0.110.0
-uvicorn[standard]>=0.28.0
-pydantic>=2.7.0
-httpx>=0.27.0
-python-multipart>=0.0.9
-sqlmodel>=0.0.40
-prometheus-client>=0.20.0
-sentry-sdk>=2.0.0
-
+# FastAPI Backend Production Dependencies (Pinned)
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+httpx==0.28.1
+python-multipart==0.0.32
+sqlmodel==0.0.48
+prometheus-client==0.26.0
+sentry-sdk==2.72.0

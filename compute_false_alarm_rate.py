@@ -29,9 +29,6 @@ logger = logging.getLogger("acs.false_alarm")
 
 DEFAULT_MODELS = [
     "best.pt",
-    "best_model_without_freeze.pt",
-    "trained_yolo_model.pt",
-    "yolov8_accident_detection_improved.pt",
 ]
 
 

@@ -40,6 +40,7 @@ datasets/
 yolo11s.pt
 models/*.pt
 models/*.onnx
+models/archive/
 
 # Local media server certs
 *.crt

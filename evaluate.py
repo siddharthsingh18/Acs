@@ -31,9 +31,6 @@ logger = logging.getLogger("acs.evaluate")
 
 DEFAULT_MODELS = [
     "best.pt",
-    "best_model_without_freeze.pt",
-    "trained_yolo_model.pt",
-    "yolov8_accident_detection_improved.pt",
 ]
 
 

@@ -63,6 +63,9 @@ class ConfigDefaults(BaseModel):
     severity_medium_max: int = Field(default=70, description="Upper threshold score for medium severity tier")
     severity_scorer_type: str = Field(default="rule_based", description="Active severity scorer implementation")
     temp_dir: str = Field(description="Directory storing temporary uploads")
+    demo_mode: bool = Field(default=False, description="Whether demo presentation mode is enabled")
+    public_demo: bool = Field(default=False, description="Whether public cloud demo mode is active")
+    store_uploads: bool = Field(default=True, description="Whether uploaded media is stored persistently to disk")
 
 
 class SystemConfigResponse(BaseModel):

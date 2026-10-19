@@ -1,8 +1,27 @@
-# CCTV Accident Detection with YOLO and Streamlit
+# Automated CCTV Accident Detection System (ACS)
 
-This project is a CCTV accident detection application using the YOLO model, Streamlit, and Google Generative AI. The app analyzes video footage to detect accidents, generates detailed reports, and provides a user-friendly interface for viewing and managing accident reports.
+[![CI Pipeline](https://github.com/siddharthsingh18/Acs/actions/workflows/ci.yml/badge.svg)](https://github.com/siddharthsingh18/Acs/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-brightgreen.svg)](requirements.txt)
+[![Node 20](https://img.shields.io/badge/Frontend-Vite_React_19-cyan.svg)](frontend/)
+[![Model Card](https://img.shields.io/badge/Model_Card-YOLO11n-orange.svg)](MODEL_CARD.md)
+
+An enterprise-grade, edge-capable Computer Vision and Multimodal AI surveillance platform designed for real-time vehicular collision detection, temporal debounce tracking, automated VLM verification, and human-in-the-loop emergency dispatch across municipal camera networks.
+
+---
+
+### Quick Links & Documentation
+- 📄 **[Technical Paper & Evaluation Report](docs/TECHNICAL_REPORT.md)**: Problem formulation, dataset curation, incident-level evaluation with 95% bootstrap CIs, 0.00 FA/hr elimination, and ethics.
+- 🎛️ **[System Architecture & Mermaid Diagrams](docs/ARCHITECTURE.md)**: End-to-end perception pipeline, tri-state verification matrix, escalation state machines, and edge-to-cloud topology.
+- 📋 **[Model Card (YOLO11n Baseline)](MODEL_CARD.md)**: Intended use, class definitions, test split benchmarks, hardware latencies, and candidate evaluation.
+- ⚠️ **[Operational Boundaries & Limitations](docs/LIMITATIONS.md)**: Tested camera mounting heights, depression angles, lighting conditions, weather limits, and human-in-the-loop mandate.
+- 🔒 **[Security Policy](SECURITY.md)**: Coordinated vulnerability disclosure, zero-trust secrets, RBAC, PII redaction, and alert storm protection.
+- 🚀 **[Public Demo Deployment Guide](#public-demo-deployment-flyio-railway-vps)**: One-command deploy to Fly.io, Railway, or VPS in safe demo-only mode.
+
+---
 
 ## Features
+
 
 
 
@@ -486,37 +505,52 @@ Load test suites simulate hundreds of control room operators and edge nodes:
   k6 run tests/load/k6_load_test.js
   ```
 
-## Dependencies
+## Public Demo Deployment (Fly.io, Railway, VPS)
 
-- `opencv-python`
-- `streamlit`
-- `pandas`
-- `ultralytics`
-- `numpy`
-- `google-generativeai`
-- `python-dotenv`
+ACS supports a standalone **Public Demo Mode** with built-in safety interlocks:
+- **Synthetic Incidents Only**: Pre-loaded with realistic continuous CCTV incidents (`acc_ex.mp4`) and safe synthetic telemetry.
+- **Zero Real External Alerts**: Alerts are mathematically locked in simulation dry-run (`ALERTS_DRY_RUN=true`).
+- **Zero Persistent Uploads**: User uploads in demo mode are processed in-memory or immediately purged upon job completion (`STORE_UPLOADS=false`).
+- **Clear Prominent Banner**: A sticky, non-dismissible DEMO banner notifies operators and evaluators of simulated mode.
 
-## Future Enhancements
+### Option A: Fly.io Deployment
+Deploy in a single command using the included [`fly.toml`](fly.toml):
+```bash
+fly launch --config fly.toml
+fly deploy
+```
 
-- Add support for different video formats.
-- Implement email notifications for generated accident reports.
-- Integrate with a cloud storage service for report storage.
+### Option B: Railway Deployment
+Deploy directly using the bundled [`railway.json`](railway.json) and [`Dockerfile`](Dockerfile):
+1. Connect your GitHub repository to [Railway.app](https://railway.app).
+2. Railway detects `Dockerfile` and builds the multi-stage image.
+3. Configure environment variables in the Railway dashboard:
+   ```env
+   PUBLIC_DEMO=true
+   DEMO_MODE=true
+   ALERTS_DRY_RUN=true
+   ALERTS_ENABLED=false
+   STORE_UPLOADS=false
+   ```
 
-## Contributing
+### Option C: Standalone VPS Docker Compose
+Run locally or on any cloud VPS (Ubuntu, Debian, macOS, Windows) using [`docker-compose.demo.yml`](docker-compose.demo.yml):
+```bash
+docker compose -f docker-compose.demo.yml up -d
+```
+Access the control room dashboard at `http://localhost:8000`.
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/YourFeature`).
-3. Commit your changes (`git commit -m 'Add some feature'`).
-4. Push to the branch (`git push origin feature/YourFeature`).
-5. Open a Pull Request.
+---
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgements
-- Thank you,  [Tuwaiq Academy](https://tuwaiq.edu.sa/) for your guidance and for fostering an environment that allowed us to successfully complete this project.
-- [YOLO (You Only Look Once)](https://github.com/ultralytics/yolov5)
-- [Streamlit](https://streamlit.io/)
-- [Google Generative AI](https://developers.google.com/generative-ai)
+- [Ultralytics YOLOv11](https://github.com/ultralytics/ultralytics)
+- [FastAPI & Starlette](https://fastapi.tiangolo.com/)
+- [Vite & React](https://vitejs.dev/)
+- [Google Gemini Multimodal AI](https://ai.google.dev/)
+- Thank you, [Tuwaiq Academy](https://tuwaiq.edu.sa/) for your early guidance and fostering an environment that enabled this project.
+
 

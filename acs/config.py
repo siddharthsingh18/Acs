@@ -209,12 +209,23 @@ class AppConfig:
         default_factory=lambda: float(os.getenv("COOLDOWN_SECONDS", "5.0"))
     )
 
+    # Public Demo Mode & Ephemeral Upload Policy
+    demo_mode: bool = field(
+        default_factory=lambda: os.getenv("DEMO_MODE", "false").lower() in ("true", "1", "yes")
+    )
+    public_demo: bool = field(
+        default_factory=lambda: os.getenv("PUBLIC_DEMO", os.getenv("DEMO_MODE", "false")).lower() in ("true", "1", "yes")
+    )
+    store_uploads: bool = field(
+        default_factory=lambda: os.getenv("STORE_UPLOADS", "false" if os.getenv("PUBLIC_DEMO", "false").lower() in ("true", "1", "yes") else "true").lower() in ("true", "1", "yes")
+    )
+
     # Emergency Alert Configuration
     alerts_enabled: bool = field(
         default_factory=lambda: os.getenv("ALERTS_ENABLED", "true").lower() in ("true", "1", "yes")
     )
     alerts_dry_run: bool = field(
-        default_factory=lambda: os.getenv("ALERTS_DRY_RUN", "false").lower() in ("true", "1", "yes")
+        default_factory=lambda: True if os.getenv("PUBLIC_DEMO", "false").lower() in ("true", "1", "yes") or os.getenv("DEMO_MODE", "false").lower() in ("true", "1", "yes") else os.getenv("ALERTS_DRY_RUN", "false").lower() in ("true", "1", "yes")
     )
     telegram_bot_token: Optional[str] = field(
         default_factory=lambda: os.getenv("TELEGRAM_BOT_TOKEN")

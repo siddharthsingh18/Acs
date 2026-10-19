@@ -76,26 +76,29 @@ async def receive_edge_incident(
     saved_keyframe_path = None
     keyframe_url = None
 
-    if keyframe and keyframe.filename:
+    store_uploads = getattr(config, "store_uploads", True) and not getattr(config, "public_demo", False)
+
+    if keyframe and keyframe.filename and store_uploads:
         safe_kf_name = f"{incident_id}_{os.path.basename(keyframe.filename)}"
         saved_keyframe_path = os.path.join(keyframe_dir, safe_kf_name)
         with open(saved_keyframe_path, "wb") as buffer:
             shutil.copyfileobj(keyframe.file, buffer)
         keyframe_url = f"/media/keyframes/{safe_kf_name}"
     else:
-        # Default fallback keyframe path to satisfy database constraint
-        saved_keyframe_path = os.path.join(keyframe_dir, f"{incident_id}_placeholder.jpg")
+        # Default placeholder keyframe path to satisfy database constraint without storing user uploads
+        safe_kf_name = "demo_keyframe_placeholder.jpg"
+        saved_keyframe_path = os.path.join(keyframe_dir, safe_kf_name)
         if not os.path.exists(saved_keyframe_path):
             with open(saved_keyframe_path, "wb") as f:
                 f.write(b"\xFF\xD8\xFF\xE0\x00\x10JFIF" + b"\x00" * 50)
-        keyframe_url = f"/media/keyframes/{os.path.basename(saved_keyframe_path)}"
+        keyframe_url = f"/media/keyframes/{safe_kf_name}"
 
-    # 2. Save Video Clip if provided
+    # 2. Save Video Clip if provided and store_uploads enabled
     clip_dir = getattr(config, "clips_dir", "report_clips")
     os.makedirs(clip_dir, exist_ok=True)
     saved_clip_path = None
 
-    if clip and clip.filename:
+    if clip and clip.filename and store_uploads:
         safe_clip_name = f"{incident_id}_{os.path.basename(clip.filename)}"
         saved_clip_path = os.path.join(clip_dir, safe_clip_name)
         with open(saved_clip_path, "wb") as buffer:
