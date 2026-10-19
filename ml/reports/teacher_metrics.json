@@ -1,0 +1,112 @@
+{
+  "timestamp": "2026-10-19 18:32:45 UTC",
+  "model_name": "YOLO11m (Teacher)",
+  "model_parameters": 20060718,
+  "checkpoint_path": "models/teacher_yolo11m.pt",
+  "dataset": "ml/data/merged/data.yaml",
+  "split_evaluated": "test",
+  "overall": {
+    "precision": 0.234,
+    "recall": 0.4914,
+    "map50": 0.1582,
+    "map50_95": 0.0567
+  },
+  "accident_classes_macro": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "map50": 0.0,
+    "map50_95": 0.0
+  },
+  "per_class": [
+    {
+      "class_id": 0,
+      "class_name": "bike",
+      "is_accident": false,
+      "precision": 0.3498,
+      "recall": 0.1705,
+      "map50": 0.1587,
+      "map50_95": 0.0446
+    },
+    {
+      "class_id": 1,
+      "class_name": "bike_bike_accident",
+      "is_accident": true,
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    },
+    {
+      "class_id": 2,
+      "class_name": "bike_object_accident",
+      "is_accident": true,
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    },
+    {
+      "class_id": 3,
+      "class_name": "bike_person_accident",
+      "is_accident": true,
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    },
+    {
+      "class_id": 4,
+      "class_name": "car",
+      "is_accident": false,
+      "precision": 0.1181,
+      "recall": 0.8124,
+      "map50": 0.1577,
+      "map50_95": 0.0688
+    },
+    {
+      "class_id": 5,
+      "class_name": "car_bike_accident",
+      "is_accident": true,
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    },
+    {
+      "class_id": 6,
+      "class_name": "car_car_accident",
+      "is_accident": true,
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    },
+    {
+      "class_id": 7,
+      "class_name": "car_object_accident",
+      "is_accident": true,
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    },
+    {
+      "class_id": 8,
+      "class_name": "car_person_accident",
+      "is_accident": true,
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    },
+    {
+      "class_id": 9,
+      "class_name": "person",
+      "is_accident": false,
+      "precision": 0.0,
+      "recall": 0.0,
+      "map50": 0.0,
+      "map50_95": 0.0
+    }
+  ]
+}

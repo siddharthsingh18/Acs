@@ -37,7 +37,8 @@ ml/data/
 ml/runs/
 ml/baseline/*.pt
 datasets/
-yolo11s.pt
+yolo*.pt
+weights/
 models/*.pt
 !models/temporal_gate.pt
 models/*.onnx

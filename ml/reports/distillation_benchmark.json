@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-10-19 19:01:40 UTC",
+  "baseline_model": {
+    "name": "Current Production Model (YOLO11n Baseline)",
+    "path": "best.pt",
+    "parameters": 2591790,
+    "precision": 0.2747,
+    "recall": 0.1999,
+    "map50": 0.1399,
+    "map50_95": 0.0632
+  },
+  "student_model": {
+    "name": "Distilled Student Model (YOLO11n + Pseudo-Labels)",
+    "path": "models/student_yolo11n.pt",
+    "parameters": 2591790,
+    "precision": 0.3573,
+    "recall": 0.284,
+    "map50": 0.3239,
+    "map50_95": 0.1519
+  },
+  "delta_metrics": {
+    "delta_map50": 0.184,
+    "delta_map50_95": 0.0886,
+    "delta_precision": 0.0826,
+    "delta_recall": 0.0841
+  },
+  "bootstrap_confidence_intervals": {
+    "overall": {
+      "baseline_ci95": [
+        0.7932,
+        0.8277
+      ],
+      "student_ci95": [
+        0.6689,
+        0.7163
+      ],
+      "delta_ci95": [
+        -0.1408,
+        -0.0964
+      ],
+      "delta_mean": -0.1187,
+      "is_significant": false
+    },
+    "accident_only": {
+      "baseline_ci95": [
+        0.7751,
+        0.8164
+      ],
+      "student_ci95": [
+        0.6673,
+        0.7107
+      ],
+      "delta_ci95": [
+        -0.1272,
+        -0.0856
+      ],
+      "delta_mean": -0.1059,
+      "is_significant": false
+    }
+  },
+  "video_incident_evaluation": {
+    "baseline": [
+      {
+        "video": "test_holdout_acc_ex.mp4",
+        "total_frames": 192,
+        "duration_seconds": 6.41,
+        "incidents_count": 1,
+        "false_alarms_per_hour": 561.94
+      },
+      {
+        "video": "test_holdout_neg_traffic.mp4",
+        "total_frames": 120,
+        "duration_seconds": 6.0,
+        "incidents_count": 0,
+        "false_alarms_per_hour": 0.0
+      }
+    ],
+    "student": [
+      {
+        "video": "test_holdout_acc_ex.mp4",
+        "total_frames": 192,
+        "duration_seconds": 6.41,
+        "incidents_count": 0,
+        "false_alarms_per_hour": 0.0
+      },
+      {
+        "video": "test_holdout_neg_traffic.mp4",
+        "total_frames": 120,
+        "duration_seconds": 6.0,
+        "incidents_count": 0,
+        "false_alarms_per_hour": 0.0
+      }
+    ]
+  }
+}
