@@ -15,9 +15,8 @@ import os
 import time
 import pytest
 from starlette.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from acs.config import config
 from backend.app.core.security import (
     create_access_token,
     hash_password,
@@ -26,9 +25,9 @@ from backend.app.core.security import (
     verify_password,
 )
 from backend.app.db.database import engine, get_session
-from backend.app.db.models import AuditLog, Camera, Incident, User
+from backend.app.db.models import Incident, User
 from backend.app.main import app, validate_startup_secrets
-from backend.app.routers.jobs import is_valid_video_magic_bytes, validate_video_file
+from backend.app.routers.jobs import is_valid_video_magic_bytes
 
 
 @pytest.fixture

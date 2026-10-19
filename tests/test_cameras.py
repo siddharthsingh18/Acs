@@ -14,12 +14,9 @@ import time
 from typing import Generator
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
 
-from backend.app.db.database import get_session
-from backend.app.db.models import Camera
 from backend.app.main import app
-from backend.app.services.camera_manager import CameraManager, CameraWorker, camera_manager
+from backend.app.services.camera_manager import CameraWorker
 from backend.app.services.camera_source import (
     FileCameraSource,
     StreamCameraSource,

@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from acs.config import config
 from acs.privacy import (
@@ -23,7 +23,6 @@ from acs.privacy import (
     detect_faces,
     detect_license_plates,
     detect_sensitive_regions,
-    merge_overlapping_boxes,
     protect_keyframe,
     protect_video_clip,
 )
@@ -34,7 +33,6 @@ from backend.app.main import app
 from backend.app.services.retention_service import (
     delete_incident_and_media,
     export_incident_bundle,
-    run_retention_cleanup,
 )
 
 

@@ -15,13 +15,12 @@ Audits raw downloaded object detection datasets in YOLO format:
 """
 
 import argparse
-import os
 import random
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -125,9 +124,9 @@ def audit_single_dataset(
         dataset_key = dataset_dir.name
         folder_name = dataset_dir.name
 
-    print(f"\n=======================================================")
+    print("\n=======================================================")
     print(f"Auditing Dataset: {dataset_key}")
-    print(f"=======================================================")
+    print("=======================================================")
 
     yaml_path = dataset_dir / "data.yaml"
     class_names = parse_data_yaml(yaml_path)
@@ -167,7 +166,7 @@ def audit_single_dataset(
 
         for img_path in img_files:
             lbl_path = lbl_dir / f"{img_path.stem}.txt"
-            
+
             # Check Image Integrity & Perceptual Hash
             try:
                 with Image.open(img_path) as im:
@@ -175,7 +174,7 @@ def audit_single_dataset(
                 with Image.open(img_path) as im:
                     w, h = im.size
                     h_val = compute_dhash(im)
-                
+
                 dhash_to_images[h_val].append((split_name, img_path))
                 image_to_dhash[img_path] = h_val
             except Exception as e:
@@ -196,7 +195,7 @@ def audit_single_dataset(
 
             try:
                 content = lbl_path.read_text(encoding="utf-8").strip()
-            except Exception as e:
+            except Exception:
                 content = ""
 
             if not content:
@@ -238,7 +237,7 @@ def audit_single_dataset(
                     reasons.append(f"center_out_of_bounds(xc={xc:.4f},yc={yc:.4f})")
                 if bw > 1.001 or bh > 1.001:
                     reasons.append(f"size_exceeds_image(w={bw:.4f},h={bh:.4f})")
-                
+
                 # Check box corners
                 x1 = xc - bw / 2.0
                 y1 = yc - bh / 2.0
@@ -276,7 +275,7 @@ def audit_single_dataset(
     # Duplicate analysis
     duplicate_groups = {h: imgs for h, imgs in dhash_to_images.items() if len(imgs) > 1}
     num_duplicate_images = sum(len(imgs) - 1 for imgs in duplicate_groups.values())
-    
+
     # Cross-split leakage
     cross_split_leakage = []
     for h, imgs in duplicate_groups.items():
@@ -369,15 +368,15 @@ def audit_single_dataset(
     # 20-Sample Inspection for Generic "Accident" Classes
     accident_samples_dir = ds_samples_dir / "accident_inspection_20"
     accident_sample_paths = []
-    
+
     # Identify classes containing 'accident' or 'flip' in their name
     generic_accident_cids = [
-        cid for cid, name in class_names.items() 
+        cid for cid, name in class_names.items()
         if "accident" in name.lower() or "flip" in name.lower()
     ]
     if generic_accident_cids:
         accident_candidates = [
-            e for e in image_entries 
+            e for e in image_entries
             if any(b[0] in generic_accident_cids for b in e["boxes"])
         ]
         if accident_candidates:
@@ -468,7 +467,7 @@ def audit_single_dataset(
 def generate_markdown_report(audit_results: List[Dict[str, Any]], report_path: Path, class_map_path: Optional[Path] = None):
     """Compiles audit results and class mapping decisions into a detailed Markdown report."""
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Load class mapping if available
     class_map = {}
     if class_map_path and class_map_path.exists():
@@ -484,8 +483,8 @@ def generate_markdown_report(audit_results: List[Dict[str, Any]], report_path: P
     lines.append("# Automated CCTV Accident Detection System (ACS)")
     lines.append("## Multi-Dataset Audit & Label Quality Report\n")
     lines.append(f"**Execution Date**: {now_str}  ")
-    lines.append(f"**Audit Script**: `ml/scripts/audit_dataset.py`  ")
-    lines.append(f"**Class Map File**: `ml/configs/class_map.yaml`\n")
+    lines.append("**Audit Script**: `ml/scripts/audit_dataset.py`  ")
+    lines.append("**Class Map File**: `ml/configs/class_map.yaml`\n")
     lines.append("This document audits all downloaded raw datasets prior to merging or fine-tuning, strictly evaluating bounding box geometric validity, image integrity, perceptual duplicates (dHash), cross-split leakage, class balance, and semantic label alignment against the 10 target classes.\n")
 
     # 1. Executive Summary Table
@@ -551,7 +550,7 @@ def generate_markdown_report(audit_results: List[Dict[str, Any]], report_path: P
         name = res["dataset_name"]
         folder_name = res["folder_name"]
         lines.append(f"#### Dataset: `{name}`\n")
-        
+
         # Splits
         lines.append(f"- **Splits Configuration**: {', '.join([f'{k}: {v:,} images' for k, v in res['split_counts'].items()])}")
         lines.append(f"- **Total Image Count**: {res['total_images']:,}")
@@ -619,9 +618,9 @@ def generate_markdown_report(audit_results: List[Dict[str, Any]], report_path: P
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
-    print(f"\n=======================================================")
+    print("\n=======================================================")
     print(f"Audit report saved to: {report_path}")
-    print(f"=======================================================\n")
+    print("=======================================================\n")
 
 
 def main():

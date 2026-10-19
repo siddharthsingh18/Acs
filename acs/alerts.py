@@ -180,6 +180,12 @@ def record_alert_delivery(
     except Exception as exc:
         logger.debug("Could not record alert delivery in database: %s", exc)
 
+    try:
+        from backend.app.core.metrics import record_alert_delivery as record_alert_delivery_metric
+        record_alert_delivery_metric(channel=channel, status=status)
+    except Exception:
+        pass
+
 
 def check_existing_delivery(incident_id: str, channel: str, tier: int) -> bool:
     """Checks if an alert for this incident, channel, and tier has already been dispatched (de-duplication)."""

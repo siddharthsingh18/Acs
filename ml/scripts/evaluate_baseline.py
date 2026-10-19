@@ -13,15 +13,14 @@ import time
 import json
 import torch
 import cv2
-import numpy as np
 from ultralytics import YOLO
 
 # Add repository root to path
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, ROOT_DIR)
 
-from acs.config import ACCIDENT_CLASSES, config
-from acs.detector import AccidentDetector, AccidentEventManager, DetectionBox, DetectionResult
+from acs.config import ACCIDENT_CLASSES
+from acs.detector import AccidentDetector, AccidentEventManager
 
 MODEL_PATH = os.path.join(ROOT_DIR, "ml", "baseline", "best_v0.pt")
 VIDEO_PATH = os.path.join(ROOT_DIR, "acc_ex.mp4")
@@ -32,7 +31,7 @@ def run_model_val():
     """Runs model.val() using Ultralytics YOLO and collects all validation metrics."""
     print(f"--- [1/2] Running model.val() on {MODEL_PATH} ---")
     model = YOLO(MODEL_PATH)
-    
+
     # Run validation
     val_results = model.val(
         project=os.path.join(ROOT_DIR, "ml", "runs"),
@@ -41,17 +40,17 @@ def run_model_val():
         verbose=True,
         plots=True
     )
-    
+
     box = val_results.box
     names = val_results.names
-    
+
     overall_metrics = {
         "mAP50": float(box.map50),
         "mAP50_95": float(box.map),
         "precision": float(box.mp),
         "recall": float(box.mr),
     }
-    
+
     # Per-class metrics
     per_class = {}
     if hasattr(box, "maps") and box.maps is not None:
@@ -61,7 +60,7 @@ def run_model_val():
             cls_map = float(box.maps[idx])
             cls_p = float(box.p[idx]) if hasattr(box, "p") and len(box.p) > idx else 0.0
             cls_r = float(box.r[idx]) if hasattr(box, "r") and len(box.r) > idx else 0.0
-            
+
             per_class[cls_name] = {
                 "class_id": idx,
                 "precision": cls_p,
@@ -69,7 +68,7 @@ def run_model_val():
                 "mAP50": cls_map50,
                 "mAP50_95": cls_map,
             }
-            
+
     # Confusion matrix
     cm_matrix = None
     if hasattr(val_results, "confusion_matrix") and val_results.confusion_matrix is not None:
@@ -101,26 +100,26 @@ def run_video_benchmark():
         confidence_threshold=0.25,
         auto_save=False
     )
-    
+
     cap = cv2.VideoCapture(VIDEO_PATH)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    
+
     frame_idx = 0
     first_accident_frame_raw = None
     first_accident_time_raw = None
     first_accident_class_raw = None
     first_accident_conf_raw = 0.0
-    
+
     first_accident_frame_tracked = None
     first_accident_time_tracked = None
-    
+
     max_confidence_raw = 0.0
     max_conf_class_raw = None
     max_conf_frame_raw = None
-    
+
     max_confidence_tracked = 0.0
     max_conf_class_tracked = None
     max_conf_frame_tracked = None
@@ -131,9 +130,9 @@ def run_video_benchmark():
         ret, frame = cap.read()
         if not ret:
             break
-            
+
         t_sec = frame_idx / fps
-        
+
         # 1. Raw YOLO prediction (no tracker)
         raw_res = detector.primary_model.predict(frame, conf=0.25, imgsz=640, verbose=False)
         if raw_res and len(raw_res) > 0 and raw_res[0].boxes is not None:
@@ -142,9 +141,9 @@ def run_video_benchmark():
                 c_conf = float(b.conf[0].item())
                 c_name = detector.primary_model.names.get(cid, f"class_{cid}")
                 is_acc = c_name in ACCIDENT_CLASSES
-                
+
                 class_detection_counts[c_name] = class_detection_counts.get(c_name, 0) + 1
-                
+
                 if is_acc:
                     if first_accident_frame_raw is None:
                         first_accident_frame_raw = frame_idx
@@ -173,10 +172,10 @@ def run_video_benchmark():
         frame_idx += 1
 
     cap.release()
-    
+
     # Finalize any ongoing incident at stream end
     event_manager.end_active_incident(timestamp=frame_idx / fps)
-    
+
     incidents = []
     for inc in event_manager.incidents:
         incidents.append({
@@ -210,7 +209,7 @@ def run_video_benchmark():
         "incidents": incidents,
         "class_detection_counts": class_detection_counts,
     }
-    
+
     return video_results
 
 
@@ -220,8 +219,8 @@ def build_markdown_report(val_metrics, per_class, cm, class_names, ckpt_meta, sa
     lines.append("# ACS Machine Learning Baseline Report (`best_v0.pt`)")
     lines.append("")
     lines.append(f"> **Report Timestamp**: {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}  ")
-    lines.append(f"> **Baseline Checkpoint**: `ml/baseline/best_v0.pt` (copied from original `best.pt`, MD5: `7828ef5eb302408cf84f2dfefd41281e`)  ")
-    lines.append(f"> **Architecture**: YOLO11n (`yolo11n.pt`, 2.58M parameters, 6.4 GFLOPs)  ")
+    lines.append("> **Baseline Checkpoint**: `ml/baseline/best_v0.pt` (copied from original `best.pt`, MD5: `7828ef5eb302408cf84f2dfefd41281e`)  ")
+    lines.append("> **Architecture**: YOLO11n (`yolo11n.pt`, 2.58M parameters, 6.4 GFLOPs)  ")
     lines.append(f"> **Training Date in Checkpoint**: `{ckpt_meta.get('date', 'Unknown')}`  ")
     lines.append("")
     lines.append("---")
@@ -230,10 +229,10 @@ def build_markdown_report(val_metrics, per_class, cm, class_names, ckpt_meta, sa
     lines.append("")
     lines.append("| Benchmark Metric | Value | Reference / Conditions |")
     lines.append("| :--- | :---: | :--- |")
-    lines.append(f"| **Validation mAP@0.50 (Original Training Set)** | **57.70%** | `datasets/Real-Time-Accident-Detection-1` (Logged in Checkpoint) |")
-    lines.append(f"| **Validation mAP@0.50-0.95 (Original Training Set)** | **33.24%** | `datasets/Real-Time-Accident-Detection-1` (Logged in Checkpoint) |")
-    lines.append(f"| **Precision (Original Training Set)** | **56.30%** | Logged in Checkpoint |")
-    lines.append(f"| **Recall (Original Training Set)** | **58.59%** | Logged in Checkpoint |")
+    lines.append("| **Validation mAP@0.50 (Original Training Set)** | **57.70%** | `datasets/Real-Time-Accident-Detection-1` (Logged in Checkpoint) |")
+    lines.append("| **Validation mAP@0.50-0.95 (Original Training Set)** | **33.24%** | `datasets/Real-Time-Accident-Detection-1` (Logged in Checkpoint) |")
+    lines.append("| **Precision (Original Training Set)** | **56.30%** | Logged in Checkpoint |")
+    lines.append("| **Recall (Original Training Set)** | **58.59%** | Logged in Checkpoint |")
     lines.append(f"| **Sample Video First Accident Frame** | **Frame {video_results['first_accident_frame_raw']}** | `{video_results['video_path']}` ({video_results['first_accident_time_raw']:.2f}s, `{video_results['first_accident_class_raw']}`) |")
     lines.append(f"| **Sample Video Max Detection Confidence** | **{video_results['max_confidence_raw'] * 100:.2f}%** | `{video_results['max_conf_class_raw']}` at frame {video_results['max_conf_frame_raw']} |")
     lines.append(f"| **Total Incidents after AccidentEventManager** | **{video_results['total_incidents']}** | State machine debounce=5, cooldown=10s, timeout=3s |")
@@ -290,7 +289,7 @@ def build_markdown_report(val_metrics, per_class, cm, class_names, ckpt_meta, sa
     lines.append("")
     lines.append("| Class ID | Class Name | Category | Precision | Recall | mAP@0.50 | mAP@0.50-0.95 |")
     lines.append("| :---: | :--- | :---: | :---: | :---: | :---: | :---: |")
-    
+
     for cid in range(10):
         cname = class_names.get(cid, f"class_{cid}")
         is_acc = "Accident" if cname in ACCIDENT_CLASSES else "Normal"
@@ -375,21 +374,21 @@ def build_markdown_report(val_metrics, per_class, cm, class_names, ckpt_meta, sa
     lines.append("- [x] Inference on `acc_ex.mp4` executed with first accident frame, max confidence, and incident count logged.")
     lines.append("- [x] Class taxonomy saved to `ml/configs/classes.yaml`.")
     lines.append("- [x] Training has NOT been started.")
-    
+
     return "\n".join(lines)
 
 
 def main():
     val_metrics, per_class, cm, class_names, ckpt_meta, save_dir = run_model_val()
     video_results = run_video_benchmark()
-    
+
     report_content = build_markdown_report(
         val_metrics, per_class, cm, class_names, ckpt_meta, save_dir, video_results
     )
-    
+
     with open(REPORT_PATH, "w") as f:
         f.write(report_content)
-        
+
     print(f"\n✅ Baseline report successfully written to: {REPORT_PATH}")
 
 

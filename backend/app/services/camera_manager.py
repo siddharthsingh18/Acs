@@ -178,9 +178,19 @@ class CameraWorker:
                         except Exception:
                             pass
                         self.dropped_frames += 1
+                        try:
+                            from backend.app.core.metrics import record_camera_dropped_frame
+                            record_camera_dropped_frame(self.camera_id)
+                        except Exception:
+                            pass
                     q.put_nowait(message)
                 except Exception:
                     self.dropped_frames += 1
+                    try:
+                        from backend.app.core.metrics import record_camera_dropped_frame
+                        record_camera_dropped_frame(self.camera_id)
+                    except Exception:
+                        pass
 
         try:
             self.loop.call_soon_threadsafe(_dispatch)
@@ -252,6 +262,11 @@ class CameraWorker:
             if not opened:
                 self.connected = False
                 self.reconnect_count += 1
+                try:
+                    from backend.app.core.metrics import record_camera_reconnect
+                    record_camera_reconnect(self.camera_id)
+                except Exception:
+                    pass
                 logger.warning(
                     "Camera '%s' failed to connect. Auto-reconnecting in %.1fs (attempt #%d)...",
                     self.name,
@@ -294,10 +309,18 @@ class CameraWorker:
 
                 # Execute ByteTrack tracking inference with camera's isolated detector
                 try:
+                    t_infer_start = time.perf_counter()
                     detection_result: DetectionResult = self.detector.track_frame(
                         frame=frame,
                         resize_width=min(MAX_FRAME_DIMENSION, frame.shape[1]),
                     )
+                    t_infer_duration = time.perf_counter() - t_infer_start
+                    try:
+                        from backend.app.core.metrics import record_inference_latency, record_camera_fps
+                        record_inference_latency(self.camera_id, t_infer_duration)
+                        record_camera_fps(self.camera_id, self.name, self.current_fps)
+                    except Exception:
+                        pass
                 except Exception as infer_err:
                     logger.error("Inference error on camera '%s': %s", self.name, infer_err)
                     continue
@@ -349,6 +372,15 @@ class CameraWorker:
                         logger.warning("Severity scoring failed for camera incident %s: %s", completed_incident.incident_id, s_err)
 
                     self._persist_incident_to_db(completed_incident)
+                    try:
+                        from backend.app.core.metrics import record_incident
+                        record_incident(
+                            self.camera_id,
+                            completed_incident.severity or "medium",
+                            completed_incident.verification_status or "unverified",
+                        )
+                    except Exception:
+                        pass
                     # Broadcast incident event
                     self._broadcast_message(
                         {

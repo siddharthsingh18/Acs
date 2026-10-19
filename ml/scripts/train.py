@@ -13,7 +13,6 @@ Features:
 """
 
 import os
-import sys
 import time
 import shutil
 import random
@@ -309,7 +308,7 @@ def run_training_experiment(
     p1_last = p1_dir / "weights" / "last.pt"
 
     if monitor_p1.diverged:
-        print(f"\n🛑 Experiment halted due to loss divergence in Phase 1.")
+        print("\n🛑 Experiment halted due to loss divergence in Phase 1.")
         return {
             "experiment": exp_key,
             "name": exp_name,
@@ -379,7 +378,7 @@ def run_training_experiment(
         final_last_pt = p2_dir / "weights" / "last.pt"
 
         if monitor_p2.diverged:
-            print(f"\n🛑 Experiment halted due to loss divergence in Phase 2.")
+            print("\n🛑 Experiment halted due to loss divergence in Phase 2.")
             return {
                 "experiment": exp_key,
                 "name": exp_name,

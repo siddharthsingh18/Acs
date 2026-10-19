@@ -21,14 +21,11 @@ import argparse
 import datetime
 import json
 import logging
-import os
 import shutil
 import sys
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List
 
-import cv2
 import numpy as np
 from PIL import Image
 import torch
@@ -39,12 +36,10 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from acs.config import ACCIDENT_CLASSES, CLASS_NAMES, config
+from acs.config import CLASS_NAMES
 import imagehash
 from ml.scripts.promote import (
-    benchmark_inference_speed,
     evaluate_candidate,
-    evaluate_test_clips_telemetry,
     execute_promotion,
 )
 

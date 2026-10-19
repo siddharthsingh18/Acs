@@ -21,15 +21,12 @@ from acs.clip_recorder import (
     CameraRollingBuffer,
     IncidentClipRecorder,
     cleanup_expired_clips,
-    get_clip_storage_stats,
     save_h264_clip,
 )
-from acs.config import config
-from acs.detector import AccidentEventManager, DetectionBox, DetectionResult
 from backend.app.db.database import engine, init_db
 from backend.app.db.models import Incident
 from backend.app.main import app
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 
 class TestRollingBufferMemory(unittest.TestCase):

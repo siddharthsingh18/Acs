@@ -16,10 +16,8 @@ Enforces strict zero-leakage verification against ml/data/holdout/ and val/test 
 import argparse
 import random
 import shutil
-import sys
-from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 
 import numpy as np
 from PIL import Image

@@ -9,7 +9,6 @@ an augmented training set by oversampling images containing rare instances.
 Maintains identical validation and test splits with zero leakage.
 """
 
-import sys
 import shutil
 from pathlib import Path
 from collections import Counter
@@ -82,14 +81,14 @@ def create_oversampled_dataset(
     # Symlink val and test splits for zero overhead and identical evaluation
     (output_dir / "images").mkdir(parents=True, exist_ok=True)
     (output_dir / "labels").mkdir(parents=True, exist_ok=True)
-    
+
     # Copy or symlink val and test
     for split in ["val", "test"]:
         split_img_src = source_dir / "images" / split
         split_lbl_src = source_dir / "labels" / split
         split_img_dst = output_dir / "images" / split
         split_lbl_dst = output_dir / "labels" / split
-        
+
         split_img_dst.symlink_to(split_img_src.resolve(), target_is_directory=True)
         split_lbl_dst.symlink_to(split_lbl_src.resolve(), target_is_directory=True)
 
@@ -139,7 +138,7 @@ def create_oversampled_dataset(
         if mult > 1:
             matching_lbls = class_to_files[cid]
             print(f"  Oversampling class '{cname}' (Class {cid}): {current_cnt} -> target {current_cnt * mult} ({mult}x replication across {len(matching_lbls)} images)")
-            
+
             for copy_idx in range(1, mult):
                 for lbl_p in matching_lbls:
                     img_name = f"{lbl_p.stem}.jpg"

@@ -12,12 +12,10 @@ import argparse
 import json
 import os
 import sys
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import cv2
-import numpy as np
 
 # Add repository root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -28,7 +26,6 @@ from acs.detector import AccidentDetector, AccidentEventManager, AccidentInciden
 from acs.verifier import (
     IncidentVerificationCache,
     VLMBudgetManager,
-    evaluate_physics_motion,
     verify_incident,
 )
 

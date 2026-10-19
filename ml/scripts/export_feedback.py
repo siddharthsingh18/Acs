@@ -18,9 +18,8 @@ import logging
 import os
 import shutil
 import sys
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import cv2
 import yaml
@@ -30,7 +29,7 @@ from sqlmodel import Session, create_engine, select
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.app.db.models import Incident, ReviewFeedback
+from backend.app.db.models import ReviewFeedback
 
 logging.basicConfig(
     level=logging.INFO,

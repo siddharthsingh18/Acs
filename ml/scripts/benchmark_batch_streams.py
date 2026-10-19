@@ -13,7 +13,6 @@ Measures:
 - GPU / Accelerator VRAM (MB) and utilization
 - Generation of ASCII and Markdown capacity graphs
 """
-import argparse
 import logging
 import os
 import sys

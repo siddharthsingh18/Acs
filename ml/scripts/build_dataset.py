@@ -15,7 +15,6 @@ Merges approved datasets into ml/data/merged/ using class_map.yaml and classes.y
 """
 
 import argparse
-import os
 import random
 import shutil
 import sys
@@ -23,7 +22,7 @@ import time
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
 import cv2
 import numpy as np
@@ -140,7 +139,7 @@ def extract_video_id(filename: str) -> str:
                 block = int(num_part) // 10
                 return f"cctv_seq_{block:04d}"
             return "cctv_seq"
-    
+
     # Check synthetic or video sequences like FLIP_CAR_V141, Semi-RealisticVD-55, etc.
     if base.startswith("FLIP_CAR_V"):
         parts = base.split("_")
@@ -421,7 +420,7 @@ def verify_cross_split_isolation(
     2. Zero overlap with holdout footage (acc_ex.mp4).
     Fails the script with an exception if any violation is found.
     """
-    print(f"\n=======================================================")
+    print("\n=======================================================")
     print("Running Automated Perceptual Hash Overlap & Isolation Verification...")
     print(f"Overlap rejection threshold: Hamming distance <= {overlap_threshold}")
     print("=======================================================")
@@ -591,8 +590,8 @@ def generate_dataset_stats_report(
     lines.append("# Automated CCTV Accident Detection System (ACS)")
     lines.append("## Merged Dataset Statistics & Integrity Report\n")
     lines.append(f"**Generation Date**: {now_str}  ")
-    lines.append(f"**Dataset Location**: `ml/data/merged`  ")
-    lines.append(f"**Configuration Source**: `ml/configs/class_map.yaml` & `ml/configs/classes.yaml`\n")
+    lines.append("**Dataset Location**: `ml/data/merged`  ")
+    lines.append("**Configuration Source**: `ml/configs/class_map.yaml` & `ml/configs/classes.yaml`\n")
 
     # 1. Executive Summary Table
     lines.append("### 1. Dataset Partition Summary\n")
@@ -646,7 +645,7 @@ def generate_dataset_stats_report(
     lines.append(f"- **Perceptual Near-Duplicates Removed**: {duplicates_removed_count:,} copies")
     lines.append(f"- **Retained Unique Images**: {total_imgs:,}")
     lines.append(f"- **Atomic Source Groups Formed**: {n_source_groups:,} groups")
-    lines.append(f"- **Group Splitting Strategy**: Source groups were assigned atomically to splits to prevent temporal and camera sequence leakage.\n")
+    lines.append("- **Group Splitting Strategy**: Source groups were assigned atomically to splits to prevent temporal and camera sequence leakage.\n")
 
     lines.append("\n---\n")
 

@@ -28,9 +28,8 @@ import platform
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
-import cv2
 import numpy as np
 import torch
 import psutil
@@ -345,9 +344,9 @@ def generate_markdown_report(data: Dict[str, Any], output_path: str) -> None:
         "To achieve low-latency, multi-camera real-time processing on edge devices and municipal control room servers, the ACS YOLO11 collision detection model was exported and evaluated across four production inference runtimes: **ONNX Runtime**, **OpenVINO (Intel CPU/iGPU)**, **CoreML (Apple Silicon Neural Engine)**, and **TensorRT (NVIDIA Jetson/GPU)**.",
         "",
         "**Key Findings:**",
-        "- **OpenVINO (Intel/x86)** delivers **1.7× throughput speedup** on CPU (75.2 FPS vs 43.7 FPS baseline) with virtually identical accuracy ($\Delta\\text{mAP}_{50} = -0.0007$).",
-        "- **ONNX Runtime INT8 dynamic quantization** slashes model size by **70%** (11.0 MB $\\rightarrow$ 3.3 MB) while maintaining full detection fidelity ($\Delta\\text{mAP}_{50} = +0.0030$), well within the strict 1.0 mAP point budget.",
-        "- **CoreML (Apple Silicon)** executes in **19.0 ms (52.6 FPS)** with negligible accuracy drift ($\Delta\\text{mAP}_{50} = -0.0012$).",
+        "- **OpenVINO (Intel/x86)** delivers **1.7× throughput speedup** on CPU (75.2 FPS vs 43.7 FPS baseline) with virtually identical accuracy ($\\Delta\\text{mAP}_{50} = -0.0007$).",
+        "- **ONNX Runtime INT8 dynamic quantization** slashes model size by **70%** (11.0 MB $\\rightarrow$ 3.3 MB) while maintaining full detection fidelity ($\\Delta\\text{mAP}_{50} = +0.0030$), well within the strict 1.0 mAP point budget.",
+        "- **CoreML (Apple Silicon)** executes in **19.0 ms (52.6 FPS)** with negligible accuracy drift ($\\Delta\\text{mAP}_{50} = -0.0012$).",
         "- **TensorRT INT8 on NVIDIA Jetson Orin Nano** achieves **256.4 FPS (3.9 ms latency)**, enabling up to **17 concurrent 720p streams at 15 FPS** on a single 15W edge unit.",
         "",
         "---",

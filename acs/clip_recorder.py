@@ -15,7 +15,6 @@ import dataclasses
 import glob
 import logging
 import os
-import shutil
 import subprocess
 import threading
 import time

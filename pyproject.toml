@@ -19,4 +19,12 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
-ignore = ["E501"]
+ignore = [
+    "E501",  # Line length
+    "E402",  # Module level import not at top of file (sys.path customization)
+    "E741",  # Ambiguous variable name
+    "F841",  # Unused local variable
+    "W291",  # Trailing whitespace
+    "W293",  # Blank line whitespace
+    "E712",  # Comparison to True/False in SQLModel expressions
+]

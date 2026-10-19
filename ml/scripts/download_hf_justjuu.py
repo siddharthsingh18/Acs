@@ -6,7 +6,6 @@ and converts it from Parquet format with COCO bboxes into standard YOLO txt form
 """
 import os
 import io
-import json
 import pandas as pd
 from PIL import Image
 from huggingface_hub import hf_hub_download
@@ -57,11 +56,11 @@ def convert_split(split_name, parquet_files):
             try:
                 img = Image.open(io.BytesIO(img_bytes))
                 w, h = img.size
-                
+
                 # Image filename
                 img_name = f"cctv_{split_name}_{global_idx:05d}.jpg"
                 lbl_name = f"cctv_{split_name}_{global_idx:05d}.txt"
-                
+
                 img_path = os.path.join(img_dir, img_name)
                 lbl_path = os.path.join(lbl_dir, lbl_name)
 

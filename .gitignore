@@ -45,7 +45,9 @@ models/*.onnx
 *.crt
 *.key
 mediamtx.yml
-rtsp-simple-server.yml
+# MLflow experiment tracking
+mlruns.db
+mlruns/
 
 
 

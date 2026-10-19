@@ -20,18 +20,16 @@ from acs.alerts import (
     DISCLAIMER_TEXT,
     AlertManager,
     AlertPayload,
-    ConsoleNotifier,
     SMTPNotifier,
     StormRateLimiter,
     TelegramNotifier,
     WebPushNotifier,
     get_or_generate_vapid_keys,
     is_demo_incident,
-    send_incident_alert,
 )
 from acs.config import config
 from backend.app.db.database import engine, init_db
-from backend.app.db.models import AlertDelivery, Incident, User, WebPushSubscription
+from backend.app.db.models import AlertDelivery, Incident, WebPushSubscription
 from backend.app.main import app
 from backend.app.services.alert_escalation_service import check_and_escalate_unacknowledged_incidents
 

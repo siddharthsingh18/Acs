@@ -12,7 +12,6 @@ Features:
 import asyncio
 import logging
 import os
-import sys
 import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -37,17 +36,20 @@ from backend.app.routers import stats as stats_router
 from backend.app.routers import users as users_router
 from backend.app.services.camera_manager import camera_manager
 from backend.app.services.incident_service import import_csv_to_db
+import uuid
+from backend.app.core.logging_config import setup_structured_logging, set_request_id
+from backend.app.core.sentry import init_sentry, capture_error
+from backend.app.core.metrics import record_http_request
+from backend.app.routers import drift as drift_router
+from backend.app.routers import metrics as metrics_router
+
 from backend.app.services.job_manager import job_manager
 
 # -----------------------------------------------------------------------------
-# Structured Logging Configuration
+# Structured Logging & Error Monitoring Initialization
 # -----------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
+setup_structured_logging()
+init_sentry()
 logger = logging.getLogger("acs.backend")
 
 
@@ -230,18 +232,46 @@ async def security_headers_middleware(request: Request, call_next):
 # -----------------------------------------------------------------------------
 # Request Timing & Structured Logging Middleware
 # -----------------------------------------------------------------------------
+# Request Timing & Structured Logging Middleware
+# -----------------------------------------------------------------------------
 @app.middleware("http")
 async def log_requests_middleware(request: Request, call_next):
+    # Correlation Request ID
+    req_id = request.headers.get("X-Request-ID") or request.headers.get("X-Correlation-ID")
+    if not req_id:
+        req_id = f"req_{uuid.uuid4().hex[:12]}"
+    set_request_id(req_id)
+
     start_time = time.time()
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        duration_ms = (time.time() - start_time) * 1000.0
+        capture_error(exc, request_id=req_id, context={"path": request.url.path, "method": request.method})
+        record_http_request(request.method, request.url.path, 500, duration_ms / 1000.0)
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "request_id": req_id},
+            headers={"X-Request-ID": req_id},
+        )
+
     duration_ms = (time.time() - start_time) * 1000.0
-    logger.info(
-        "%s %s - %d (%.1fms)",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration_ms,
-    )
+    response.headers["X-Request-ID"] = req_id
+
+    # Record Prometheus HTTP metric
+    record_http_request(request.method, request.url.path, response.status_code, duration_ms / 1000.0)
+
+    # Log request unless high-frequency metric probe
+    if request.url.path != "/metrics" or response.status_code >= 400:
+        logger.info(
+            "%s %s - %d (%.1fms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            extra={"request_id": req_id, "status_code": response.status_code, "duration_ms": duration_ms},
+        )
     return response
 
 
@@ -273,6 +303,8 @@ def stream_media_clip(filename: str, request: Request):
 # -----------------------------------------------------------------------------
 # Router Registration
 # -----------------------------------------------------------------------------
+app.include_router(metrics_router.router)
+app.include_router(drift_router.router)
 app.include_router(health_router.router)
 app.include_router(auth_router.router)
 app.include_router(users_router.router)

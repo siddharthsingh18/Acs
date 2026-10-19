@@ -20,15 +20,15 @@ Core Capabilities:
    - Routes recommended emergency units (EMS, police, fire, tow) based on score and hazard rules.
 """
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 import logging
 import math
 import os
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 import numpy as np
 
-from acs.config import ACCIDENT_CLASSES, config
+from acs.config import config
 
 logger = logging.getLogger("acs.severity")
 

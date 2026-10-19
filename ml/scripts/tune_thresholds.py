@@ -22,11 +22,10 @@ Constraints & Guarantees:
 import os
 import sys
 import time
-import json
 import argparse
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Tuple, Optional, Set
+from typing import Dict, Any, List, Tuple
 
 import numpy as np
 import cv2
@@ -41,12 +40,10 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from acs.config import config, ACCIDENT_CLASSES, CLASS_NAMES
+from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
 from acs.detector import (
     AccidentDetector,
     AccidentEventManager,
-    DetectionBox,
-    DetectionResult,
     compute_box_iou,
     compute_intersection_ratio,
 )
@@ -889,7 +886,7 @@ def write_tuning_report(
         if matches:
             table_rows.append(matches[0])
 
-    md_content = f"""# Automated CCTV Accident Detection System (ACS)
+    md_content = rf"""# Automated CCTV Accident Detection System (ACS)
 # Threshold & Event Manager Optimization Report
 
 **Date of Execution**: {timestamp}  
@@ -995,7 +992,7 @@ After freezing the winning configuration (`accident_conf={best_cfg['accident_con
     for inc in test_results["pos_holdout"]["incidents"]:
         md_content += f"  - **ID**: `{inc['id']}` | **Class**: `{inc['class']}` | **Max Confidence**: `{inc['confidence']:.4f}` | **Window**: `{inc['start']}` to `{inc['end']}`\n"
 
-    md_content += f"""
+    md_content += rf"""
 ### 5.2. Holdout Negative Traffic Video (`test_holdout_neg_traffic.mp4`)
 - **Clip Properties**: {test_results['neg_holdout']['frames']} frames, {test_results['neg_holdout']['duration_sec']:.2f} seconds ({test_results['neg_holdout']['duration_hrs']:.4f} hours).
 - **False Alarms Triggered**: **{test_results['neg_holdout']['incidents_count']} incidents**

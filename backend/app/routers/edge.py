@@ -14,8 +14,8 @@ from sqlmodel import Session, select
 
 from acs.config import config
 from backend.app.db.database import get_session
-from backend.app.db.models import AuditLog, Incident, User
-from backend.app.deps import extract_client_ip, get_current_user_optional, is_auth_enforced
+from backend.app.db.models import Incident
+from backend.app.deps import extract_client_ip, is_auth_enforced
 from backend.app.services.audit_service import log_audit_event
 
 logger = logging.getLogger("acs.backend.edge_router")

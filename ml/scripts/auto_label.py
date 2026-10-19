@@ -14,19 +14,16 @@ Processes extracted video frames and accident candidate datasets:
 
 import argparse
 import json
-import os
 import random
 import shutil
-import sys
 import time
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import cv2
 import numpy as np
-from PIL import Image
 from ultralytics import YOLO
 import yaml
 

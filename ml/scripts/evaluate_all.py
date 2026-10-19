@@ -17,14 +17,13 @@ Generates ml/reports/comparison.md featuring:
   with explicit determination of whether a candidate gain is real or within experimental noise.
 """
 
-import os
 import sys
 import time
 import hashlib
 import argparse
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Tuple, Optional, Set
+from typing import Dict, Any, List, Tuple, Set
 
 import yaml
 import numpy as np
@@ -882,7 +881,7 @@ def generate_comparison_report(
         # Confusion Matrix Image
         cm_rel_path = f"confusion_matrices/cm_{m_name}.png"
         cm_abs_path = report_path.parent / cm_rel_path
-        lines.append(f"\n#### C. Confusion Matrix Visualization\n")
+        lines.append("\n#### C. Confusion Matrix Visualization\n")
         lines.append(f"![Confusion Matrix - {m_name}]({cm_rel_path})\n")
         lines.append(f"[Open Full-Resolution Plot](file://{cm_abs_path})\n")
 

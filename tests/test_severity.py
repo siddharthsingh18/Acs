@@ -10,35 +10,25 @@ Unit and integration tests for the collision severity scoring engine:
 - Pluggable model architecture (replacing heuristic scorer with custom ML model).
 - SQLite persistence and API schema serialization.
 """
-from dataclasses import dataclass
-import json
-import math
-import os
 import unittest
-from typing import Any, List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
-import pytest
-from sqlmodel import Session, select
 
-from acs.config import AppConfig, config
 from acs.detector import AccidentIncident, DetectionBox
 from acs.severity import (
     BaseSeverityScorer,
     CameraCalibration,
     MLSeverityScorer,
     RuleBasedSeverityScorer,
-    ScoreComponent,
     SeverityFeatures,
     SeverityResult,
     evaluate_incident_severity,
     extract_severity_features,
     get_severity_scorer,
     register_severity_scorer,
-    set_default_severity_scorer,
 )
-from backend.app.db.database import engine, init_db
-from backend.app.db.models import Incident
+from backend.app.db.database import init_db
 from backend.app.routers.incidents import _to_incident_response
 from backend.app.services.incident_service import save_incident_to_db
 

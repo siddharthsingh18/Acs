@@ -21,7 +21,7 @@ import json
 import logging
 import random
 import time
-from locust import HttpUser, TaskSet, between, task
+from locust import HttpUser, between, task
 import websocket
 
 logger = logging.getLogger("acs.loadtest")

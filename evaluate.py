@@ -417,6 +417,12 @@ def main() -> None:
         default="evaluation_results.md",
         help="Output markdown file path (default: evaluation_results.md).",
     )
+    parser.add_argument(
+        "--track-mlflow",
+        action="store_true",
+        default=os.getenv("TRACK_MLFLOW", "false").lower() in ("true", "1", "yes"),
+        help="Log evaluation run, dataset link, parameters, and metrics to MLflow.",
+    )
 
     args = parser.parse_args()
 
@@ -441,6 +447,37 @@ def main() -> None:
 
     print("\n" + report_md + "\n")
     logger.info("Evaluation report successfully written to %s", args.output)
+
+    if args.track_mlflow:
+        from acs.tracking import tracker
+        logger.info("Logging evaluation runs and model versions to MLflow...")
+        for r in records:
+            with tracker.start_run(run_name=f"eval-{r['filename']}", tags={"stage": "evaluation"}):
+                tracker.log_dataset_metadata(
+                    name="accident_validation_data",
+                    data_yaml_path=args.data,
+                )
+                tracker.log_params({
+                    "model_filename": r["filename"],
+                    "base_model": r.get("base_model", "Unknown"),
+                    "parameters": r.get("parameters", 0),
+                    "imgsz": args.imgsz,
+                    "batch": args.batch,
+                })
+                tracker.log_metrics({
+                    "mAP50": r.get("mAP50", 0.0),
+                    "mAP50_95": r.get("mAP50_95", 0.0),
+                    "precision": r.get("precision", 0.0),
+                    "recall": r.get("recall", 0.0),
+                    "cpu_fps": r.get("cpu_fps", 0.0),
+                    "gpu_fps": r.get("gpu_fps", 0.0),
+                })
+                tracker.log_artifact(args.output)
+                tracker.log_and_register_model(
+                    r["model_path"],
+                    registered_model_name="acs-yolo-accident-detector",
+                    tags={"filename": r["filename"], "base_model": str(r.get("base_model"))},
+                )
 
 
 if __name__ == "__main__":

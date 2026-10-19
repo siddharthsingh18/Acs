@@ -15,22 +15,20 @@ Key Responsibilities:
    - unverified: API failure, timeout, or daily budget reached -> falls back to YOLO-only with unverified flag, never crashes
 5. Operational Controls: Hard timeouts, exponential backoff retries, per-incident caching, and daily call budget.
 """
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 import json
 import logging
 import math
 import os
 import threading
 import time
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
-import cv2
 import numpy as np
-from pydantic import BaseModel, Field
 
 from acs.config import ACCIDENT_CLASSES, config
 from acs.detector import compute_box_iou, compute_intersection_ratio
-from acs.llm import VerificationReportModel, verify_incident_frames_vlm
+from acs.llm import verify_incident_frames_vlm
 
 logger = logging.getLogger("acs.verifier")
 

@@ -8,10 +8,8 @@ Comprehensive unit and integration test suite for the ACS Verification Stage:
 5. Operational resilience: timeouts, retries, caching, daily call budget, and offline fallbacks.
 6. Alert manager verification gate enforcement.
 """
-import json
 import os
 import tempfile
-import time
 from typing import List
 from unittest.mock import MagicMock, patch
 
@@ -19,15 +17,12 @@ import numpy as np
 import pytest
 
 from acs.alerts import send_incident_alert
-from acs.config import AppConfig
 from acs.detector import AccidentEventManager, AccidentIncident, DetectionBox, DetectionResult
 from acs.llm import VerificationReportModel, verify_incident_frames_vlm
 from acs.verifier import (
     IncidentVerificationCache,
     PhysicsCheckResult,
-    VerificationDecision,
     VLMBudgetManager,
-    collect_verification_frames,
     evaluate_physics_motion,
     verify_incident,
 )

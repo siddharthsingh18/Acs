@@ -677,10 +677,12 @@ def verify_incident_frames_vlm(
 
     last_error = None
     for attempt in range(retries + 1):
+        t0 = time.time()
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(_call)
                 raw_text = future.result(timeout=call_timeout)
+            vlm_duration = time.time() - t0
 
             # Clean markdown code block fences if present
             cleaned_text = raw_text.strip()
@@ -690,6 +692,11 @@ def verify_incident_frames_vlm(
 
             parsed = json.loads(cleaned_text)
             validated = VerificationReportModel(**parsed)
+            try:
+                from backend.app.core.metrics import record_vlm_call
+                record_vlm_call(status="success", duration_seconds=vlm_duration, model=chosen_model)
+            except Exception:
+                pass
             return {
                 "is_accident": bool(validated.is_accident),
                 "confidence": float(validated.confidence),
@@ -701,9 +708,19 @@ def verify_incident_frames_vlm(
         except concurrent.futures.TimeoutError:
             last_error = TimeoutError(f"Call timed out after {call_timeout}s")
             logger.warning(f"VLM verification attempt {attempt + 1}/{retries + 1} timed out")
+            try:
+                from backend.app.core.metrics import record_vlm_call
+                record_vlm_call(status="timeout", duration_seconds=time.time() - t0, model=chosen_model)
+            except Exception:
+                pass
         except Exception as exc:
             last_error = exc
             logger.warning(f"VLM verification attempt {attempt + 1}/{retries + 1} failed: {exc}")
+            try:
+                from backend.app.core.metrics import record_vlm_call
+                record_vlm_call(status="failure", duration_seconds=time.time() - t0, model=chosen_model)
+            except Exception:
+                pass
 
         if attempt < retries:
             time.sleep(1.0 * (2 ** attempt))

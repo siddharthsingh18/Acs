@@ -15,12 +15,11 @@ import time
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from acs.batch_inference import BatchedInferenceEngine
-from backend.app.core.security import create_access_token
 from backend.app.db.database import get_session
-from backend.app.db.models import AuditLog, Incident, User
+from backend.app.db.models import AuditLog, Incident
 from backend.app.main import app
 from edge.edge_client import EdgeQueueManager
 

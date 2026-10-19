@@ -12,7 +12,6 @@ Runs on local hardware (NVIDIA Jetson, Intel NUC, or x86 edge boxes):
 7. Periodic heartbeat telemetry with edge CPU, RAM, and camera status.
 """
 import argparse
-import base64
 import json
 import logging
 import os
@@ -24,7 +23,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import cv2
-import numpy as np
 import psutil
 import requests
 
@@ -33,7 +31,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from acs.config import config
 from acs.detector import AccidentDetector, AccidentEventManager, AccidentIncident
-from acs.privacy import apply_privacy_blur, protect_keyframe
+from acs.privacy import apply_privacy_blur
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [EDGE] %(message)s")
 logger = logging.getLogger("acs.edge_client")

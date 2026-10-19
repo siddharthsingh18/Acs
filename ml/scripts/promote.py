@@ -19,16 +19,13 @@ If promoted:
 - Moves old checkpoints to models/archive/.
 """
 
-import os
 import sys
 import shutil
-import time
 import argparse
 import subprocess
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any
 
-import numpy as np
 import cv2
 import torch
 from ultralytics import YOLO
@@ -382,7 +379,7 @@ def main() -> None:
                 ci = eval_result["criterion_a"]["ci95"]
                 print(f"   - Failed Criterion A: Accident mAP50 difference CI [{ci[0]*100:+.2f}%, {ci[1]*100:+.2f}%] is within noise or regressed.")
             if not eval_result["criterion_b"]["passed"]:
-                print(f"   - Failed Criterion B: FA rate or incident recall inferior to baseline.")
+                print("   - Failed Criterion B: FA rate or incident recall inferior to baseline.")
             if not eval_result["criterion_c"]["passed"]:
                 print(f"   - Failed Criterion C: CPU FPS ({eval_result['criterion_c']['cand_cpu_fps']:.1f}) < {args.min_fps:.1f}.")
 
