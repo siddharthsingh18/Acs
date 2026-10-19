@@ -39,6 +39,7 @@ ml/baseline/*.pt
 datasets/
 yolo11s.pt
 models/*.pt
+!models/temporal_gate.pt
 models/*.onnx
 models/archive/
 

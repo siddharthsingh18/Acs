@@ -132,6 +132,17 @@ class AppConfig:
         default_factory=lambda: int(os.getenv("GEMINI_MAX_RETRIES", "3"))
     )
 
+    # Second-Stage Temporal Model Gate Configuration
+    temporal_model_enabled: bool = field(
+        default_factory=lambda: os.getenv("TEMPORAL_MODEL_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+    temporal_model_path: str = field(
+        default_factory=lambda: os.getenv("TEMPORAL_MODEL_PATH", "models/temporal_gate.pt")
+    )
+    temporal_threshold: float = field(
+        default_factory=lambda: float(os.getenv("TEMPORAL_THRESHOLD", "0.50"))
+    )
+
     # VLM Verification Stage Configuration
     vlm_verification_enabled: bool = field(
         default_factory=lambda: os.getenv("VLM_VERIFICATION_ENABLED", "true").lower() in ("true", "1", "yes")

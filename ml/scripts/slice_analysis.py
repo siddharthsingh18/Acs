@@ -19,10 +19,8 @@ Outputs:
 4. Persisted report at ml/reports/slice_analysis.md and machine-readable ml/reports/slice_analysis.json.
 """
 import argparse
-import glob
 import json
 import math
-import os
 import sys
 import time
 from collections import defaultdict
@@ -37,7 +35,7 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from acs.config import ACCIDENT_CLASSES, CLASS_NAMES, config
+from acs.config import CLASS_NAMES
 
 # Designated accident class IDs for YOLOv11 (0-indexed based on data.yaml)
 # 1: bike_bike_accident, 2: bike_object_accident, 3: bike_person_accident,
@@ -888,7 +886,7 @@ def generate_markdown_report(
         "# Production Model Slice Analysis & Failure Modes Report",
         "",
         f"**Evaluated Model**: `{model_path}`  ",
-        f"**Evaluation Datasets**: Merged Test Split (`ml/data/merged/images/test`) + Video Evaluation Suite (`ml/data/video_eval/`)  ",
+        "**Evaluation Datasets**: Merged Test Split (`ml/data/merged/images/test`) + Video Evaluation Suite (`ml/data/video_eval/`)  ",
         f"**Total Evaluated Samples**: {total_samples:,} frames  ",
         f"**Generated**: {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}  ",
         "",

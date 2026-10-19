@@ -73,6 +73,9 @@ class AccidentIncident:
     severity: Optional[str] = None
     severity_breakdown: Optional[Dict[str, Any]] = None
     recommended_units: Optional[List[str]] = None
+    temporal_confirmed: Optional[bool] = None
+    temporal_prob: Optional[float] = None
+    temporal_diagnostics: Optional[Dict[str, Any]] = None
 
 
 def load_model(weights_path: str) -> YOLO:
@@ -430,6 +433,9 @@ class AccidentEventManager:
         clip_pre_seconds: Optional[float] = None,
         clip_post_seconds: Optional[float] = None,
         target_fps: float = 30.0,
+        temporal_model_enabled: Optional[bool] = None,
+        temporal_model_path: Optional[str] = None,
+        temporal_threshold: Optional[float] = None,
     ):
         """Initializes the event manager with timing and storage parameters.
 
@@ -451,6 +457,9 @@ class AccidentEventManager:
             clip_pre_seconds: Duration of footage collected before impact (default: 8.0s).
             clip_post_seconds: Duration of footage collected after impact (default: 10.0s).
             target_fps: Estimated stream framerate for clip encoding.
+            temporal_model_enabled: Whether to gate accident confirmation using second-stage temporal model.
+            temporal_model_path: Checkpoint file path for temporal gate model (.pt or .joblib).
+            temporal_threshold: Probability cutoff for temporal accident confirmation (default 0.50).
         """
         self.consecutive_frames_threshold = (
             consecutive_frames_threshold
@@ -493,6 +502,36 @@ class AccidentEventManager:
         self.auto_save = auto_save
         self.auto_verify = auto_verify
         self.save_verification_frames = save_verification_frames
+
+        # Second-Stage Temporal Model Gate
+        self.temporal_model_enabled = (
+            temporal_model_enabled
+            if temporal_model_enabled is not None
+            else getattr(config, "temporal_model_enabled", True)
+        )
+        self.temporal_model_path = (
+            temporal_model_path
+            or getattr(config, "temporal_model_path", "models/temporal_gate.pt")
+        )
+        self.temporal_threshold = (
+            temporal_threshold
+            if temporal_threshold is not None
+            else getattr(config, "temporal_threshold", 0.50)
+        )
+
+        from acs.temporal import TemporalGate, TrackHistoryBuffer
+        self.temporal_history_buffer = TrackHistoryBuffer(
+            max_buffer_seconds=4.0,
+            fps=self.target_fps,
+        )
+        self.temporal_gate = TemporalGate(
+            model_path=self.temporal_model_path,
+            threshold=self.temporal_threshold,
+            enabled=self.temporal_model_enabled,
+        )
+        self.last_temporal_prob: Optional[float] = None
+        self.last_temporal_confirmed: Optional[bool] = None
+        self.last_temporal_diagnostics: Optional[Dict[str, Any]] = None
 
         # Clip Recorder with Bounded Rolling Ring Buffer
         from acs.clip_recorder import IncidentClipRecorder
@@ -601,6 +640,21 @@ class AccidentEventManager:
         else:
             frame_copy = np.zeros((480, 640, 3), dtype=np.uint8)
 
+        # Buffer dimensions
+        ann_w = frame_copy.shape[1]
+        ann_h = frame_copy.shape[0]
+        if getattr(detection_result, "annotated_frame", None) is not None:
+            ann_h, ann_w = detection_result.annotated_frame.shape[:2]
+
+        # Feed detections to second-stage temporal history buffer
+        self.temporal_history_buffer.add_frame_detections(
+            frame_idx=int(current_time * self.target_fps),
+            timestamp=current_time,
+            detections=detection_result.detections,
+            frame_width=ann_w,
+            frame_height=ann_h,
+        )
+
         # Record to rolling frame buffer
         self._frame_buffer.append((current_time, frame_copy, detection_result))
         ann_frame = (
@@ -663,17 +717,43 @@ class AccidentEventManager:
                             self._active_peak_idx = len(self._active_incident_history) - 1
 
                     # Trigger incident start upon reaching consecutive frames threshold (N)
+                    # Gate in AccidentEventManager: YOLO proposes, the temporal model confirms!
                     if self.consecutive_count >= self.consecutive_frames_threshold:
-                        self.is_incident_active = True
-                        self.incident_counter += 1
-                        self.current_incident_id = (
-                            f"INC-{int(self.current_start_time)}-{self.incident_counter:03d}"
-                        )
-                        if self.save_clips:
-                            self.clip_recorder.start_incident(
-                                incident_id=self.current_incident_id,
-                                impact_time=self.current_start_time,
+                        gate_confirmed = True
+                        if self.temporal_model_enabled and self.temporal_gate is not None:
+                            gate_confirmed, prob, diag = self.temporal_gate.verify(
+                                history_buffer=self.temporal_history_buffer,
+                                candidate_bbox=best_box.bbox,
+                                frame_width=ann_w,
+                                frame_height=ann_h,
+                                window_seconds=1.5,
                             )
+                            self.last_temporal_prob = prob
+                            self.last_temporal_confirmed = gate_confirmed
+                            self.last_temporal_diagnostics = diag
+                        else:
+                            self.last_temporal_prob = 1.0
+                            self.last_temporal_confirmed = True
+                            self.last_temporal_diagnostics = {"gate_disabled": True}
+
+                        if gate_confirmed:
+                            self.is_incident_active = True
+                            self.incident_counter += 1
+                            self.current_incident_id = (
+                                f"INC-{int(self.current_start_time)}-{self.incident_counter:03d}"
+                            )
+                            if self.save_clips:
+                                self.clip_recorder.start_incident(
+                                    incident_id=self.current_incident_id,
+                                    impact_time=self.current_start_time,
+                                )
+                        else:
+                            logger.debug(
+                                "Temporal gate rejected accident proposal at threshold N (prob=%.3f < %.2f)",
+                                self.last_temporal_prob or 0.0, self.temporal_threshold,
+                            )
+                            self.consecutive_count = 0
+                            self._active_incident_history.clear()
                 else:
                     self.consecutive_count = 0
                     self.current_start_time = None
@@ -775,6 +855,9 @@ class AccidentEventManager:
             clip_path=raw_clip,
             clip_annotated_path=ann_clip,
             impact_offset_seconds=impact_offset,
+            temporal_confirmed=self.last_temporal_confirmed,
+            temporal_prob=self.last_temporal_prob,
+            temporal_diagnostics=self.last_temporal_diagnostics,
         )
 
         if self.auto_save:

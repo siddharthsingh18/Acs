@@ -1,0 +1,132 @@
+{
+  "model_type": "1D-CNN",
+  "model_format": "pytorch",
+  "model_file": "temporal_gate.pt",
+  "selection_reason": "Sequence model (1D-CNN) demonstrated statistically significant superiority beyond the bootstrap 95% confidence interval (Delta AUC CI: [0.2156, 0.3384]).",
+  "preliminary_status": true,
+  "preliminary_notice": "PRELIMINARY RESULTS: Training split contains 72 labeled accident windows (total across train/test: 201). Results designated as preliminary.",
+  "test_metrics": {
+    "lightgbm": {
+      "roc_auc": 0.2136,
+      "avg_precision": 0.3025,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.3455
+    },
+    "1d_cnn": {
+      "roc_auc": 0.4928,
+      "avg_precision": 0.4156,
+      "precision": 0.4433,
+      "recall": 0.969,
+      "f1": 0.6083,
+      "accuracy": 0.5478
+    },
+    "gru": {
+      "roc_auc": 0.4538,
+      "avg_precision": 0.3707,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.4494
+    },
+    "selected_model": {
+      "roc_auc": 0.4928,
+      "avg_precision": 0.4156,
+      "precision": 0.4433,
+      "recall": 0.969,
+      "f1": 0.6083,
+      "accuracy": 0.5478
+    }
+  },
+  "bootstrap_comparison": {
+    "baseline": "LightGBM",
+    "candidate": "1D-CNN",
+    "baseline_auc_ci95": [
+      0.1713,
+      0.2703
+    ],
+    "candidate_auc_ci95": [
+      0.4281,
+      0.5465
+    ],
+    "delta_auc_ci95": [
+      0.2156,
+      0.3384
+    ],
+    "delta_f1_ci95": [
+      0.5527,
+      0.6546
+    ],
+    "candidate_wins_beyond_ci": true
+  },
+  "feature_names": [
+    "iou_max",
+    "iou_mean",
+    "iou_final",
+    "iou_slope",
+    "iou_delta",
+    "min_distance",
+    "max_closing_speed",
+    "mean_closing_speed",
+    "final_distance",
+    "max_deceleration",
+    "mean_deceleration",
+    "post_approach_deceleration",
+    "speed_drop_ratio",
+    "max_direction_change_rad",
+    "heading_convergence_rad",
+    "heading_deflection_rad",
+    "min_ttc_seconds",
+    "mean_ttc_seconds",
+    "ttc_under_1s_ratio",
+    "post_overlap_stationary_seconds",
+    "post_overlap_stationary_ratio",
+    "is_stationary_at_end",
+    "stopped_vehicles_in_pair",
+    "stopped_vehicles_in_scene"
+  ],
+  "top_features": [
+    {
+      "feature": "speed_drop_ratio",
+      "importance": 155
+    },
+    {
+      "feature": "stopped_vehicles_in_scene",
+      "importance": 121
+    },
+    {
+      "feature": "min_distance",
+      "importance": 103
+    },
+    {
+      "feature": "min_ttc_seconds",
+      "importance": 102
+    },
+    {
+      "feature": "heading_deflection_rad",
+      "importance": 93
+    },
+    {
+      "feature": "max_deceleration",
+      "importance": 86
+    },
+    {
+      "feature": "max_direction_change_rad",
+      "importance": 62
+    },
+    {
+      "feature": "mean_ttc_seconds",
+      "importance": 36
+    },
+    {
+      "feature": "max_closing_speed",
+      "importance": 35
+    },
+    {
+      "feature": "mean_closing_speed",
+      "importance": 30
+    }
+  ],
+  "default_temporal_threshold": 0.5
+}

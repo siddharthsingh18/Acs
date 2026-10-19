@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-10-19 17:35:07 UTC",
+  "preliminary_status": true,
+  "train_accident_windows": 72,
+  "total_accident_windows": 201,
+  "baseline": {
+    "mode": "baseline",
+    "temporal_enabled": false,
+    "test_pos_detected": true,
+    "test_pos_recall": 1.0,
+    "test_neg_fa_count": 0,
+    "test_neg_hours": 0.0016666666666666668,
+    "test_fa_per_hour": 0.0,
+    "tuning_pos_recall": 0.5,
+    "tuning_pos_detected": 1,
+    "tuning_neg_fa_count": 1,
+    "tuning_neg_hours": 0.005833333333333334,
+    "tuning_fa_per_hour": 171.42857142857142,
+    "overall_fa_per_hour": 133.33333333333331,
+    "all_neg_fa_count": 1,
+    "all_neg_hours": 0.007500000000000001,
+    "test_pos_incidents": [
+      {
+        "id": "INC-3-001",
+        "start_time": 3.64,
+        "confidence": 0.911
+      }
+    ],
+    "test_neg_incidents": []
+  },
+  "temporal_gated": {
+    "mode": "temporal_gated",
+    "temporal_enabled": true,
+    "test_pos_detected": true,
+    "test_pos_recall": 1.0,
+    "test_neg_fa_count": 0,
+    "test_neg_hours": 0.0016666666666666668,
+    "test_fa_per_hour": 0.0,
+    "tuning_pos_recall": 0.0,
+    "tuning_pos_detected": 0,
+    "tuning_neg_fa_count": 0,
+    "tuning_neg_hours": 0.005833333333333334,
+    "tuning_fa_per_hour": 0.0,
+    "overall_fa_per_hour": 0.0,
+    "all_neg_fa_count": 0,
+    "all_neg_hours": 0.007500000000000001,
+    "test_pos_incidents": [
+      {
+        "id": "INC-3-001",
+        "start_time": 3.64,
+        "confidence": 0.911
+      }
+    ],
+    "test_neg_incidents": []
+  },
+  "delta": {
+    "test_recall_pct": 0.0,
+    "test_fa_per_hour": 0.0,
+    "overall_fa_per_hour": -133.33333333333331
+  }
+}
