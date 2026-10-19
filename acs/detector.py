@@ -17,9 +17,6 @@ from ultralytics import YOLO
 
 from acs.config import config, ACCIDENT_CLASSES
 
-logger = logging.getLogger("acs.detector")
-
-
 @dataclass
 class DetectionBox:
     """Represents a single detected or tracked bounding box and its metadata."""
@@ -30,6 +27,12 @@ class DetectionBox:
     class_name: str
     is_accident: bool
     track_id: Optional[int] = None
+
+
+# Optional resolution-enhancement helpers (SAHI tiles + ROI crop)
+_RESOLUTION_AVAILABLE = True
+
+logger = logging.getLogger("acs.detector")
 
 
 @dataclass
@@ -153,6 +156,11 @@ class AccidentDetector:
         nms_iou: Optional[float] = None,
         tracker_track_buffer: Optional[int] = None,
         tracker_match_thresh: Optional[float] = None,
+        # ── Resolution enhancement (SAHI tiles + ROI crop re-detection) ────
+        enable_tile_inference: bool = False,
+        tile_config: Optional["TileConfig"] = None,  # type: ignore[type-arg]
+        enable_roi_redetect: bool = False,
+        roi_config: Optional["ROIConfig"] = None,    # type: ignore[type-arg]
     ):
         """Initializes primary detection and optional secondary injury models.
 
@@ -170,6 +178,14 @@ class AccidentDetector:
             nms_iou: Non-maximum suppression IoU threshold.
             tracker_track_buffer: ByteTrack frame buffer for lost tracks.
             tracker_match_thresh: ByteTrack association threshold.
+            enable_tile_inference: Enable SAHI-style tiled inference on suspicious frames.
+                Applied only when the primary pass already fires a candidate accident
+                detection (not on every frame) to avoid FPS regression.
+            tile_config: TileConfig controlling tile size, overlap, and inference imgsz.
+            enable_roi_redetect: Enable ROI crop re-detection at higher resolution when
+                a track pair's centroid distance falls below close_distance_norm or
+                either box is classified as small/far (area < small_area_px2).
+            roi_config: ROIConfig controlling crop padding, redetect_imgsz, and gates.
         """
         self.model_path = model_path or config.model_path
         self.injury_model_path = injury_model_path or config.injury_model_path
@@ -225,6 +241,33 @@ class AccidentDetector:
         self.injury_model: Optional[YOLO] = None
         if self.injury_model_path and os.path.exists(self.injury_model_path):
             self.injury_model = load_model(self.injury_model_path)
+
+        # Resolution enhancement modules (disabled by default)
+        self._tiler: Optional[Any] = None
+        self._roi_redetector: Optional[Any] = None
+
+        if enable_tile_inference and _RESOLUTION_AVAILABLE:
+            try:
+                from acs.resolution import SuspiciousTileInferencer, TileConfig
+                self._tiler = SuspiciousTileInferencer(tile_config)
+                logger.info(
+                    "SuspiciousTileInferencer enabled (tile=%dpx, overlap=%.0f%%)",
+                    (tile_config or TileConfig()).tile_size,
+                    (tile_config or TileConfig()).overlap_ratio * 100,
+                )
+            except ImportError as _err:
+                logger.warning("Could not load SuspiciousTileInferencer: %s", _err)
+
+        if enable_roi_redetect and _RESOLUTION_AVAILABLE:
+            try:
+                from acs.resolution import ROICropReDetector, ROIConfig
+                self._roi_redetector = ROICropReDetector(roi_config)
+                logger.info(
+                    "ROICropReDetector enabled (redetect_imgsz=%d)",
+                    (roi_config or ROIConfig()).redetect_imgsz,
+                )
+            except ImportError as _err:
+                logger.warning("Could not load ROICropReDetector: %s", _err)
 
     def predict_frame(
         self,
@@ -337,7 +380,80 @@ class AccidentDetector:
         detected_boxes.extend(validated_accident_boxes)
         accident_detected = len(validated_accident_boxes) > 0
         detected_classes = {b.class_name for b in detected_boxes}
-        accident_classes = {b.class_name for b in validated_accident_boxes}
+        accident_classes_set = {b.class_name for b in validated_accident_boxes}
+
+        # ── Resolution-enhancement pass 1: suspicious-region tiled inference ──
+        # Fires only when the primary pass has *any* candidate accident (suspicious).
+        # This avoids running tiling on clean frames and keeps FPS budget.
+        if self._tiler is not None and len(candidate_accident_boxes) > 0:
+            try:
+                tile_extras = self._tiler.infer(
+                    self.primary_model,
+                    processed_frame,
+                    device=self.device,
+                    accident_classes=self.accident_classes,
+                )
+                if tile_extras:
+                    # Merge tile detections with existing, applying per-class thresholds
+                    filtered_tile = [
+                        b for b in tile_extras
+                        if b.confidence >= (
+                            self.accident_confidence_threshold if b.is_accident
+                            else self.normal_confidence_threshold
+                        )
+                    ]
+                    from acs.resolution import merge_detections
+                    merged = merge_detections(detected_boxes, filtered_tile, self.nms_iou)
+                    new_acc = [b for b in merged if b.is_accident and b not in detected_boxes]
+                    if new_acc:
+                        validated_accident_boxes.extend(new_acc)
+                        detected_boxes = merged
+                        accident_detected = True
+                        detected_classes = {b.class_name for b in detected_boxes}
+                        accident_classes_set = {b.class_name for b in detected_boxes if b.is_accident}
+                        logger.debug("Tiler added %d new accident detections.", len(new_acc))
+            except Exception as _tile_err:  # pragma: no cover
+                logger.warning("Tiled inference failed (skipping): %s", _tile_err)
+
+        # ── Resolution-enhancement pass 2: ROI crop re-detection ──
+        # Fires only when ≥2 tracked entities exist and any pair is close/small.
+        if self._roi_redetector is not None and len(normal_entity_boxes) >= 2:
+            fh, fw = processed_frame.shape[:2]
+            redetect_added: List[DetectionBox] = []
+            try:
+                for ai in range(len(normal_entity_boxes)):
+                    for bi in range(ai + 1, len(normal_entity_boxes)):
+                        da = normal_entity_boxes[ai]
+                        db = normal_entity_boxes[bi]
+                        if self._roi_redetector.should_redetect(da, db, fw, fh):
+                            _confirmed, _refined = self._roi_redetector.redetect(
+                                self.primary_model,
+                                processed_frame,
+                                da,
+                                db,
+                                device=self.device,
+                                accident_classes=self.accident_classes,
+                            )
+                            if _confirmed:
+                                acc_refined = [
+                                    b for b in _refined
+                                    if b.is_accident
+                                    and b.confidence >= self.accident_confidence_threshold
+                                ]
+                                redetect_added.extend(acc_refined)
+            except Exception as _roi_err:  # pragma: no cover
+                logger.warning("ROI re-detect failed (skipping): %s", _roi_err)
+
+            if redetect_added:
+                from acs.resolution import merge_detections
+                detected_boxes = merge_detections(detected_boxes, redetect_added, self.nms_iou)
+                validated_accident_boxes.extend(redetect_added)
+                accident_detected = True
+                detected_classes = {b.class_name for b in detected_boxes}
+                accident_classes_set = {b.class_name for b in detected_boxes if b.is_accident}
+                logger.debug("ROI redetect confirmed %d accident detections.", len(redetect_added))
+
+        accident_classes = accident_classes_set
 
         # Run secondary injury model if available and an accident was detected
         if accident_detected and self.injury_model is not None:
