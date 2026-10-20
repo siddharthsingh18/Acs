@@ -1,0 +1,1932 @@
+{
+  "before_retraining": {
+    "timestamp": "2026-10-20T20:06:17Z",
+    "model_path": "best.pt",
+    "clean_baseline": {
+      "corruption": "none",
+      "severity": 0,
+      "incident_recall_pct": 100.0,
+      "false_alarms_total": 0,
+      "neg_duration_sec": 5.95,
+      "false_alarms_per_hour": 0.0,
+      "positive_clips_tested": 1,
+      "negative_clips_tested": 1
+    },
+    "corruptions_evaluated": [
+      "gaussian_noise",
+      "motion_blur",
+      "defocus_blur",
+      "fog",
+      "rain_streaks",
+      "night_darkening",
+      "glare",
+      "low_bitrate",
+      "resolution_drop",
+      "camera_shake",
+      "lens_dirt"
+    ],
+    "severities_evaluated": [
+      1,
+      2,
+      3
+    ],
+    "results_by_corruption": {
+      "gaussian_noise": [
+        {
+          "corruption": "gaussian_noise",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 100.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "gaussian_noise",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 100.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "gaussian_noise",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 100.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "motion_blur": [
+        {
+          "corruption": "motion_blur",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "motion_blur",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "motion_blur",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 100.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "defocus_blur": [
+        {
+          "corruption": "defocus_blur",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "defocus_blur",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "defocus_blur",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "fog": [
+        {
+          "corruption": "fog",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "fog",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "fog",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "rain_streaks": [
+        {
+          "corruption": "rain_streaks",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "rain_streaks",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 1,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 605.04,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 605.04
+        },
+        {
+          "corruption": "rain_streaks",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 1,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 605.04,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 605.04
+        }
+      ],
+      "night_darkening": [
+        {
+          "corruption": "night_darkening",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "night_darkening",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "night_darkening",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 1,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 605.04,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 100.0,
+          "rise_in_fa_per_hour": 605.04
+        }
+      ],
+      "glare": [
+        {
+          "corruption": "glare",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "glare",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "glare",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 100.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "low_bitrate": [
+        {
+          "corruption": "low_bitrate",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "low_bitrate",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "low_bitrate",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "resolution_drop": [
+        {
+          "corruption": "resolution_drop",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "resolution_drop",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "resolution_drop",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "camera_shake": [
+        {
+          "corruption": "camera_shake",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "camera_shake",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "camera_shake",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "lens_dirt": [
+        {
+          "corruption": "lens_dirt",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "lens_dirt",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "lens_dirt",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ]
+    },
+    "ranked_corruptions": [
+      {
+        "corruption": "night_darkening",
+        "avg_recall_drop": 33.33,
+        "max_recall_drop": 100.0,
+        "avg_fa_rise": 201.68,
+        "max_fa_rise": 605.04,
+        "degradation_score": 153.92,
+        "levels": [
+          {
+            "corruption": "night_darkening",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "night_darkening",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "night_darkening",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 1,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 605.04,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 100.0,
+            "rise_in_fa_per_hour": 605.04
+          }
+        ]
+      },
+      {
+        "corruption": "gaussian_noise",
+        "avg_recall_drop": 100.0,
+        "max_recall_drop": 100.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 150.0,
+        "levels": [
+          {
+            "corruption": "gaussian_noise",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 100.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "gaussian_noise",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 100.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "gaussian_noise",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 100.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "rain_streaks",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 403.36,
+        "max_fa_rise": 605.04,
+        "degradation_score": 141.18,
+        "levels": [
+          {
+            "corruption": "rain_streaks",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "rain_streaks",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 1,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 605.04,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 605.04
+          },
+          {
+            "corruption": "rain_streaks",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 1,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 605.04,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 605.04
+          }
+        ]
+      },
+      {
+        "corruption": "motion_blur",
+        "avg_recall_drop": 33.33,
+        "max_recall_drop": 100.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 83.33,
+        "levels": [
+          {
+            "corruption": "motion_blur",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "motion_blur",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "motion_blur",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 100.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "glare",
+        "avg_recall_drop": 33.33,
+        "max_recall_drop": 100.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 83.33,
+        "levels": [
+          {
+            "corruption": "glare",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "glare",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "glare",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 100.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "defocus_blur",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "defocus_blur",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "defocus_blur",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "defocus_blur",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "fog",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "fog",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "fog",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "fog",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "low_bitrate",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "low_bitrate",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "low_bitrate",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "low_bitrate",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "resolution_drop",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "resolution_drop",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "resolution_drop",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "resolution_drop",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "camera_shake",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "camera_shake",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "camera_shake",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "camera_shake",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "lens_dirt",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "lens_dirt",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "lens_dirt",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "lens_dirt",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      }
+    ],
+    "worst_three_corruptions": [
+      "night_darkening",
+      "gaussian_noise",
+      "rain_streaks"
+    ]
+  },
+  "after_retraining": {
+    "timestamp": "2026-10-20T20:11:27Z",
+    "model_path": "/Users/shidharthkushwaha/Desktop/Acs/models/robust_model.pt",
+    "clean_baseline": {
+      "corruption": "none",
+      "severity": 0,
+      "incident_recall_pct": 0.0,
+      "false_alarms_total": 0,
+      "neg_duration_sec": 5.95,
+      "false_alarms_per_hour": 0.0,
+      "positive_clips_tested": 1,
+      "negative_clips_tested": 1
+    },
+    "corruptions_evaluated": [
+      "gaussian_noise",
+      "motion_blur",
+      "defocus_blur",
+      "fog",
+      "rain_streaks",
+      "night_darkening",
+      "glare",
+      "low_bitrate",
+      "resolution_drop",
+      "camera_shake",
+      "lens_dirt"
+    ],
+    "severities_evaluated": [
+      1,
+      2,
+      3
+    ],
+    "results_by_corruption": {
+      "gaussian_noise": [
+        {
+          "corruption": "gaussian_noise",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "gaussian_noise",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "gaussian_noise",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "motion_blur": [
+        {
+          "corruption": "motion_blur",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "motion_blur",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "motion_blur",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "defocus_blur": [
+        {
+          "corruption": "defocus_blur",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "defocus_blur",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": -100.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "defocus_blur",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "fog": [
+        {
+          "corruption": "fog",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "fog",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "fog",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "rain_streaks": [
+        {
+          "corruption": "rain_streaks",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": -100.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "rain_streaks",
+          "severity": 2,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": -100.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "rain_streaks",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "night_darkening": [
+        {
+          "corruption": "night_darkening",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "night_darkening",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "night_darkening",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "glare": [
+        {
+          "corruption": "glare",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": -100.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "glare",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "glare",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 1,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 605.04,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 605.04
+        }
+      ],
+      "low_bitrate": [
+        {
+          "corruption": "low_bitrate",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "low_bitrate",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "low_bitrate",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": -100.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "resolution_drop": [
+        {
+          "corruption": "resolution_drop",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "resolution_drop",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "resolution_drop",
+          "severity": 3,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": -100.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "camera_shake": [
+        {
+          "corruption": "camera_shake",
+          "severity": 1,
+          "incident_recall_pct": 100.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": -100.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "camera_shake",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "camera_shake",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ],
+      "lens_dirt": [
+        {
+          "corruption": "lens_dirt",
+          "severity": 1,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "lens_dirt",
+          "severity": 2,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        },
+        {
+          "corruption": "lens_dirt",
+          "severity": 3,
+          "incident_recall_pct": 0.0,
+          "false_alarms_total": 0,
+          "neg_duration_sec": 5.95,
+          "false_alarms_per_hour": 0.0,
+          "positive_clips_tested": 1,
+          "negative_clips_tested": 1,
+          "drop_in_recall_pct": 0.0,
+          "rise_in_fa_per_hour": 0.0
+        }
+      ]
+    },
+    "ranked_corruptions": [
+      {
+        "corruption": "glare",
+        "avg_recall_drop": -33.33,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 201.68,
+        "max_fa_rise": 605.04,
+        "degradation_score": 37.25,
+        "levels": [
+          {
+            "corruption": "glare",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": -100.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "glare",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "glare",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 1,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 605.04,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 605.04
+          }
+        ]
+      },
+      {
+        "corruption": "gaussian_noise",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "gaussian_noise",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "gaussian_noise",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "gaussian_noise",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "motion_blur",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "motion_blur",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "motion_blur",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "motion_blur",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "fog",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "fog",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "fog",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "fog",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "night_darkening",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "night_darkening",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "night_darkening",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "night_darkening",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "lens_dirt",
+        "avg_recall_drop": 0.0,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": 0.0,
+        "levels": [
+          {
+            "corruption": "lens_dirt",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "lens_dirt",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "lens_dirt",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "defocus_blur",
+        "avg_recall_drop": -33.33,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": -33.33,
+        "levels": [
+          {
+            "corruption": "defocus_blur",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "defocus_blur",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": -100.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "defocus_blur",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "low_bitrate",
+        "avg_recall_drop": -33.33,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": -33.33,
+        "levels": [
+          {
+            "corruption": "low_bitrate",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "low_bitrate",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "low_bitrate",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": -100.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "resolution_drop",
+        "avg_recall_drop": -33.33,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": -33.33,
+        "levels": [
+          {
+            "corruption": "resolution_drop",
+            "severity": 1,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "resolution_drop",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "resolution_drop",
+            "severity": 3,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": -100.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "camera_shake",
+        "avg_recall_drop": -33.33,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": -33.33,
+        "levels": [
+          {
+            "corruption": "camera_shake",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": -100.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "camera_shake",
+            "severity": 2,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "camera_shake",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      },
+      {
+        "corruption": "rain_streaks",
+        "avg_recall_drop": -66.67,
+        "max_recall_drop": 0.0,
+        "avg_fa_rise": 0.0,
+        "max_fa_rise": 0.0,
+        "degradation_score": -66.67,
+        "levels": [
+          {
+            "corruption": "rain_streaks",
+            "severity": 1,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": -100.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "rain_streaks",
+            "severity": 2,
+            "incident_recall_pct": 100.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": -100.0,
+            "rise_in_fa_per_hour": 0.0
+          },
+          {
+            "corruption": "rain_streaks",
+            "severity": 3,
+            "incident_recall_pct": 0.0,
+            "false_alarms_total": 0,
+            "neg_duration_sec": 5.95,
+            "false_alarms_per_hour": 0.0,
+            "positive_clips_tested": 1,
+            "negative_clips_tested": 1,
+            "drop_in_recall_pct": 0.0,
+            "rise_in_fa_per_hour": 0.0
+          }
+        ]
+      }
+    ],
+    "worst_three_corruptions": [
+      "glare",
+      "gaussian_noise",
+      "motion_blur"
+    ]
+  }
+}
