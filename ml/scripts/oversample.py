@@ -14,6 +14,7 @@ from pathlib import Path
 from collections import Counter
 from typing import Dict, List, Tuple
 import yaml
+from acs.config import ACCIDENT_CLASSES, CLASS_NAMES, NORMAL_CLASSES
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -62,7 +63,7 @@ def create_oversampled_dataset(
     Returns the path to the newly generated data.yaml.
     """
     classes_cfg = load_yaml(classes_yaml_path)
-    target_classes = classes_cfg.get("classes", [])
+    target_classes = CLASS_NAMES
 
     src_train_imgs = source_dir / "images" / "train"
     src_train_lbls = source_dir / "labels" / "train"
@@ -113,8 +114,14 @@ def create_oversampled_dataset(
 
     # 2. Oversample rare classes
     # Define accident classes
-    accident_cids = {1, 2, 3, 5, 6, 7, 8}
-    minority_cids = {0, 9}  # bike, person
+    accident_cids = {
+        class_id for class_id, class_name in enumerate(target_classes)
+        if class_name in ACCIDENT_CLASSES
+    }
+    minority_cids = {
+        class_id for class_id, class_name in enumerate(target_classes)
+        if class_name in NORMAL_CLASSES and class_name in {"bike", "person"}
+    }
 
     oversampled_instances = Counter(initial_counts)
     oversample_copies = 0

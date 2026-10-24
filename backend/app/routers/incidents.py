@@ -79,6 +79,7 @@ def _to_incident_response(inc: Incident) -> IncidentResponse:
         start_timestamp=inc.start_timestamp,
         end_timestamp=inc.end_timestamp,
         class_name=inc.class_name,
+        incident_type=inc.incident_type,
         max_confidence=inc.max_confidence,
         image_path=inc.image_path,
         keyframe_url=inc.keyframe_url,
@@ -232,6 +233,7 @@ def get_incident_pdf_endpoint(
     pdf_bytes = generate_report_pdf(
         incident_id=inc.incident_id,
         class_name=inc.class_name,
+        incident_type=inc.incident_type,
         start_timestamp=inc.start_timestamp,
         end_timestamp=inc.end_timestamp,
         max_confidence=inc.max_confidence,
@@ -732,5 +734,3 @@ def run_retention_cleanup_endpoint(
         user_id=admin_user.id,
     )
     return stats
-
-

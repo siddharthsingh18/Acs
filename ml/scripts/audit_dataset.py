@@ -521,7 +521,11 @@ def generate_markdown_report(audit_results: List[Dict[str, Any]], report_path: P
 
     # 2. Class Mapping & Decision Rationale
     lines.append("### 2. Class Mapping Matrix (`ml/configs/class_map.yaml`)\n")
-    lines.append("Every source class was mapped to one of the 10 target classes (`bike`, `bike_bike_accident`, `bike_object_accident`, `bike_person_accident`, `car`, `car_bike_accident`, `car_car_accident`, `car_object_accident`, `car_person_accident`, `person`) or explicitly marked as `\"drop\"` following rigorous empirical inspection of a 20-sample visual audit per generic class:\n")
+    lines.append(
+        "Every source class was mapped to one of the canonical target classes "
+        f"({', '.join(f'`{name}`' for name in class_names.values())}) or explicitly marked as `\"drop\"` "
+        "following source-specific label review:\n"
+    )
 
     lines.append("| Dataset | Source Class ID & Name | Target Class | Action | Empirical Audit Rationale |")
     lines.append("| :--- | :--- | :---: | :---: | :--- |")

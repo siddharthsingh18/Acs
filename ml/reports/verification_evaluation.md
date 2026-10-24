@@ -1,5 +1,7 @@
 # Automated Incident Verification Stage: Empirical Evaluation Report
 
+> **UNVERIFIED:** Recall and false-alarm figures conflict with other reports and cannot be reproduced without the missing clips, dataset, and raw predictions.
+
 ## Executive Summary
 
 This evaluation benchmarks the impact of adding the automated verification stage between YOLO incident detection and emergency alert dispatch. The verification pipeline combines:

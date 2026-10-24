@@ -821,6 +821,8 @@ export interface components {
          * @description Model class item with localized translation and collision designation.
          */
         ClassItem: {
+            /** Id */
+            id: number;
             /**
              * Name
              * @description Raw class label name in YOLO model
@@ -832,10 +834,15 @@ export interface components {
              */
             name_ar: string;
             /**
-             * Is Accident
-             * @description True if designated as an accident class, False for normal traffic
+             * Group
+             * @description Taxonomy group: accident or normal
              */
-            is_accident: boolean;
+            group: string;
+            /**
+             * Definition
+             * @description One-line annotation definition
+             */
+            definition: string;
         };
         /**
          * ConfigDefaults
@@ -1020,6 +1027,7 @@ export interface components {
             incident_id: string;
             /** Class Name */
             class_name: string;
+            incident_type?: string | null;
             /** Max Confidence */
             max_confidence: number;
             /** Start Timestamp */
@@ -1078,6 +1086,7 @@ export interface components {
             end_timestamp: string;
             /** Class Name */
             class_name: string;
+            incident_type?: string | null;
             /** Max Confidence */
             max_confidence: number;
             /** Image Path */
@@ -1450,6 +1459,7 @@ export interface components {
             incident_id: string;
             /** Class Name */
             class_name: string;
+            incident_type?: string | null;
             /** Max Confidence */
             max_confidence: number;
             /** Image Path */

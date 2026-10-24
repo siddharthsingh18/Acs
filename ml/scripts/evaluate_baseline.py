@@ -19,11 +19,13 @@ from ultralytics import YOLO
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, ROOT_DIR)
 
-from acs.config import ACCIDENT_CLASSES
+from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
+from acs.taxonomy import decode_model_class, validate_model_taxonomy
 from acs.detector import AccidentDetector, AccidentEventManager
 
 MODEL_PATH = os.path.join(ROOT_DIR, "ml", "baseline", "best_v0.pt")
 VIDEO_PATH = os.path.join(ROOT_DIR, "acc_ex.mp4")
+DATA_YAML_PATH = os.path.join(ROOT_DIR, "ml", "data", "merged", "data.yaml")
 REPORT_PATH = os.path.join(ROOT_DIR, "ml", "reports", "baseline.md")
 
 
@@ -31,9 +33,14 @@ def run_model_val():
     """Runs model.val() using Ultralytics YOLO and collects all validation metrics."""
     print(f"--- [1/2] Running model.val() on {MODEL_PATH} ---")
     model = YOLO(MODEL_PATH)
+    validate_model_taxonomy(model.names)
+    if not os.path.isfile(DATA_YAML_PATH):
+        raise FileNotFoundError(f"Canonical evaluation dataset is missing: {DATA_YAML_PATH}")
 
     # Run validation
     val_results = model.val(
+        data=DATA_YAML_PATH,
+        split="test",
         project=os.path.join(ROOT_DIR, "ml", "runs"),
         name="baseline_val",
         exist_ok=True,
@@ -139,7 +146,7 @@ def run_video_benchmark():
             for b in raw_res[0].boxes:
                 cid = int(b.cls[0].item())
                 c_conf = float(b.conf[0].item())
-                c_name = detector.primary_model.names.get(cid, f"class_{cid}")
+                _, c_name, _ = decode_model_class(cid, detector.primary_model.names)
                 is_acc = c_name in ACCIDENT_CLASSES
 
                 class_detection_counts[c_name] = class_detection_counts.get(c_name, 0) + 1
@@ -290,7 +297,7 @@ def build_markdown_report(val_metrics, per_class, cm, class_names, ckpt_meta, sa
     lines.append("| Class ID | Class Name | Category | Precision | Recall | mAP@0.50 | mAP@0.50-0.95 |")
     lines.append("| :---: | :--- | :---: | :---: | :---: | :---: | :---: |")
 
-    for cid in range(10):
+    for cid in range(len(CLASS_NAMES)):
         cname = class_names.get(cid, f"class_{cid}")
         is_acc = "Accident" if cname in ACCIDENT_CLASSES else "Normal"
         if cname in per_class:
@@ -304,11 +311,11 @@ def build_markdown_report(val_metrics, per_class, cm, class_names, ckpt_meta, sa
     lines.append("The confusion matrix produced by `model.val()` (rows = Ground Truth, columns = Predicted Class, column 10 = Background/FN):")
     lines.append("")
     if cm is not None:
-        header = ["GT / Pred"] + [class_names.get(i, f"c{i}") for i in range(10)] + ["background"]
+        header = ["GT / Pred"] + [class_names.get(i, f"c{i}") for i in range(len(CLASS_NAMES))] + ["background"]
         lines.append("| " + " | ".join(header) + " |")
         lines.append("| " + " | ".join([":---:"] * len(header)) + " |")
         for row_idx, row in enumerate(cm):
-            row_label = class_names.get(row_idx, "background") if row_idx < 10 else "background"
+            row_label = class_names.get(row_idx, "background") if row_idx < len(CLASS_NAMES) else "background"
             row_str = [f"`{row_label}`"] + [str(int(val)) for val in row]
             lines.append("| " + " | ".join(row_str) + " |")
     else:
@@ -354,10 +361,10 @@ def build_markdown_report(val_metrics, per_class, cm, class_names, ckpt_meta, sa
     lines.append("")
     lines.append("## 5. Single Source of Truth Class List")
     lines.append("")
-    lines.append("The definitive 10-class taxonomy is established in [`ml/configs/classes.yaml`](../configs/classes.yaml):")
+    lines.append("The canonical taxonomy is established in [`ml/configs/classes.yaml`](../configs/classes.yaml):")
     lines.append("")
     lines.append("```yaml")
-    for cid in range(10):
+    for cid in range(len(CLASS_NAMES)):
         cname = class_names.get(cid)
         is_acc = cname in ACCIDENT_CLASSES
         tag = "accident" if is_acc else "normal"

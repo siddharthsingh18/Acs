@@ -33,7 +33,16 @@ frontend/node_modules/
 frontend/dist/
 
 # Machine Learning large datasets, checkpoints, and weights
-ml/data/
+ml/data/*
+!ml/data/LICENSES.md
+!ml/data/manifest.sha256
+!ml/data/test_manifest.sha256
+!ml/data/provenance.template.csv
+!ml/data/dataset_stats.md
+!ml/data/VIDEO_EVAL_STATUS.md
+!ml/data/video_eval/
+ml/data/video_eval/*
+!ml/data/video_eval/labels.csv
 ml/runs/
 ml/baseline/*.pt
 datasets/
@@ -51,6 +60,3 @@ mediamtx.yml
 # MLflow experiment tracking
 mlruns.db
 mlruns/
-
-
-

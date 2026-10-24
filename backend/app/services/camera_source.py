@@ -25,23 +25,23 @@ logger = logging.getLogger("acs.backend.camera_source")
 # -----------------------------------------------------------------------------
 # Security & Credential Encryption Utilities
 # -----------------------------------------------------------------------------
-_ENCRYPTION_KEY_ENV = "CAMERA_ENCRYPTION_KEY"
+_ENCRYPTION_KEY_ENV = "FERNET_KEY"
 _DEFAULT_SALT = b"acs_camera_secret_salt_2026"
 
 
 def _get_fernet_cipher():
-    """Returns a Fernet cipher instance using environment key or deterministic fallback."""
+    """Return the configured Fernet cipher; deterministic production fallbacks are forbidden."""
     from cryptography.fernet import Fernet
 
-    env_key = os.getenv(_ENCRYPTION_KEY_ENV)
+    env_key = os.getenv(_ENCRYPTION_KEY_ENV) or os.getenv("CAMERA_ENCRYPTION_KEY")
     if env_key:
-        try:
-            return Fernet(env_key.encode() if isinstance(env_key, str) else env_key)
-        except Exception as e:
-            logger.warning("Invalid CAMERA_ENCRYPTION_KEY provided (%s), using derived key", e)
+        return Fernet(env_key.encode() if isinstance(env_key, str) else env_key)
 
-    # Derive a 32-byte urlsafe base64 key from machine/app secret
-    secret = os.getenv("SECRET_KEY", "acs-production-camera-vault-key-default-2026")
+    if os.getenv("ENVIRONMENT", "").lower() in {"production", "prod"}:
+        raise RuntimeError("FERNET_KEY is required for camera credential encryption in production.")
+
+    secret = os.getenv("SECRET_KEY", "acs-development-only-camera-key-not-for-production")
+    logger.warning("Using a development-only camera encryption key; configure FERNET_KEY outside development.")
     derived = hashlib.pbkdf2_hmac("sha256", secret.encode(), _DEFAULT_SALT, 100_000)
     key_b64 = base64.urlsafe_b64encode(derived)
     return Fernet(key_b64)
@@ -51,25 +51,16 @@ def encrypt_credentials(raw_str: str) -> str:
     """Encrypts a plaintext connection string or URL for safe database persistence."""
     if not raw_str:
         return ""
-    try:
-        cipher = _get_fernet_cipher()
-        return cipher.encrypt(raw_str.encode("utf-8")).decode("utf-8")
-    except Exception as exc:
-        logger.error("Failed to encrypt camera connection string: %s", exc)
-        # Fallback to plain return only if encryption library fails
-        return raw_str
+    cipher = _get_fernet_cipher()
+    return cipher.encrypt(raw_str.encode("utf-8")).decode("utf-8")
 
 
 def decrypt_credentials(encrypted_str: str) -> str:
     """Decrypts a previously encrypted connection string or URL for runtime connection."""
     if not encrypted_str:
         return ""
-    try:
-        cipher = _get_fernet_cipher()
-        return cipher.decrypt(encrypted_str.encode("utf-8")).decode("utf-8")
-    except Exception:
-        # If decryption fails (e.g. legacy plain text in db during migration), return as-is
-        return encrypted_str
+    cipher = _get_fernet_cipher()
+    return cipher.decrypt(encrypted_str.encode("utf-8")).decode("utf-8")
 
 
 def mask_credentials(url_or_path: str) -> str:

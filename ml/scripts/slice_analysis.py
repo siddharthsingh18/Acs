@@ -12,13 +12,14 @@ broken down by operational slices:
 - Crowd/traffic density (low 0-2, medium 3-6, congested >=7 vehicles)
 
 Outputs:
-1. Comprehensive slice breakdown table with Accident Recall, False Alarms/hr, Sample Count,
+1. Comprehensive slice breakdown table with Accident Recall, false-positive frames/video-hour, Sample Count,
    and "insufficient data" marks for slices with N < 30.
 2. Contact sheets of the 20 worst false negatives and 20 worst false positives per slice in ml/reports/errors/.
 3. Ranked list of the 5 weakest slices and actionable engineering fixes (data, augmentation, resolution, logic).
 4. Persisted report at ml/reports/slice_analysis.md and machine-readable ml/reports/slice_analysis.json.
 """
 import argparse
+import csv
 import json
 import math
 import sys
@@ -35,12 +36,11 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from acs.config import CLASS_NAMES
+from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
+from acs.taxonomy import decode_model_class
+from ml.eval.metrics import false_positive_frame_rate
 
-# Designated accident class IDs for YOLOv11 (0-indexed based on data.yaml)
-# 1: bike_bike_accident, 2: bike_object_accident, 3: bike_person_accident,
-# 5: car_bike_accident, 6: car_car_accident, 7: car_object_accident, 8: car_person_accident
-ACCIDENT_CLASS_IDS = {1, 2, 3, 5, 6, 7, 8}
+ACCIDENT_CLASS_IDS = {index for index, name in enumerate(CLASS_NAMES) if name in ACCIDENT_CLASSES}
 
 
 # -----------------------------------------------------------------------------
@@ -317,7 +317,7 @@ class SliceEvaluator:
                         xc, yc, bw, bh = map(float, parts[1:5])
                         box_dict = {
                             "class_id": cls_id,
-                            "class_name": CLASS_NAMES[cls_id] if cls_id < len(CLASS_NAMES) else f"class_{cls_id}",
+                            "class_name": CLASS_NAMES[cls_id] if 0 <= cls_id < len(CLASS_NAMES) else f"class_{cls_id}",
                             "x_center": xc,
                             "y_center": yc,
                             "width": bw,
@@ -343,12 +343,13 @@ class SliceEvaluator:
             max_accident_conf = 0.0
 
             for b in results.boxes:
-                cls_id = int(b.cls[0])
+                raw_cls_id = int(b.cls[0])
+                cls_id, class_name, _ = decode_model_class(raw_cls_id, self.model.names)
                 conf_val = float(b.conf[0])
                 xywhn = b.xywhn[0].tolist()
                 box_dict = {
                     "class_id": cls_id,
-                    "class_name": self.model.names[cls_id],
+                    "class_name": class_name,
                     "confidence": conf_val,
                     "x_center": xywhn[0],
                     "y_center": xywhn[1],
@@ -418,33 +419,42 @@ class SliceEvaluator:
                 print(f"  Processed {idx + 1}/{len(img_paths)} test images...")
 
     def evaluate_video_eval_clips(self, video_eval_root: Path) -> None:
-        """Evaluates video clips from ml/data/video_eval/ (test & tuning)."""
-        video_paths = sorted(video_eval_root.glob("**/*.mp4"))
-        print(f"\nEvaluating {len(video_paths)} video clips from: {video_eval_root}...")
+        """Evaluates only frozen-test clips using their labels.csv intervals."""
+        labels_path = video_eval_root / "labels.csv"
+        if not labels_path.is_file():
+            raise FileNotFoundError(f"Video evaluation labels are missing: {labels_path}")
+        with labels_path.open(newline="", encoding="utf-8") as stream:
+            reader = csv.DictReader(stream)
+            if not {"local_path", "split", "contains_accident", "start_seconds", "end_seconds"}.issubset(
+                reader.fieldnames or []
+            ):
+                raise ValueError(f"Video labels are missing required temporal fields: {labels_path}")
+            test_rows = [row for row in reader if row.get("split") == "test"]
+        if not test_rows:
+            raise ValueError("No frozen-test video clips are listed in labels.csv.")
+        video_records = []
+        for row in test_rows:
+            path = (video_eval_root / row["local_path"]).resolve()
+            if not path.is_relative_to(video_eval_root.resolve()) or not path.is_file():
+                raise FileNotFoundError(f"Frozen-test video clip is missing or outside video_eval: {path}")
+            contains_accident = row["contains_accident"].strip().lower() == "true"
+            interval = (
+                (float(row["start_seconds"]), float(row["end_seconds"]))
+                if contains_accident
+                else None
+            )
+            video_records.append((path, interval))
+        print(f"\nEvaluating {len(video_records)} frozen-test clips from: {video_eval_root}...")
 
-        for v_path in video_paths:
+        for v_path, accident_interval in video_records:
             v_name = v_path.name
             cap = cv2.VideoCapture(str(v_path))
             if not cap.isOpened():
-                print(f"  [Warning] Cannot open video clip: {v_path}")
-                continue
+                raise OSError(f"Cannot open labeled frozen-test video clip: {v_path}")
 
             fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             frame_dt = 1.0 / fps if fps > 0 else 1.0 / 30.0
-
-            # Ground truth temporal boundary for crash clips
-            # test_holdout_acc_ex: crash starts frame 100
-            # tuning_pos_cadp_crash: crash starts frame 15
-            # tuning_pos_cctv_crash: crash starts frame 20
-            # negative clips: all frames false
-            crash_start_frame = -1
-            if "acc_ex" in v_name.lower():
-                crash_start_frame = 100
-            elif "cadp_crash" in v_name.lower():
-                crash_start_frame = 15
-            elif "cctv_crash" in v_name.lower():
-                crash_start_frame = 20
 
             f_idx = 0
             while cap.isOpened():
@@ -455,18 +465,12 @@ class SliceEvaluator:
                 h, w = frame.shape[:2]
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                gt_is_accident = (crash_start_frame >= 0 and f_idx >= crash_start_frame)
+                frame_time = f_idx * frame_dt
+                gt_is_accident = bool(
+                    accident_interval
+                    and accident_interval[0] <= frame_time <= accident_interval[1]
+                )
                 gt_accident_boxes = []
-                if gt_is_accident:
-                    # Provide approximate bounding box for continuous video collision zone
-                    gt_accident_boxes.append({
-                        "class_id": 6,
-                        "class_name": "car_car_accident",
-                        "x_center": 0.45,
-                        "y_center": 0.52,
-                        "width": 0.35,
-                        "height": 0.28,
-                    })
 
                 # Inference
                 results = self.model.predict(
@@ -482,12 +486,13 @@ class SliceEvaluator:
                 max_accident_conf = 0.0
 
                 for b in results.boxes:
-                    cls_id = int(b.cls[0])
+                    raw_cls_id = int(b.cls[0])
+                    cls_id, class_name, _ = decode_model_class(raw_cls_id, self.model.names)
                     conf_val = float(b.conf[0])
                     xywhn = b.xywhn[0].tolist()
                     box_dict = {
                         "class_id": cls_id,
-                        "class_name": self.model.names[cls_id],
+                        "class_name": class_name,
                         "confidence": conf_val,
                         "x_center": xywhn[0],
                         "y_center": xywhn[1],
@@ -537,7 +542,7 @@ class SliceEvaluator:
                     image=frame,
                     gt_is_accident=gt_is_accident,
                     gt_accident_boxes=gt_accident_boxes,
-                    gt_all_boxes=pred_all_boxes,
+                    gt_all_boxes=[],
                     pred_is_accident=pred_is_accident,
                     pred_max_conf=max_accident_conf,
                     pred_accident_boxes=pred_accident_boxes,
@@ -563,7 +568,9 @@ class SliceEvaluator:
             "fn": 0,
             "fp": 0,
             "tn": 0,
-            "total_duration_sec": 0.0,
+            "video_duration_sec": 0.0,
+            "video_false_positive_frames": 0,
+            "image_false_positive_samples": 0,
         })
 
         for s in self.samples:
@@ -572,7 +579,12 @@ class SliceEvaluator:
                     continue
                 sd = slice_data[slice_name]
                 sd["samples"].append(s)
-                sd["total_duration_sec"] += s.duration_seconds
+                if s.source_type == "video_clip":
+                    sd["video_duration_sec"] += s.duration_seconds
+                    if s.outcome == "FP":
+                        sd["video_false_positive_frames"] += 1
+                elif s.source_type == "test_image" and s.outcome == "FP":
+                    sd["image_false_positive_samples"] += 1
 
                 if s.outcome == "TP":
                     sd["tp"] += 1
@@ -597,10 +609,11 @@ class SliceEvaluator:
                 recall = None
                 recall_str = "N/A (0 pos)"
 
-            # False Alarms Per Hour
-            # Total hours monitored in this slice
-            duration_hours = max(1e-6, sd["total_duration_sec"] / 3600.0)
-            fa_per_hour = sd["fp"] / duration_hours
+            # These are frame-level errors, not distinct incident false alarms.
+            duration_hours = sd["video_duration_sec"] / 3600.0
+            false_positive_frames_per_hour = false_positive_frame_rate(
+                sd["video_false_positive_frames"], duration_hours
+            )
 
             is_insufficient = (n < 30)
 
@@ -608,8 +621,13 @@ class SliceEvaluator:
             # Higher score = weaker performance
             # Combines missed accidents and false alarms
             miss_rate = (1.0 - (recall / 100.0)) if recall is not None else 0.0
-            # Weight: miss_rate * 50 + bounded FA/hr
-            defect_score = (miss_rate * 50.0) + min(50.0, fa_per_hour * 0.1)
+            # Weight: miss rate plus bounded frame-level error penalty.
+            fp_penalty = (
+                min(50.0, false_positive_frames_per_hour * 0.1)
+                if false_positive_frames_per_hour is not None
+                else 0.0
+            )
+            defect_score = (miss_rate * 50.0) + fp_penalty
 
             results[slice_name] = {
                 "slice_name": slice_name,
@@ -623,7 +641,9 @@ class SliceEvaluator:
                 "recall": recall,
                 "recall_str": recall_str,
                 "duration_hours": duration_hours,
-                "fa_per_hour": fa_per_hour,
+                "false_positive_frames_per_hour": false_positive_frames_per_hour,
+                "video_false_positive_frames": sd["video_false_positive_frames"],
+                "image_false_positive_samples": sd["image_false_positive_samples"],
                 "insufficient_data": is_insufficient,
                 "defect_score": defect_score,
                 "samples": sd["samples"],
@@ -858,7 +878,11 @@ def identify_weakest_slices_and_fixes(slice_results: Dict[str, Dict[str, Any]]) 
             "slice_name": s_name,
             "sample_count": s["sample_count"],
             "recall": s["recall_str"],
-            "fa_per_hour": f"{s['fa_per_hour']:.1f}",
+            "false_positive_frames_per_hour": (
+                f"{s['false_positive_frames_per_hour']:.1f}"
+                if s["false_positive_frames_per_hour"] is not None
+                else "N/A"
+            ),
             "insufficient_data": s["insufficient_data"],
             "defect_score": s["defect_score"],
             "fix_category": rec_info["type"],
@@ -873,6 +897,10 @@ def identify_weakest_slices_and_fixes(slice_results: Dict[str, Dict[str, Any]]) 
 # Markdown & JSON Report Generators
 # -----------------------------------------------------------------------------
 
+def _format_rate(value: float | None) -> str:
+    return "N/A" if value is None else f"{value:.1f}"
+
+
 def generate_markdown_report(
     slice_results: Dict[str, Dict[str, Any]],
     ranked_weakest: List[Dict[str, Any]],
@@ -883,7 +911,9 @@ def generate_markdown_report(
     """Writes the comprehensive slice evaluation report in Markdown format."""
     md_lines = [
         "# Automated CCTV Accident Detection System (ACS)",
-        "# Production Model Slice Analysis & Failure Modes Report",
+        "# PRELIMINARY / UNVERIFIED — Candidate Model Slice Analysis",
+        "",
+        "> This legacy report is not the authoritative same-run evaluation. Use `python -m ml.eval.run_all`; historical metrics are not promotion evidence.",
         "",
         f"**Evaluated Model**: `{model_path}`  ",
         "**Evaluation Datasets**: Merged Test Split (`ml/data/merged/images/test`) + Video Evaluation Suite (`ml/data/video_eval/`)  ",
@@ -896,7 +926,7 @@ def generate_markdown_report(
         "",
         "This evaluation dissects the operational failure modes of the production model across five critical real-world dimensions: **object size/distance**, **lighting/weather**, **camera angle**, **video quality**, and **crowd density**.",
         "",
-        "| Slice Dimension | Slice Category | Samples ($N$) | Data Status | Accident Recall | False Alarms / Hour | Defect Score |",
+        "| Slice Dimension | Slice Category | Samples ($N$) | Data Status | Accident Recall | False-positive frames / video-hour | Defect Score |",
         "| :--- | :--- | :---: | :---: | :---: | :---: | :---: |",
     ]
 
@@ -918,7 +948,7 @@ def generate_markdown_report(
         for s in matched:
             data_badge = "✅ Sufficient ($N \\ge 30$)" if not s["insufficient_data"] else "⚠️ **Insufficient Data** ($N < 30$)"
             md_lines.append(
-                f"| **{dim_title}** | `{s['slice_name']}` | {s['sample_count']} | {data_badge} | {s['recall_str']} | **{s['fa_per_hour']:.1f} FA/hr** | {s['defect_score']:.1f} |"
+                f"| **{dim_title}** | `{s['slice_name']}` | {s['sample_count']} | {data_badge} | {s['recall_str']} | **{_format_rate(s['false_positive_frames_per_hour'])} FP frames/hr** | {s['defect_score']:.1f} |"
             )
 
     md_lines.extend([
@@ -950,7 +980,7 @@ def generate_markdown_report(
             f"### #{w['rank']} Weakest Slice: `{w['slice_name']}`{insuf_note}",
             f"- **Sample Count ($N$)**: {w['sample_count']}",
             f"- **Accident Recall**: {w['recall']}",
-            f"- **False Alarm Rate**: **{w['fa_per_hour']} FA/hr**",
+            f"- **False-positive frames per video-hour**: **{w['false_positive_frames_per_hour']} FP frames/hr** (not incident false alarms)",
             f"- **Fix Category**: **{w['fix_category']}**",
             f"- **Recommended Engineering Fix**:  \n  {w['recommended_fix']}",
             "",
@@ -976,7 +1006,7 @@ def generate_markdown_report(
 # Main CLI Entry Point
 # -----------------------------------------------------------------------------
 
-def main():
+def _legacy_main():
     parser = argparse.ArgumentParser(description="ACS Model Slice-Based Error Analysis")
     parser.add_argument("--model", type=str, default="best.pt", help="Path to production YOLO weights")
     parser.add_argument("--test-images-dir", type=str, default="ml/data/merged/images/test", help="Test split images directory")
@@ -1051,7 +1081,9 @@ def main():
                 "fp": v["fp"],
                 "tn": v["tn"],
                 "recall": v["recall"],
-                "fa_per_hour": v["fa_per_hour"],
+                "false_positive_frames_per_hour": v["false_positive_frames_per_hour"],
+                "video_false_positive_frames": v["video_false_positive_frames"],
+                "image_false_positive_samples": v["image_false_positive_samples"],
                 "insufficient_data": v["insufficient_data"],
                 "defect_score": v["defect_score"],
             }
@@ -1066,11 +1098,11 @@ def main():
 
     # 7. Print Console Summary
     print("\n" + "=" * 90)
-    print(f"{'SLICE NAME':<35} | {'N':>5} | {'DATA STATUS':<16} | {'RECALL':>8} | {'FA / HOUR':>12}")
+    print(f"{'SLICE NAME':<35} | {'N':>5} | {'DATA STATUS':<16} | {'RECALL':>8} | {'FP FRAMES/HR':>12}")
     print("-" * 90)
     for s_name, s_data in sorted(slice_results.items()):
         status_str = "SUFFICIENT" if not s_data["insufficient_data"] else "INSUFFICIENT"
-        print(f"{s_name:<35} | {s_data['sample_count']:>5} | {status_str:<16} | {s_data['recall_str']:>8} | {s_data['fa_per_hour']:>10.1f}/hr")
+        print(f"{s_name:<35} | {s_data['sample_count']:>5} | {status_str:<16} | {s_data['recall_str']:>8} | {_format_rate(s_data['false_positive_frames_per_hour']):>10}/hr")
     print("=" * 90)
 
     print("\n" + "=" * 90)
@@ -1079,10 +1111,19 @@ def main():
     for w in ranked_weakest:
         insuf = " [INSUFFICIENT DATA]" if w["insufficient_data"] else ""
         print(f"\n#{w['rank']} {w['slice_name']}{insuf}")
-        print(f"   Samples: {w['sample_count']} | Recall: {w['recall']} | False Alarms: {w['fa_per_hour']} FA/hr")
+        print(
+            f"   Samples: {w['sample_count']} | Recall: {w['recall']} | "
+            f"False-positive frames: {w['false_positive_frames_per_hour']} per video-hour"
+        )
         print(f"   Fix Category: {w['fix_category']}")
         print(f"   Recommended Fix: {w['recommended_fix']}")
     print("=" * 90)
+
+
+def main() -> None:
+    from ml.eval.run_all import main as run_shared_evaluation
+
+    run_shared_evaluation()
 
 
 if __name__ == "__main__":

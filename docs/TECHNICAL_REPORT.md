@@ -3,7 +3,9 @@
 **Authors**: Siddharth Singh & The ACS Engineering Team  
 **Date**: October 2026  
 **Repository**: [github.com/siddharthsingh18/Acs](https://github.com/siddharthsingh18/Acs)  
-**Status**: Production Technical Report & Systems Paper  
+**Status**: Research prototype technical report; quantitative claims are unverified
+
+> **UNVERIFIED REPORT:** Historical recall, false-alarm, latency, and throughput figures conflict with other reports and cannot be reproduced from the current checkout.
 
 ---
 
@@ -13,7 +15,7 @@ Municipal surveillance systems monitor thousands of simultaneous closed-circuit 
 
 In this paper, we present the **Automated CCTV Accident Detection System (ACS)**, an end-to-end, edge-capable architecture that combines high-throughput spatial perception with multimodal verification. ACS integrates a fine-tuned YOLOv11 detector, ByteTrack multi-object tracking, and a temporal debounce state machine ($N \ge 5$ consecutive confident frames) with a secondary verification layer combining a kinematic motion pre-check and Google Gemini multimodal reasoning across chronological keyframes. 
 
-Evaluated across continuous real-world CCTV footage and hard negative streams, ACS achieves **100% incident recall** with an impact detection latency of **3.64 seconds**, while reducing empirical false alarm rates from **133.33 FA/hr to 0.00 FA/hr** (a 100.0% reduction). Running at **43.9 FPS on CPU** and **63.9 FPS on hardware accelerators**, ACS delivers production-grade real-time performance within a human-in-the-loop operational framework adhering to strict privacy and regulatory standards.
+Historical repository reports claim **100% incident recall**, **3.64 seconds** impact-detection latency, a reduction from **133.33 FA/hr to 0.00 FA/hr**, and **43.9 FPS on CPU** / **63.9 FPS on an accelerator**. These figures conflict with other reports and cannot be reproduced from the current checkout; they do not establish production readiness.
 
 ---
 
@@ -31,18 +33,16 @@ ACS addresses these challenges by replacing single-frame classification with a *
 
 ## 2. Dataset Curation, Segregation & Hard Negatives
 
-### 2.1. Unified Multi-Source Curation
-To avoid overfitting to a single camera viewpoint or geographical region, ACS unifies data from multiple prominent benchmark sources into a standardized 9-class schema:
+### 2.1. Historical Multi-Source Curation Claims
+The original report described multiple candidate sources and a legacy class schema. Those dataset claims are unverified because the source files and run artifacts are absent.
 
 - **CADP (Car Accident Detection & Prediction)**: Real CCTV collision footage from urban intersections.
 - **Roboflow Universe CCTV Benchmark**: Multi-angle arterial traffic crash frames.
 - **AITC 2025 Traffic Surveillance**: High-resolution daylight and twilight traffic entities.
 - **HilmanTM Accident Imagery**: Severe urban multi-vehicle impacts.
 
-### 2.2. Standardized 9-Class Taxonomy
-The dataset distinguishes normal traffic entities from designated collision events:
-- **Normal Entities**: `car`, `person`, `bike`
-- **Accident Event Classes**: `car_car_accident`, `car_bike_accident`, `car_person_accident`, `car_object_accident`, `bike_bike_accident`, `bike_person_accident`, `bike_object_accident`.
+### 2.2. Canonical Taxonomy
+The current detection taxonomy is defined in [`ml/configs/classes.yaml`](../ml/configs/classes.yaml): `bike`, `car`, `person`, and `accident`. Accident subtypes are optional incident metadata. The old checkpoint order and its explicit decoder are documented in [`ml/configs/checkpoint_class_mappings.yaml`](../ml/configs/checkpoint_class_mappings.yaml); old per-class results are not directly comparable to the canonical taxonomy.
 
 ### 2.3. Hard Negative Evaluation Suite
 To benchmark false alarm resilience, we curated a dedicated suite of continuous negative traffic videos devoid of collisions:
@@ -167,7 +167,7 @@ The dual-stage architecture completely eliminated false alarms induced by wet pa
 
 ## 5. Hardware Optimization & Latency Benchmarks
 
-Production deployment requires real-time processing ($\ge 15$ FPS) on constrained CPU edge hardware without mandatory high-end GPUs:
+The historical evaluation used a target of real-time processing ($\ge 15$ FPS) on constrained CPU edge hardware:
 
 | Hardware Platform | Execution Runtime | Resolution | Latency per Frame | Processing Throughput | $\ge 15$ FPS Requirement |
 | :--- | :--- | :---: | :---: | :---: | :---: |

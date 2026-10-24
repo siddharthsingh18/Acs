@@ -30,6 +30,7 @@ from PIL import Image
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 import yaml
+from acs.config import CLASS_NAMES
 
 # Perceptual hashing with fallback if imagehash package is not installed
 try:
@@ -693,7 +694,7 @@ def main():
 
     # 1. Load Configurations
     classes_cfg = load_yaml(classes_path)
-    target_classes = classes_cfg.get("classes", [])
+    target_classes = CLASS_NAMES
     print(f"Target Classes ({len(target_classes)}): {target_classes}")
 
     class_map_cfg = load_yaml(class_map_path)

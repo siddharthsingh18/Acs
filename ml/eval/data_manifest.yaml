@@ -1,0 +1,8 @@
+schema_version: 1
+dataset_yaml: ml/data/merged/data.yaml
+source_hash_manifest: ml/data/manifest.sha256
+test_manifest: ml/data/test_manifest.sha256
+video_labels: ml/data/video_eval/labels.csv
+split_policy: camera_scene_grouped
+test_fraction: 0.70
+tuning_fraction: 0.30

@@ -9,33 +9,16 @@ import os
 from typing import List, Optional, Set
 import torch
 from dotenv import load_dotenv
+from acs.taxonomy import class_names, load_classes
 
 # Load environment variables from .env file
 load_dotenv()
 
-# The 9 designated dataset class names
-CLASS_NAMES: List[str] = [
-    "bike_bike_accident",
-    "bike_object_accident",
-    "bike_person_accident",
-    "car",
-    "car_bike_accident",
-    "car_car_accident",
-    "car_object_accident",
-    "car_person_accident",
-    "person",
-]
-
-# Set containing only accident classes; normal traffic ('car', 'person', 'bike') excluded
-ACCIDENT_CLASSES: Set[str] = {
-    "bike_bike_accident",
-    "bike_object_accident",
-    "bike_person_accident",
-    "car_bike_accident",
-    "car_car_accident",
-    "car_object_accident",
-    "car_person_accident",
-}
+_CLASS_RECORDS = load_classes()
+CLASS_NAMES: List[str] = class_names()
+NORMAL_CLASSES: Set[str] = {item["name"] for item in _CLASS_RECORDS if item["group"] == "normal"}
+ACCIDENT_CLASSES: Set[str] = {item["name"] for item in _CLASS_RECORDS if item["group"] == "accident"}
+CLASS_DEFINITIONS = {item["name"]: item["definition"] for item in _CLASS_RECORDS}
 
 
 def auto_detect_device() -> str:

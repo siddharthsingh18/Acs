@@ -38,6 +38,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
+from acs.taxonomy import decode_model_class
 
 # Color palette for contact sheets
 PALETTE = [
@@ -55,16 +56,8 @@ PALETTE = [
 
 # High confidence thresholds per class
 DEFAULT_CONF_THRESHOLDS = {
-    "bike": 0.60,
-    "bike_bike_accident": 0.65,
-    "bike_object_accident": 0.65,
-    "bike_person_accident": 0.65,
-    "car": 0.60,
-    "car_bike_accident": 0.65,
-    "car_car_accident": 0.65,
-    "car_object_accident": 0.65,
-    "car_person_accident": 0.65,
-    "person": 0.60,
+    name: 0.65 if name in ACCIDENT_CLASSES else 0.60
+    for name in CLASS_NAMES
 }
 
 
@@ -102,7 +95,7 @@ def zero_shot_collision_check(
 ) -> bool:
     """
     Zero-shot sanity check for accident labels to eliminate obvious false positives.
-    For accident classes (e.g. car_car_accident), verifies that there is at least
+    For accident detections, verifies that there is at least
     another vehicle/person entity nearby (proximity or partial overlap) indicating a real interaction.
     """
     if cls_name not in ACCIDENT_CLASSES:
@@ -271,7 +264,7 @@ def run_pseudo_labeling(
         if res_orig.boxes is not None and len(res_orig.boxes) > 0:
             for b in res_orig.boxes:
                 cid = int(b.cls[0].item())
-                cname = class_map[cid]
+                cid, cname, _incident_type = decode_model_class(cid, class_map)
                 conf = float(b.conf[0].item())
                 xywh = b.xywhn[0].cpu().numpy()
                 orig_boxes.append((xywh[0], xywh[1], xywh[2], xywh[3], cname, conf, cid))

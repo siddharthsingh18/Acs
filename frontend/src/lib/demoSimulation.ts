@@ -35,7 +35,8 @@ export function runDemoSimulation(callbacks: DemoSimulationCallbacks): () => voi
         callbacks.onIncident({
           type: 'incident',
           incident_id: 'INC-DEMO-2026-001',
-          class_name: 'car_car_accident',
+          class_name: 'accident',
+          incident_type: 'car_car_accident',
           max_confidence: 0.96,
           start_timestamp: new Date().toISOString(),
           end_timestamp: new Date(Date.now() + 2800).toISOString(),
@@ -120,7 +121,8 @@ export function runDemoSimulation(callbacks: DemoSimulationCallbacks): () => voi
         const inc1: StreamIncidentMessage = {
           type: 'incident',
           incident_id: 'INC-DEMO-2026-001',
-          class_name: 'car_car_accident',
+          class_name: 'accident',
+          incident_type: 'car_car_accident',
           max_confidence: 0.96,
           start_timestamp: new Date().toISOString(),
           end_timestamp: new Date(Date.now() + 2800).toISOString(),

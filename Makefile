@@ -1,6 +1,6 @@
 # ==============================================================================
 # Automated CCTV Accident Detection System (ACS)
-# Production Automation Makefile
+# Research Prototype Automation Makefile
 # ==============================================================================
 
 SHELL := /bin/bash
@@ -8,6 +8,7 @@ PYTHON ?= ./venv/bin/python
 PIP ?= ./venv/bin/pip
 PYTEST ?= ./venv/bin/pytest
 NPM ?= npm
+DUPLICATE_ENCODER ?= ml/models/clip_dinov2_encoder.pt
 
 .PHONY: help setup install data audit train eval eval-verification tune promote test test-unit test-e2e clean
 
@@ -20,9 +21,9 @@ help:
 	@echo "  make data        - Fetch supplemental datasets and build merged split dataset"
 	@echo "  make audit       - Audit dataset integrity, bounding boxes, and leakage"
 	@echo "  make train       - Train model using the 2-phase fine-tuning recipe (Exp A)"
-	@echo "  make eval        - Evaluate baseline & candidate models on TEST split + holdout video"
+	@echo "  make eval        - Generate provenance-stamped same-run evaluation reports"
 	@echo "  make eval-verification - Evaluate incident-level verifier (YOLO vs Verified)"
-	@echo "  make tune        - Run threshold, debounce, and overlap grid-search on tuning suite"
+	@echo "  make tune        - Run the shared evaluation pipeline (blocked without tuning clips)"
 	@echo "  make promote     - Execute model promotion gate check against baseline"
 	@echo "  make test        - Run full test suite (pytest unit tests + Playwright smoke test)"
 	@echo "  make test-unit   - Run all pytest unit tests (backend, detector, event manager)"
@@ -41,11 +42,10 @@ setup:
 install: setup
 
 data:
-	@echo "Running dataset acquisition and synthesis pipeline..."
-	$(PYTHON) ml/scripts/fetch_supplemental_data.py
-	$(PYTHON) ml/scripts/inject_hard_negatives.py
-	$(PYTHON) ml/scripts/build_dataset.py
-	$(PYTHON) ml/scripts/audit_dataset.py
+	@echo "Fetching only license-cleared, checksum-pinned datasets and rebuilding derived data..."
+	$(PYTHON) ml/scripts/fetch_data.py
+	$(PYTHON) ml/scripts/rebuild_dataset.py --embedding-model "$(DUPLICATE_ENCODER)"
+	$(PYTHON) ml/scripts/review_labels.py
 
 audit:
 	@echo "Auditing merged dataset..."
@@ -56,16 +56,16 @@ train:
 	$(PYTHON) ml/scripts/train.py --experiment exp_a
 
 eval:
-	@echo "Running model benchmark on test split and holdout video..."
-	$(PYTHON) ml/scripts/evaluate_all.py --split test --video acc_ex.mp4
+	@echo "Generating same-run reports; this fails closed when data/evaluation evidence is missing..."
+	$(PYTHON) -m ml.eval.run_all --model best.pt --data-manifest ml/eval/data_manifest.yaml
 
 eval-verification:
 	@echo "Running incident-level verification stage evaluation..."
 	$(PYTHON) ml/scripts/eval_verification.py
 
 tune:
-	@echo "Running threshold and event manager grid-search tuning..."
-	$(PYTHON) ml/scripts/tune_thresholds.py --target-fa-per-hour 0.25
+	@echo "Threshold tuning is owned by the shared evaluation run; no frozen tuning clips are available yet..."
+	$(PYTHON) -m ml.eval.run_all --model best.pt --data-manifest ml/eval/data_manifest.yaml
 
 promote:
 	@echo "Running automated promotion gate pipeline..."

@@ -1,0 +1,22 @@
+# Dataset licenses and use clearance
+
+No source in this checkout is currently cleared for download or model training. Entries below are disabled in `ml/configs/data_sources.yaml`. A license label copied from earlier project notes is not evidence of the terms for the exact dataset version; obtain and retain the source terms before enabling a source.
+
+| Source | License / terms known | Redistribution allowed | Model training allowed | Attribution text / status |
+|---|---|---|---|---|
+| AITC 2025 Traffic Object Detection (`aitc2025/hossein-2`, v4) | Private/custom, as recorded in repository notes; written terms absent | No, not cleared | No, not cleared | Provisional identification: “AITC 2025 Traffic Object Detection, Roboflow project `aitc2025/hossein-2`, version 4.” Obtain the owner's exact attribution and permission. |
+| HilmanTM Traffic Accident Detection (`hilmantm/traffic-accident-detection`, v1) | CC BY 4.0 reported in repository notes; exact version terms not verified | No, pending verification | No, pending verification and label re-audit | Provisional identification: “HilmanTM Traffic Accident Detection, Roboflow Universe, version 1.” Include the verified creator, source URL, license link, and change notice if permission is confirmed. |
+| Justjuu CCTV Accident Detection (`justjuu/traffic-accident-cctv-object-detection`) | CC0 1.0 reported in repository notes; not independently verified | No, not cleared; excluded for quality | No, excluded for duplicate/leaked and heterogeneous labels | Provisional identification: “Traffic Accident CCTV Object Detection, Hugging Face dataset `justjuu/traffic-accident-cctv-object-detection`.” |
+| On-the-Roads Traffic Accident (`on-the-roads/traffic-accident-vrvx6`, v2) | Public domain reported in repository notes; exact version terms not verified | No, not cleared; excluded for quality | No, not cleared; excluded for low volume/coarse labels | Provisional identification: “On-the-Roads Traffic Accident, Roboflow Universe, version 2.” |
+| CADP CCTV frames (`yassine-pzpt7/cadp`, v1 export) | Academic/non-commercial terms reported; primary terms and extraction rights absent | No, not cleared | No, not cleared for this use | Provisional identification: “Car Accident Detection and Prediction (CADP); extracted CCTV frames via Roboflow project `yassine-pzpt7/cadp`, version 1.” Verify the original CADP citation and export license. |
+| CCTV Accident Frames (`vehicle-accident-frame-by-frame/traffic-accident-nwmqo`, v5) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+| Car Flip/Object (`latifa-fuirj/car-accident-jp29y`, v1) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+| Motorcycle Accident (`deep-learning-xnbnl/accident-vcudo`, v17) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+| Pedestrian Accident (`sliit-kpo3y/pedestrian-accident-detection`, v3) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+| CCTV Non-Accident (`tammy/cctv-non-accident`, v2) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+| Rain Traffic (`weather-xduis/rain-kdcqi`, v1) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+| Traffic Night (`univ-kqors/traffic-night`, v1) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+| Traffic Jam (`ballplayground/traffic-jam-ksie2`, v3) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+| Parked Cars (`jonathans-workspace-7jpdf/wrong-parked`, v2) | Unknown | No, not cleared | No, not cleared | Provisional identification: Roboflow project and version; required attribution unknown. |
+
+Do not set a source to `enabled: true` until its exact license/terms, redistribution permission, training permission, attribution text, expected archive file count, and archive SHA256 have all been verified. Excluded sources remain excluded even if their license is permissive unless their quality issues are separately resolved.

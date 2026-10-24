@@ -52,6 +52,11 @@ export const IncidentsPage: React.FC = () => {
   // Drawer inspection state
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
 
+  const { data: systemConfig } = useQuery({
+    queryKey: ['config'],
+    queryFn: () => api.getConfig(),
+  })
+
   // Derive sort_by and order for API query
   const sortBy = sorting[0]?.id || 'created_at'
   const sortOrder = sorting[0]?.desc ? 'desc' : 'asc'
@@ -222,12 +227,17 @@ export const IncidentsPage: React.FC = () => {
             </button>
           )
         },
-        cell: ({ getValue }) => {
+        cell: ({ getValue, row }) => {
           const raw = getValue<string>()
           return (
-            <span className="font-semibold text-foreground text-xs whitespace-nowrap">
-              {t(`classes.${raw}`, raw)}
-            </span>
+            <div className="font-semibold text-foreground text-xs whitespace-nowrap">
+              <span>{t(`classes.${raw}`, raw)}</span>
+              {row.original.incident_type && (
+                <span className="block text-[10px] text-muted-foreground">
+                  {t(`classes.${row.original.incident_type}`, row.original.incident_type)}
+                </span>
+              )}
+            </div>
           )
         },
       },
@@ -427,13 +437,11 @@ export const IncidentsPage: React.FC = () => {
               className="px-3 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="">{t('incidents.all_classes')}</option>
-              <option value="car_car_accident">{t('classes.car_car_accident')}</option>
-              <option value="bike_bike_accident">{t('classes.bike_bike_accident')}</option>
-              <option value="car_bike_accident">{t('classes.car_bike_accident')}</option>
-              <option value="car_person_accident">{t('classes.car_person_accident')}</option>
-              <option value="bike_person_accident">{t('classes.bike_person_accident')}</option>
-              <option value="car_object_accident">{t('classes.car_object_accident')}</option>
-              <option value="accident">{t('classes.accident')}</option>
+              {systemConfig?.classes.map((classInfo) => (
+                <option key={classInfo.id} value={classInfo.name}>
+                  {t(`classes.${classInfo.name}`, classInfo.name)}
+                </option>
+              ))}
             </select>
 
             {/* Severity Filter */}

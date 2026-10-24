@@ -1,5 +1,7 @@
 # Teacher Model Fine-Tuning Metrics (YOLO11m)
 
+> **UNVERIFIED:** The per-class metrics and split counts cannot be reproduced because the teacher checkpoint, dataset, and raw validation artifacts are absent; the report also uses the legacy 10-class taxonomy.
+
 - **Evaluated Model**: `YOLO11m (Teacher)` (20,060,718 parameters)
 - **Checkpoint Path**: `models/teacher_yolo11m.pt`
 - **Dataset Evaluated**: `ml/data/merged/data.yaml` (FROZEN TEST split, 417 images)

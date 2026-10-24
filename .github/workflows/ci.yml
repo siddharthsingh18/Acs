@@ -43,6 +43,14 @@ jobs:
         run: |
           pytest -v
 
+      - name: Verify latest evaluation report hashes
+        run: |
+          python -m ml.eval.check_report_headers
+
+      - name: Verify frozen test split
+        run: |
+          python -m ml.scripts.verify_test_manifest
+
   frontend-quality-and-tests:
     name: Frontend (ESLint, TSC, Vitest & Playwright)
     runs-on: ubuntu-latest

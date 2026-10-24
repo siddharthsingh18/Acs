@@ -25,10 +25,13 @@ class DeviceInfo(BaseModel):
 
 
 class ClassItem(BaseModel):
-    """Model class item with localized translation and collision designation."""
+    """Canonical taxonomy class with localized display name."""
 
-    name: str = Field(description="Raw class label name in YOLO model")
+    id: int = Field(description="Canonical contiguous class ID")
+    name: str = Field(description="Canonical class label name")
     name_ar: str = Field(description="Localized Arabic class name")
+    group: str = Field(description="Taxonomy group: accident or normal")
+    definition: str = Field(description="One-line annotation definition")
     is_accident: bool = Field(
         description="True if designated as an accident class, False for normal traffic"
     )
@@ -137,6 +140,7 @@ class IncidentItem(BaseModel):
 
     incident_id: str
     class_name: str
+    incident_type: Optional[str] = None
     max_confidence: float
     start_timestamp: str
     end_timestamp: str
@@ -174,6 +178,7 @@ class IncidentResponse(BaseModel):
     start_timestamp: str
     end_timestamp: str
     class_name: str
+    incident_type: Optional[str] = None
     max_confidence: float
     image_path: str
     keyframe_url: str
@@ -287,6 +292,7 @@ class ReviewQueueItem(BaseModel):
 
     incident_id: str
     class_name: str
+    incident_type: Optional[str] = None
     max_confidence: float
     image_path: str
     keyframe_url: str
@@ -580,8 +586,6 @@ class AuditLogListResponse(BaseModel):
     total: int = Field(description="Total matching audit records")
     skip: int = Field(description="Pagination offset")
     limit: int = Field(description="Pagination limit")
-
-
 
 
 

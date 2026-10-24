@@ -1,7 +1,9 @@
 # Automated CCTV Accident Detection System (ACS)
 ## Multi-Dataset Audit & Label Quality Report
 
-**Execution Date**: 2026-10-18 03:48:29  
+> **UNVERIFIED:** Dataset counts, class mapping, and leakage/quality findings cannot be reproduced because the source datasets and generated audit artifacts are absent. This report also describes the former 10-class schema.
+
+**Execution Date**: 2026-10-18 03:48:29
 **Audit Script**: `ml/scripts/audit_dataset.py`  
 **Class Map File**: `ml/configs/class_map.yaml`
 

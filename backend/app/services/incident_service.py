@@ -106,6 +106,7 @@ def save_incident_to_db(
     class_name: str,
     max_confidence: float,
     image_path: str,
+    incident_type: Optional[str] = None,
     duration: float = 0.0,
     status: str = "pending",
     verification_status: Optional[str] = None,
@@ -142,6 +143,8 @@ def save_incident_to_db(
         existing = s.exec(select(Incident).where(Incident.incident_id == incident_id)).first()
         if existing:
             existing.end_timestamp = end_timestamp
+            if incident_type is not None:
+                existing.incident_type = incident_type
             existing.max_confidence = max(existing.max_confidence, max_confidence)
             existing.duration = max(existing.duration, duration)
             if camera_id is not None:
@@ -181,6 +184,7 @@ def save_incident_to_db(
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
             class_name=class_name,
+            incident_type=incident_type,
             max_confidence=max_confidence,
             image_path=image_path,
             keyframe_url=kf_url,

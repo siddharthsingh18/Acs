@@ -1,7 +1,9 @@
 # Automated CCTV Accident Detection System (ACS)
 ## Master Model Evaluation & Comparative Benchmark Report
 
-**Evaluation Timestamp**: 2026-10-18 06:41:57  
+> **UNVERIFIED:** Reported mAP, recall, and false-alarm values conflict with other reports and cannot be reproduced without the missing dataset, clips, and raw run artifacts.
+
+**Evaluation Timestamp**: 2026-10-18 06:41:57
 **Evaluated Split**: ⚠️ `TEST` Split ONLY (`ml/data/merged/data.yaml` split='test' — Never `val`)  
 **Holdout Video**: `acc_ex.mp4` (192 frames, strictly excluded from all training and hyperparameter tuning)  
 **Hardware Environment**: CPU Inference + Hardware Acceleration (`MPS`)  

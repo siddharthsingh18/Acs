@@ -1,0 +1,17 @@
+version: 1
+thresholds_approved: false
+approval_note: "Suggested defaults only; require user confirmation before production promotion."
+defaults:
+  accident_macro_map50_lower_bound: 0.50
+  incident_recall_lower_bound: 0.80
+  false_alarms_per_camera_hour_upper_bound: 0.25
+  minimum_test_events: 40
+  minimum_test_cameras_or_scenes: 15
+  minimum_accident_free_camera_hours: 20
+  maximum_robustness_drop: 0.10
+  minimum_accident_ground_truth_boxes_per_class: 30
+confidence_level: 0.95
+interval_methods:
+  recall: exact_two_sided_clopper_pearson
+  false_alarms: exact_one_sided_poisson
+  other_camera_level_metrics: camera_scene_cluster_bootstrap

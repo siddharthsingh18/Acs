@@ -25,6 +25,8 @@ from typing import Any, Dict, List
 import cv2
 import numpy as np
 from ultralytics import YOLO
+from acs.config import CLASS_NAMES
+from acs.taxonomy import decode_model_class
 import yaml
 
 # Consistent color palette for drawing annotations (BGR format)
@@ -135,7 +137,7 @@ def run_auto_labeling(
 ):
     """Executes model inference on candidate video frames and generates pre-labels + contact sheets."""
     classes_cfg = load_yaml(classes_path)
-    target_classes = classes_cfg.get("classes", [])
+    target_classes = CLASS_NAMES
     target_names = {i: name for i, name in enumerate(target_classes)}
 
     print(f"Loading baseline detector from {model_path}...")
@@ -180,7 +182,7 @@ def run_auto_labeling(
         for box in results.boxes:
             cid = int(box.cls[0])
             conf = float(box.conf[0])
-            cname = target_names.get(cid, model.names.get(cid, f"ID_{cid}"))
+            cid, cname, _ = decode_model_class(cid, model.names)
 
             xywhn = box.xywhn[0].cpu().numpy()
             xc, yc, bw, bh = float(xywhn[0]), float(xywhn[1]), float(xywhn[2]), float(xywhn[3])
@@ -314,7 +316,7 @@ def generate_contact_sheet_report(
     lines.append("1. **Review each Contact Sheet**: Open the image file for each class under `ml/reports/contact_sheets/`.")
     lines.append("2. **Verification Criteria**:")
     lines.append("   - Confirm the bounding box accurately encloses the collision event (not merely unaffected background cars).")
-    lines.append("   - Verify that collision subtype matches the class definition (e.g., `car_car_accident` shows vehicle impact, `car_object_accident` shows vehicle impact with guardrail/tree/barrier).")
+    lines.append("   - Verify that the four-class label is `accident` only for a visible collision/impact; record a known subtype separately as optional metadata.")
     lines.append("3. **Promotion to Training**: Only after visual spot-check approval should high-precision candidate clusters be promoted to `ml/data/merged/images/train/`.\n")
 
     with open(report_path, "w", encoding="utf-8") as f:

@@ -16,6 +16,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from acs.config import config, ACCIDENT_CLASSES
+from acs.taxonomy import decode_model_class
 
 @dataclass
 class DetectionBox:
@@ -27,6 +28,7 @@ class DetectionBox:
     class_name: str
     is_accident: bool
     track_id: Optional[int] = None
+    incident_type: Optional[str] = None
 
 
 # Optional resolution-enhancement helpers (SAHI tiles + ROI crop)
@@ -58,6 +60,7 @@ class AccidentIncident:
     image_path: str
     start_time: float
     end_time: float
+    incident_type: Optional[str] = None
     keyframe: Optional[np.ndarray] = None
     last_accident_time: Optional[float] = None
     verification_status: str = "unverified"
@@ -336,7 +339,7 @@ class AccidentDetector:
             for box in boxes:
                 class_id = int(box.cls[0].item())
                 confidence = float(box.conf[0].item())
-                class_name = self.primary_model.names.get(class_id, f"class_{class_id}")
+                class_id, class_name, incident_type = decode_model_class(class_id, self.primary_model.names)
                 is_accident = class_name.lower().strip() in self.accident_classes
 
                 track_id: Optional[int] = None
@@ -351,6 +354,7 @@ class AccidentDetector:
                     class_name=class_name,
                     is_accident=is_accident,
                     track_id=track_id,
+                    incident_type=incident_type,
                 )
 
                 if is_accident:
@@ -669,6 +673,7 @@ class AccidentEventManager:
         self.current_start_time: Optional[float] = None
         self.current_start_ts: Optional[str] = None
         self.current_class_name: str = ""
+        self.current_incident_type: Optional[str] = None
         self.current_max_confidence: float = 0.0
         self.current_keyframe: Optional[np.ndarray] = None
         self.last_accident_time: Optional[float] = None
@@ -796,6 +801,7 @@ class AccidentEventManager:
                 if best_box.confidence > self.current_max_confidence:
                     self.current_max_confidence = best_box.confidence
                     self.current_class_name = best_box.class_name
+                    self.current_incident_type = best_box.incident_type
                     self.current_keyframe = frame_copy
                     self._active_peak_idx = len(self._active_incident_history) - 1
             else:
@@ -823,12 +829,14 @@ class AccidentEventManager:
                         self.current_start_ts = self._format_timestamp(current_time)
                         self.current_max_confidence = best_box.confidence
                         self.current_class_name = best_box.class_name
+                        self.current_incident_type = best_box.incident_type
                         self.current_keyframe = frame_copy
                         self._active_peak_idx = 0
                     else:
                         if best_box.confidence > self.current_max_confidence:
                             self.current_max_confidence = best_box.confidence
                             self.current_class_name = best_box.class_name
+                            self.current_incident_type = best_box.incident_type
                             self.current_keyframe = frame_copy
                             self._active_peak_idx = len(self._active_incident_history) - 1
 
@@ -875,6 +883,7 @@ class AccidentEventManager:
                     self.current_start_time = None
                     self.current_start_ts = None
                     self.current_class_name = ""
+                    self.current_incident_type = None
                     self.current_max_confidence = 0.0
                     self.current_keyframe = None
                     self.last_accident_time = None
@@ -960,6 +969,7 @@ class AccidentEventManager:
             start_timestamp=start_ts,
             end_timestamp=end_ts,
             class_name=self.current_class_name or "accident",
+            incident_type=self.current_incident_type,
             max_confidence=self.current_max_confidence,
             image_path=image_path,
             start_time=start_time,
@@ -1026,6 +1036,7 @@ class AccidentEventManager:
         self.current_start_time = None
         self.current_start_ts = None
         self.current_class_name = ""
+        self.current_incident_type = None
         self.current_max_confidence = 0.0
         self.current_keyframe = None
         self.last_accident_time = None
@@ -1115,6 +1126,7 @@ class AccidentEventManager:
             start_timestamp=self.current_start_ts or self._format_timestamp(start_time),
             end_timestamp=self._format_timestamp(self.last_accident_time or start_time),
             class_name=self.current_class_name or "accident",
+            incident_type=self.current_incident_type,
             max_confidence=self.current_max_confidence,
             image_path=image_path,
             start_time=start_time,
@@ -1139,4 +1151,3 @@ class AccidentEventManager:
         self.incidents.clear()
         self._active_incident_history.clear()
         self._active_peak_idx = 0
-

@@ -66,7 +66,7 @@ def is_placeholder_secret(value: Optional[str]) -> bool:
 
 def get_jwt_secret_key() -> str:
     """Retrieves JWT secret key from environment, with validation."""
-    key = os.getenv("JWT_SECRET_KEY")
+    key = os.getenv("JWT_SECRET_KEY") or os.getenv("SECRET_KEY")
     is_prod = (
         os.getenv("ENVIRONMENT", "").lower() in ("production", "prod")
         or os.getenv("STRICT_SECRETS", "").lower() in ("true", "1")

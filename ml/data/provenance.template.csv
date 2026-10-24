@@ -1,0 +1,3 @@
+relative_path,source_id,video_id,camera_id,scene_id
+# Add exactly one row per source image. Paths are relative to ml/data/raw.
+# At least one of video_id, camera_id, or scene_id must identify its acquisition group.

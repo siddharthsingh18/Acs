@@ -6,14 +6,22 @@
 [![Node 20](https://img.shields.io/badge/Frontend-Vite_React_19-cyan.svg)](frontend/)
 [![Model Card](https://img.shields.io/badge/Model_Card-YOLO11n-orange.svg)](MODEL_CARD.md)
 
-An enterprise-grade, edge-capable Computer Vision and Multimodal AI surveillance platform designed for real-time vehicular collision detection, temporal debounce tracking, automated VLM verification, and human-in-the-loop emergency dispatch across municipal camera networks.
+A research prototype for exploring CCTV traffic-object detection, temporal event logic, optional multimodal verification, and human-reviewed incident triage.
+
+## Status and limitations
+
+- **Status:** Research prototype; not approved for emergency dispatch or unsupervised operational use.
+- **Current reproducible evaluation scope:** 0 verified test clips and 0 camera-hours. The historical claim of 8 clips and 38.86 seconds is **UNVERIFIED** because its source clips and raw run artifacts are absent.
+- **Accident-class mAP is currently unreliable.** The reports conflict, the legacy checkpoint uses a different class order/taxonomy, and the dataset is unavailable for reproduction.
+- **Decision support only. A human must verify every alert** before any operational action.
+- No field camera-hours, unique scenes, or unique camera counts can be established from the files currently present.
 
 ---
 
 ### Quick Links & Documentation
-- 📄 **[Technical Paper & Evaluation Report](docs/TECHNICAL_REPORT.md)**: Problem formulation, dataset curation, incident-level evaluation with 95% bootstrap CIs, 0.00 FA/hr elimination, and ethics.
+- 📄 **[Technical Paper & Evaluation Report](docs/TECHNICAL_REPORT.md)**: Research prototype design and historical evaluation claims (unverified).
 - 🎛️ **[System Architecture & Mermaid Diagrams](docs/ARCHITECTURE.md)**: End-to-end perception pipeline, tri-state verification matrix, escalation state machines, and edge-to-cloud topology.
-- 📋 **[Model Card (YOLO11n Baseline)](MODEL_CARD.md)**: Intended use, class definitions, test split benchmarks, hardware latencies, and candidate evaluation.
+- 📋 **[Model Card](MODEL_CARD.md)**: Generated promotion status, current evaluation scope, and decision-support limitations.
 - ⚠️ **[Operational Boundaries & Limitations](docs/LIMITATIONS.md)**: Tested camera mounting heights, depression angles, lighting conditions, weather limits, and human-in-the-loop mandate.
 - 🔒 **[Security Policy](SECURITY.md)**: Coordinated vulnerability disclosure, zero-trust secrets, RBAC, PII redaction, and alert storm protection.
 - 🚀 **[Public Demo Deployment Guide](#public-demo-deployment-flyio-railway-vps)**: One-command deploy to Fly.io, Railway, or VPS in safe demo-only mode.
@@ -39,19 +47,19 @@ An enterprise-grade, edge-capable Computer Vision and Multimodal AI surveillance
 ```text
 ├── Makefile                     # End-to-end automation pipeline (data, train, eval, tune, test)
 ├── models/
-│   ├── best.pt                  # Production YOLO11n weights (Baseline Anchor)
+│   ├── best.pt                  # Legacy YOLO11n research checkpoint
 │   ├── best.onnx                # Exported ONNX runtime weights
 │   ├── MODEL_CARD.md            # Formal model card (architecture, metrics, limitations)
 │   └── archive/                 # Archived candidate & legacy checkpoints
 ├── ml/
-│   ├── data/
-│   │   ├── merged/              # Merged CCTV dataset (train: 2338, val: 417, test: 417)
-│   │   └── video_eval/          # Video clips (tuning/ vs untouched test/)
+│   ├── configs/
+│   │   └── classes.yaml         # Canonical four-class detection taxonomy
+│   ├── data/                    # Not present; fetched only from approved manifest entries
 │   ├── scripts/
 │   │   ├── build_dataset.py     # Dataset merger & class unification
 │   │   ├── audit_dataset.py     # Leakage & bounding box auditor
 │   │   ├── train.py             # Two-phase transfer learning fine-tuning recipe
-│   │   ├── evaluate_all.py      # Test split benchmark with 200 bootstrap CIs
+│   │   ├── run_all.py           # Same-run, hash-stamped evaluation reports
 │   │   ├── tune_thresholds.py   # Event manager & threshold grid search
 │   │   ├── eval_verification.py # Incident-level verifier evaluation (YOLO vs Verified)
 │   │   └── promote.py           # Automated promotion gatekeeper
@@ -66,18 +74,14 @@ An enterprise-grade, edge-capable Computer Vision and Multimodal AI surveillance
 ├── frontend/                    # Vite + React real-time CCTV operations dashboard
 ├── tests/                       # Unit tests for backend, detector, event manager, and verifier
 └── app.py                       # Streamlit fallback interface
-```React real-time CCTV operations dashboard
-├── tests/                       # Unit tests for backend, detector, and event manager
-└── app.py                       # Streamlit fallback interface
 ```
-
 ## Model
 
-The Automated CCTV Accident Detection System (ACS) uses a fine-tuned Ultralytics **YOLO11n** architecture coupled with an event-driven temporal manager (`AccidentEventManager`) for real-time edge inference and automated emergency triage.
+The current runtime taxonomy is maintained in [`ml/configs/classes.yaml`](ml/configs/classes.yaml): `bike`, `car`, `person`, and `accident`. Legacy incident subtype is optional metadata. The existing YOLO checkpoint uses a different 10-class order; that explicit mapping is documented in [`ml/configs/checkpoint_class_mappings.yaml`](ml/configs/checkpoint_class_mappings.yaml) and must not be confused with a four-class trained checkpoint.
 
 ### 1. Dataset & Licensing
 
-The model was trained and evaluated on a unified, multi-source CCTV surveillance dataset aggregating public, academic, and curated benchmarking streams:
+Historical dataset claims below are retained for audit and are **UNVERIFIED**. The data is absent from this checkout, source rights are not cleared, and the old 10-class dataset description is not the canonical taxonomy:
 
 | Dataset / Source | Scope / Content | Annotation Format | Split (Train / Val / Test) | License / Terms |
 | :--- | :--- | :--- | :---: | :--- |
@@ -88,7 +92,7 @@ The model was trained and evaluated on a unified, multi-source CCTV surveillance
 | **Hard Negative CCTV Suite** | Wet asphalt rain reflections, night traffic glare, parking jams | Negative Traffic (Non-incident) | Curated Video Benchmark | Curated ACS Benchmarking Suite |
 | **Total Merged Dataset** | **Unified multi-class traffic & accident dataset** | **YOLO format (10 classes)** | **2,338 / 417 / 417 (3,172 total)** | **Multi-license (see individual sources)** |
 
-In addition to static frames, temporal event evaluation is performed on **8 continuous CCTV video clips** (649 frames total) strictly segregated into tuning clips (`ml/data/video_eval/tuning/`) and untouched holdout test clips (`ml/data/video_eval/test/`).
+Historical temporal-evaluation claims cite **8 clips** but conflict on total frame count: this README says 649 while the threshold report's per-clip counts sum to 841. The clips are absent, so both frame and duration totals remain unverified.
 
 ### 2. Training Recipe
 
@@ -109,11 +113,13 @@ The detection backbone employs a two-phase transfer learning recipe engineered t
 
 ### 3. Results & Comparative Benchmark
 
+> **UNVERIFIED historical results:** The following table reproduces old report claims only. The dataset, clips, and raw run outputs are absent, and the numbers conflict with other reports. They are not promotion evidence.
+
 Performance is evaluated strictly on the segregated **TEST split** (`ml/data/merged/data.yaml` split='test' — never val) with **200-iteration non-parametric bootstrap resampling** (image-level resampling with replacement, 95% confidence intervals) to mathematically verify whether candidate improvements are statistically significant or within experimental noise:
 
 | Model Checkpoint | Role | Test mAP50 (All) | Accident Macro mAP50 | Bootstrap 95% CI (Accident mAP50) | Statistical Significance vs Baseline | Holdout Crash Recall | Negative False Alarms | CPU FPS | MPS Accel FPS | Promotion Verdict |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`best.pt` (`best_v0.pt`)** | 👑 **Baseline** | **12.53%** | **0.00%**\* | **Baseline Anchor** | **Baseline Anchor** | **100.0%** (91.1% peak conf) | **0 (0.00 FA/hr)** | **43.9** | **63.9** | ✅ **RETAINED AS PRODUCTION** |
+| **`best.pt` (`best_v0.pt`)** | Legacy checkpoint | **12.53%** | **0.00%**\* | **Baseline Anchor** | **Baseline Anchor** | **100.0%** (91.1% peak conf) | **0 (0.00 FA/hr)** | **43.9** | **63.9** | **UNVERIFIED historical claim** |
 | `exp_a_yolo11n_phase1.pt` | Candidate | 47.77% | 0.00% | `[+0.00%, +0.00%]` | ⚠️ **WITHIN NOISE** | 0% (Missed Crash) | 0 | 20.8 | 64.4 | ❌ Rejected (Missed crash & within noise) |
 | `exp_a_yolo11n_twophase.pt` | Candidate | 56.98% | 0.00% | `[+0.00%, +0.00%]` | ⚠️ **WITHIN NOISE** | 0% (Missed Crash) | 0 | 20.6 | 65.0 | ❌ Rejected (Missed crash & within noise) |
 | `trained_yolo_model.pt` | Legacy | 19.35% | 5.01% | Regression on normal classes | Mixed | 100.0% (94.0% conf) | 61 FA frames | 46.4 | 64.1 | ❌ Rejected (Severe false alarm burst) |
@@ -121,7 +127,7 @@ Performance is evaluated strictly on the segregated **TEST split** (`ml/data/mer
 
 *\*Note on Accident Macro mAP50: In the merged test split, ground-truth annotations for non-bike accident classes are zero due to dataset mapping protocols; therefore, test-split accident mAP50 gains are mathematically bounded at 0.00% and strictly within noise. Real-world accident discrimination is validated on continuous video footage.*
 
-**Promotion Gate Outcome**: Baseline `best.pt` was strictly retained for production deployment. While candidate models improved general car/bike detection on static frames, they suffered catastrophic false negatives on genuine collision footage (0% recall on `test_holdout_acc_ex.mp4`). Baseline `best.pt` reliably identifies impact onset at Frame 109 with 91.12% peak confidence while maintaining 0.00 FA/hr on negative traffic streams.
+**Historical promotion claim (UNVERIFIED):** The old report states that baseline `best.pt` was retained. This checkout cannot reproduce that outcome or establish that promotion gates pass.
 
 ### 4. Incident-Level Temporal Metrics
 
@@ -192,7 +198,7 @@ graph TD
 1. **Camera Angles & Perspective Distortion**: The model is calibrated for elevated, stationary overhead CCTV surveillance cameras (15°–45° downward tilt). Extreme low-angle oblique perspectives or mobile/dashcam footage with high ego-motion degrade detection geometry and tracking stability.
 2. **Night Headlight Glare**: Direct high-beam headlights facing the CCTV lens in unlit night environments can cause transient 1-frame detection spikes (suppressed by temporal debounce $N \ge 4$).
 3. **Small & Distant Objects**: Vehicles or pedestrians occupying fewer than $32 \times 32$ pixels (e.g., at far camera horizons or on low-resolution analog feeds) have significantly reduced recall.
-4. **Limited Video Evaluation Sample Size**: Automated temporal evaluation was validated across **8 curated video clips** (649 frames total) covering day, night, rain, traffic jam, and crash conditions. Production deployment across extensive multi-camera networks requires continuous site-specific calibration.
+4. **Limited Video Evaluation Sample Size**: Historical reports cite **8 clips** but conflict on frame totals (649 in this README versus 841 from the threshold report's per-clip counts). The clips are missing; scope and results are unverified. No production deployment claim is supported.
 5. **Decision-Support Disclaimer**:
    > [!CAUTION]
    > **MANDATORY HUMAN VERIFICATION REQUIRED**:
@@ -552,5 +558,3 @@ This project is licensed under the **Apache License 2.0** — see the [LICENSE](
 - [Vite & React](https://vitejs.dev/)
 - [Google Gemini Multimodal AI](https://ai.google.dev/)
 - Thank you, [Tuwaiq Academy](https://tuwaiq.edu.sa/) for your early guidance and fostering an environment that enabled this project.
-
-

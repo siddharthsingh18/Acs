@@ -30,6 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
+from acs.taxonomy import decode_model_class, validate_model_taxonomy
 from acs.detector import AccidentDetector, AccidentEventManager
 
 
@@ -74,7 +75,8 @@ def run_paired_bootstrap(
                     parts = line.strip().split()
                     if len(parts) >= 5:
                         cid = int(parts[0])
-                        if cid < len(CLASS_NAMES) and CLASS_NAMES[cid] in ACCIDENT_CLASSES:
+                        decoded_name = CLASS_NAMES[cid] if 0 <= cid < len(CLASS_NAMES) else "unknown"
+                        if decoded_name in ACCIDENT_CLASSES:
                             has_accident = True
                             break
 
@@ -89,8 +91,14 @@ def run_paired_bootstrap(
         stud_scores.append(max(s_confs))
 
         if has_accident:
-            b_acc_confs = [float(b.conf[0].item()) for b in rb.boxes if int(b.cls[0].item()) < len(CLASS_NAMES) and CLASS_NAMES[int(b.cls[0].item())] in ACCIDENT_CLASSES]
-            s_acc_confs = [float(b.conf[0].item()) for b in rs.boxes if int(b.cls[0].item()) < len(CLASS_NAMES) and CLASS_NAMES[int(b.cls[0].item())] in ACCIDENT_CLASSES]
+            b_acc_confs = [
+                float(b.conf[0].item()) for b in rb.boxes
+                if decode_model_class(int(b.cls[0].item()), yolo_baseline.names)[1] in ACCIDENT_CLASSES
+            ]
+            s_acc_confs = [
+                float(b.conf[0].item()) for b in rs.boxes
+                if decode_model_class(int(b.cls[0].item()), yolo_student.names)[1] in ACCIDENT_CLASSES
+            ]
             base_acc_scores.append(max(b_acc_confs) if b_acc_confs else 0.0)
             stud_acc_scores.append(max(s_acc_confs) if s_acc_confs else 0.0)
 
@@ -210,6 +218,8 @@ def compare_models(
 
     base_yolo = YOLO(str(baseline_path))
     stud_yolo = YOLO(str(student_path))
+    validate_model_taxonomy(base_yolo.names)
+    validate_model_taxonomy(stud_yolo.names)
 
     # 1. Validation on Frozen Test Split
     print("\n1. Evaluating Baseline on Frozen TEST Split...")

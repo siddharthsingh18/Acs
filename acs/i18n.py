@@ -176,13 +176,6 @@ CLASS_TRANSLATIONS: Dict[str, str] = {
     "person": "شخص",
     "injured": "مصاب",
     "vehicle": "مركبة",
-    "bike_bike_accident": "حادث دراجة مع دراجة",
-    "bike_object_accident": "حادث دراجة مع جسم",
-    "bike_person_accident": "حادث دراجة مع شخص",
-    "car_bike_accident": "حادث سيارة مع دراجة",
-    "car_car_accident": "حادث سيارة مع سيارة",
-    "car_object_accident": "حادث سيارة مع جسم",
-    "car_person_accident": "حادث سيارة مع شخص",
     "accident": "حادث",
 }
 

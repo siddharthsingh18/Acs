@@ -201,6 +201,62 @@ class TestAlertsSystem(unittest.TestCase):
         )
         self.assertTrue(results.get("console"))
 
+    def test_alert_payload_has_unverified_confidence_and_review_links(self):
+        class CaptureNotifier(BaseNotifier):
+            received = None
+
+            @property
+            def name(self) -> str:
+                return "console"
+
+            def is_configured(self) -> bool:
+                return True
+
+            def send(self, payload: AlertPayload) -> bool:
+                self.received = payload
+                return True
+
+        notifier = CaptureNotifier()
+        manager = AlertManager()
+        manager.register_notifier(notifier)
+        payload = AlertPayload(
+            incident_id=f"INC-TEST-{os.urandom(4).hex()}",
+            class_name="accident",
+            timestamp=self.payload.timestamp,
+            confidence=0.95,
+            report_text="test",
+        )
+        with patch.dict(os.environ, {"OPERATOR_ALERT_CHANNELS": "console"}):
+            result = manager.send(payload, channels=["console"])
+
+        assert result["console"] is True
+        assert notifier.received is not None
+        assert "UNVERIFIED MACHINE DETECTION" in notifier.received.report_text
+        assert "confidence label HIGH (95%)" in notifier.received.report_text
+        assert "human must verify" in notifier.received.report_text
+        assert notifier.received.ack_url
+        assert notifier.received.review_url
+
+    def test_demo_and_dry_run_incidents_cannot_reach_real_channels(self):
+        manager = AlertManager()
+        dry_payload = AlertPayload(
+            incident_id="DEMO-DRY-001",
+            class_name="accident",
+            timestamp="2026-10-08T12:00:00Z",
+            confidence=0.4,
+            report_text="test",
+            dry_run=True,
+        )
+        with (
+            patch.dict(os.environ, {"OPERATOR_ALERT_CHANNELS": "email,telegram"}),
+            patch("smtplib.SMTP") as smtp,
+            patch("requests.post") as http_post,
+        ):
+            results = manager.send(dry_payload, channels=["email", "telegram"])
+        assert results == {"email": True, "telegram": True}
+        smtp.assert_not_called()
+        http_post.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

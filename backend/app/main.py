@@ -44,6 +44,7 @@ from backend.app.routers import drift as drift_router
 from backend.app.routers import metrics as metrics_router
 
 from backend.app.services.job_manager import job_manager
+from backend.app.core.startup_validation import validate_production_environment
 
 # -----------------------------------------------------------------------------
 # Structured Logging & Error Monitoring Initialization
@@ -54,45 +55,10 @@ logger = logging.getLogger("acs.backend")
 
 
 def validate_startup_secrets() -> None:
-    """Validates that sensitive secrets are sourced exclusively from environment and not insecure placeholders."""
-    is_prod = (
-        os.getenv("ENVIRONMENT", "").lower() in ("production", "prod")
-        or os.getenv("STRICT_SECRETS", "").lower() in ("true", "1")
-    )
-    from backend.app.core.security import is_placeholder_secret
-    jwt_key = os.getenv("JWT_SECRET_KEY")
-    fernet_key = os.getenv("FERNET_KEY")
+    """Refuse unsafe production settings before any listeners or workers start."""
+    from backend.app.db.database import DATABASE_URL
 
-    errors = []
-    if is_prod:
-        if not jwt_key or is_placeholder_secret(jwt_key):
-            errors.append(
-                "JWT_SECRET_KEY is missing or contains an insecure placeholder. "
-                "Generate one using: python -c 'import secrets; print(secrets.token_hex(32))'"
-            )
-        if fernet_key and is_placeholder_secret(fernet_key):
-            errors.append("FERNET_KEY matches an insecure placeholder pattern.")
-
-        initial_admin_pw = os.getenv("INITIAL_ADMIN_PASSWORD")
-        if initial_admin_pw and is_placeholder_secret(initial_admin_pw):
-            errors.append("INITIAL_ADMIN_PASSWORD matches an insecure placeholder pattern.")
-
-        vault_secret = os.getenv("SECRET_KEY")
-        if vault_secret and is_placeholder_secret(vault_secret):
-            errors.append("SECRET_KEY matches an insecure placeholder pattern.")
-
-        if os.getenv("ALERTS_ENABLED", "true").lower() in ("true", "1", "yes") and os.getenv("ALERTS_DRY_RUN", "false").lower() not in ("true", "1", "yes"):
-            tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
-            if tg_token and is_placeholder_secret(tg_token):
-                errors.append("TELEGRAM_BOT_TOKEN matches an insecure placeholder pattern.")
-            smtp_pw = os.getenv("SMTP_PASSWORD")
-            if smtp_pw and is_placeholder_secret(smtp_pw):
-                errors.append("SMTP_PASSWORD matches an insecure placeholder pattern.")
-
-    if errors:
-        error_msg = "FATAL: Startup secret validation failed:\n  " + "\n  ".join(errors)
-        logger.error(error_msg)
-        raise RuntimeError(error_msg)
+    validate_production_environment(database_url=DATABASE_URL)
 
 
 # -----------------------------------------------------------------------------
@@ -104,14 +70,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Initializing ACS Backend service...")
     validate_startup_secrets()
     config.ensure_directories()
-    # Initialize SQLite database and import existing CSV records
-    try:
-        init_db()
-        imported = import_csv_to_db()
-        if imported > 0:
-            logger.info("Imported %d historical incidents from CSV to SQLite.", imported)
-    except Exception as db_init_err:
-        logger.warning("Database init or CSV migration warning: %s", db_init_err)
+    init_db()
+    from sqlmodel import Session, select
+    from backend.app.db.database import engine
+    from backend.app.db.models import User
+
+    with Session(engine) as session:
+        validate_production_environment(
+            database_url=engine.url.render_as_string(hide_password=True),
+            users=((user.username, user.hashed_password) for user in session.exec(select(User)).all()),
+        )
+    imported = import_csv_to_db()
+    if imported > 0:
+        logger.info("Imported %d historical incidents from CSV.", imported)
 
     # Register running event loop with job manager and camera manager
     try:
@@ -147,14 +118,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             pass
     camera_manager.shutdown()
 
-
-# Initial module load initialization for storage and database
-config.ensure_directories()
-try:
-    init_db()
-    import_csv_to_db()
-except Exception as e:
-    logger.warning("Initial database bootstrap warning: %s", e)
 
 # -----------------------------------------------------------------------------
 # FastAPI Application Factory
@@ -345,5 +308,4 @@ if os.path.exists(frontend_dist):
         if os.path.exists(index_file):
             return FileResponse(index_file)
         raise HTTPException(status_code=404, detail="Frontend build not found")
-
 

@@ -1,7 +1,9 @@
 # Automated CCTV Accident Detection System (ACS)
 # Production Model Slice Analysis & Failure Modes Report
 
-**Evaluated Model**: `best.pt`  
+> **UNVERIFIED:** Slice-level recall and false-alarm figures conflict with other reports and cannot be reproduced without the missing dataset, clips, and raw predictions.
+
+**Evaluated Model**: `best.pt`
 **Evaluation Datasets**: Merged Test Split (`ml/data/merged/images/test`) + Video Evaluation Suite (`ml/data/video_eval/`)  
 **Total Evaluated Samples**: 1,258 frames  
 **Generated**: 2026-10-19 15:02:56 UTC  

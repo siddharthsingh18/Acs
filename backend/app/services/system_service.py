@@ -8,11 +8,10 @@ from typing import List
 import torch
 
 from acs.config import (
-    ACCIDENT_CLASSES,
-    CLASS_NAMES,
     AppConfig,
     scan_available_models,
 )
+from acs.taxonomy import load_classes
 from acs.i18n import translate_class_name
 from backend.app.schemas import (
     ClassItem,
@@ -48,15 +47,17 @@ def get_device_info(cfg: AppConfig) -> DeviceInfo:
 
 
 def get_class_list() -> List[ClassItem]:
-    """Builds class item list with collision flags and bilingual translations."""
+    """Builds the API directory directly from the canonical taxonomy."""
     items: List[ClassItem] = []
-    for c in CLASS_NAMES:
-        is_acc = c in ACCIDENT_CLASSES
+    for record in load_classes():
+        c = record["name"]
         items.append(
             ClassItem(
+                id=record["id"],
                 name=c,
                 name_ar=translate_class_name(c, lang="ar"),
-                is_accident=is_acc,
+                group=record["group"],
+                definition=record["definition"],
             )
         )
     return items

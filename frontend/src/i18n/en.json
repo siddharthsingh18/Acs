@@ -158,13 +158,6 @@
     "person": "Pedestrian",
     "injured": "Injured Person",
     "vehicle": "Motor Vehicle",
-    "bike_bike_accident": "Bike-Bike Collision",
-    "bike_object_accident": "Bike-Obstacle Collision",
-    "bike_person_accident": "Bike-Pedestrian Collision",
-    "car_bike_accident": "Car-Bike Collision",
-    "car_car_accident": "Car-Car Collision",
-    "car_object_accident": "Car-Obstacle Collision",
-    "car_person_accident": "Car-Pedestrian Collision",
     "accident": "Vehicle Accident"
   },
   "review_queue": {

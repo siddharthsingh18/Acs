@@ -1,6 +1,8 @@
 # Temporal Second-Stage Accident Verification Model: Selection & Evaluation Report
 
-**Generated**: Mon Oct 19 17:21:02 UTC 2026  
+> **UNVERIFIED:** Selection and production-readiness claims are unsupported by reproducible data or run artifacts and conflict with other temporal evaluation reports.
+
+**Generated**: Mon Oct 19 17:21:02 UTC 2026
 **Target Goal**: Eliminate single-frame false alarms by confirming collisions from 1–2 second multi-object tracking history.
 
 ---

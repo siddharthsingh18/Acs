@@ -1,0 +1,25 @@
+schema_version: 1
+legacy_yolo_10_v1:
+  description: "Legacy ACS YOLO checkpoint class order from best.pt and best_openvino_model/metadata.yaml."
+  source_classes:
+    - bike
+    - bike_bike_accident
+    - bike_object_accident
+    - bike_person_accident
+    - car
+    - car_bike_accident
+    - car_car_accident
+    - car_object_accident
+    - car_person_accident
+    - person
+  mapping:
+    0: {target_id: 0}
+    1: {target_id: 3, incident_type: bike_bike_accident}
+    2: {target_id: 3, incident_type: bike_object_accident}
+    3: {target_id: 3, incident_type: bike_person_accident}
+    4: {target_id: 1}
+    5: {target_id: 3, incident_type: car_bike_accident}
+    6: {target_id: 3, incident_type: car_car_accident}
+    7: {target_id: 3, incident_type: car_object_accident}
+    8: {target_id: 3, incident_type: car_person_accident}
+    9: {target_id: 2}

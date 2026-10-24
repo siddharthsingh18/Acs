@@ -334,7 +334,7 @@ def merge_staging_and_build_retrain_splits(
         "train": "images/train",
         "val": "images/val",
         "test": "images/test",
-        "nc": 10,
+        "nc": len(CLASS_NAMES),
         "names": {i: name for i, name in enumerate(CLASS_NAMES)},
     }
     with open(retrain_yaml_path, "w", encoding="utf-8") as f:

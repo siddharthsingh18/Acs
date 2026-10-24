@@ -1,5 +1,7 @@
 # Knowledge Distillation Evaluation Report
 
+> **UNVERIFIED:** Detection metrics and video rates conflict with other reports; the source dataset, clips, checkpoints, and raw evaluation artifacts are not available for reproduction.
+
 ## Student (YOLO11n + Pseudo-Labels) vs Current Production Model
 
 **Generated**: 2026-10-19 19:01:40 UTC  

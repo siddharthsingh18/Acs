@@ -15,12 +15,16 @@ import json
 import os
 import random
 import shutil
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from acs.taxonomy import load_classes
 
 
 def build_distillation_dataset(
@@ -89,24 +93,14 @@ def build_distillation_dataset(
 
     # 3. Create dataset descriptor pointing to frozen val and test splits
     data_yaml_path = output_dir / "data.yaml"
+    classes = load_classes()
     dataset_cfg = {
         "path": str(output_dir.resolve()),
         "train": str(train_img_out.resolve()),
         "val": str((PROJECT_ROOT / "ml" / "data" / "merged" / "images" / "val").resolve()),
         "test": str((PROJECT_ROOT / "ml" / "data" / "merged" / "images" / "test").resolve()),
-        "nc": 10,
-        "names": {
-            0: "bike",
-            1: "bike_bike_accident",
-            2: "bike_object_accident",
-            3: "bike_person_accident",
-            4: "car",
-            5: "car_bike_accident",
-            6: "car_car_accident",
-            7: "car_object_accident",
-            8: "car_person_accident",
-            9: "person",
-        }
+        "nc": len(classes),
+        "names": {item["id"]: item["name"] for item in classes},
     }
 
     with open(data_yaml_path, "w", encoding="utf-8") as f:

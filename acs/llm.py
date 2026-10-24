@@ -246,58 +246,41 @@ def build_fallback_report(
     has_bike = any("bike" in c for c in class_names)
     has_car = any("car" in c for c in class_names)
     has_injury = any("injury" in c for c in class_names)
+    has_accident = "accident" in class_names
 
     vehicles: List[str] = []
-    if "car_car_accident" in class_names:
-        vehicles = ["passenger car 1", "passenger car 2"]
-    elif "car_bike_accident" in class_names:
+    if has_car and has_bike:
         vehicles = ["passenger car", "motorcycle / bicycle"]
-    elif "bike_bike_accident" in class_names:
-        vehicles = ["motorcycle / bicycle 1", "motorcycle / bicycle 2"]
-    elif "car_person_accident" in class_names:
-        vehicles = ["passenger car", "pedestrian involved"]
-    elif "bike_person_accident" in class_names:
-        vehicles = ["motorcycle / bicycle", "pedestrian involved"]
-    elif "car_object_accident" in class_names:
-        vehicles = ["passenger car (roadside object impact)"]
+    elif has_car:
+        vehicles = ["passenger car"]
+    elif has_bike:
+        vehicles = ["motorcycle / bicycle"]
+    elif has_person:
+        vehicles = ["pedestrian"]
     else:
-        if has_car and has_bike:
-            vehicles = ["passenger car", "motorcycle / bicycle"]
-        elif has_car:
-            vehicles = ["passenger car"]
-        elif has_bike:
-            vehicles = ["motorcycle / bicycle"]
-        else:
-            vehicles = ["unidentified motor vehicle"]
+        vehicles = ["unidentified road user"]
 
     collision_point = "Active roadway intersection / traffic camera surveillance zone"
     detected_summary = ", ".join(class_names) if class_names else "traffic collision"
     damage = f"Impact damage detected via vision model matching: {detected_summary}"
     road_conditions = "Standard asphalt roadway conditions observed in camera feed"
 
-    if has_person or has_injury:
+    if has_accident and (has_person or has_injury):
         hazards = "Pedestrian / vulnerable road user impacted on active roadway; high collision risk"
-    elif has_bike:
+    elif has_accident and has_bike:
         hazards = "Downed two-wheeler rider and debris obstructing active lane"
     else:
-        hazards = "Disabled collision vehicles obstructing active roadway lane"
+        hazards = "Potential collision obstruction; verify from the source footage"
 
     recommended_units: List[str] = []
-    if has_person or has_injury or "car_person_accident" in class_names or "bike_person_accident" in class_names:
+    if has_accident and (has_person or has_injury):
         recommended_units = ["EMS", "police", "tow"]
-    elif has_bike:
-        recommended_units = ["EMS", "police", "tow"]
-    else:
+    elif has_accident:
         recommended_units = ["police", "tow"]
 
-    if has_person or has_injury or "car_person_accident" in class_names or "bike_person_accident" in class_names:
+    if has_accident and (has_person or has_injury):
         severity = "high"
-    elif (
-        "car_car_accident" in class_names
-        or "car_bike_accident" in class_names
-        or "bike_bike_accident" in class_names
-        or "car_object_accident" in class_names
-    ):
+    elif has_accident:
         severity = "medium"
     else:
         severity = "low"
@@ -734,4 +717,3 @@ def verify_incident_frames_vlm(
         "vehicles_involved": 2,
         "verification_status": "unverified",
     }
-

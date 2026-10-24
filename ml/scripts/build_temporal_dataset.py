@@ -38,6 +38,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from acs.detector import AccidentDetector
+from acs.config import CLASS_NAMES
 from acs.temporal.features import (
     FEATURE_NAMES,
     SEQUENCE_FEATURE_NAMES,
@@ -103,14 +104,14 @@ def generate_synthetic_hard_negatives(
                 bbox=(xa * 640, ya * 480, (xa + 0.08) * 640, (ya + 0.08) * 480),
                 norm_bbox=(xa, ya, xa + 0.08, ya + 0.08),
                 centroid=(xa + 0.04, ya + 0.04),
-                confidence=0.88, class_id=2, class_name="car", track_id=1000 + idx * 2,
+                confidence=0.88, class_id=CLASS_NAMES.index("car"), class_name="car", track_id=1000 + idx * 2,
             ))
             t_b.add_point(TrackPoint(
                 frame_idx=f, timestamp=t,
                 bbox=(xb * 640, yb * 480, (xb + 0.08) * 640, (yb + 0.08) * 480),
                 norm_bbox=(xb, yb, xb + 0.08, yb + 0.08),
                 centroid=(xb + 0.04, yb + 0.04),
-                confidence=0.88, class_id=2, class_name="car", track_id=1001 + idx * 2,
+                confidence=0.88, class_id=CLASS_NAMES.index("car"), class_name="car", track_id=1001 + idx * 2,
             ))
 
         res = extractor.extract_pair_features(t_a, t_b, window_seconds=window_seconds, fps=fps)
@@ -148,14 +149,14 @@ def generate_synthetic_hard_negatives(
                 bbox=(xa * 640, ya * 480, (xa + 0.06) * 640, (ya + 0.06) * 480),
                 norm_bbox=(xa, ya, xa + 0.06, ya + 0.06),
                 centroid=(xa + 0.03, ya + 0.03),
-                confidence=0.90, class_id=2, class_name="car", track_id=2000 + idx * 2,
+                confidence=0.90, class_id=CLASS_NAMES.index("car"), class_name="car", track_id=2000 + idx * 2,
             ))
             t_b.add_point(TrackPoint(
                 frame_idx=f, timestamp=t,
                 bbox=(xb * 640, yb * 480, (xb + 0.06) * 640, (yb + 0.06) * 480),
                 norm_bbox=(xb, yb, xb + 0.06, yb + 0.06),
                 centroid=(xb + 0.03, yb + 0.03),
-                confidence=0.90, class_id=2, class_name="car", track_id=2001 + idx * 2,
+                confidence=0.90, class_id=CLASS_NAMES.index("car"), class_name="car", track_id=2001 + idx * 2,
             ))
 
         res = extractor.extract_pair_features(t_a, t_b, window_seconds=window_seconds, fps=fps)
@@ -205,14 +206,14 @@ def generate_synthetic_hard_negatives(
                 bbox=(0.5 * 640, ya * 480, 0.56 * 640, (ya + 0.06) * 480),
                 norm_bbox=(0.5, ya, 0.56, ya + 0.06),
                 centroid=(0.53, ya + 0.03),
-                confidence=0.92, class_id=2, class_name="car", track_id=3000 + idx * 2,
+                confidence=0.92, class_id=CLASS_NAMES.index("car"), class_name="car", track_id=3000 + idx * 2,
             ))
             t_b.add_point(TrackPoint(
                 frame_idx=f, timestamp=t,
                 bbox=(0.5 * 640, yb_curr * 480, 0.56 * 640, (yb_curr + 0.06) * 480),
                 norm_bbox=(0.5, yb_curr, 0.56, yb_curr + 0.06),
                 centroid=(0.53, yb_curr + 0.03),
-                confidence=0.92, class_id=2, class_name="car", track_id=3001 + idx * 2,
+                confidence=0.92, class_id=CLASS_NAMES.index("car"), class_name="car", track_id=3001 + idx * 2,
             ))
 
         res = extractor.extract_pair_features(t_a, t_b, window_seconds=window_seconds, fps=fps)

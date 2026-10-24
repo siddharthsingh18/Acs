@@ -41,6 +41,7 @@ import cv2
 import numpy as np
 
 from acs.config import ACCIDENT_CLASSES  # lightweight, no circular dep
+from acs.taxonomy import decode_model_class
 
 from acs.detector import DetectionBox
 
@@ -184,7 +185,7 @@ class SuspiciousTileInferencer:
             for box in boxes:
                 cid = int(box.cls[0].item())
                 conf = float(box.conf[0].item())
-                cname = model.names.get(cid, f"class_{cid}")
+                cid, cname, incident_type = decode_model_class(cid, model.names)
                 is_acc = cname.lower().strip() in acc_cls
                 xyxy = box.xyxy[0].tolist()
                 # Map tile-local coords → frame coords
@@ -200,6 +201,7 @@ class SuspiciousTileInferencer:
                     class_name=cname,
                     is_accident=is_acc,
                     track_id=None,
+                    incident_type=incident_type,
                 ))
 
         return _nms(all_boxes, cfg.nms_iou)
@@ -334,7 +336,7 @@ class ROICropReDetector:
             for box in boxes:
                 cid = int(box.cls[0].item())
                 conf = float(box.conf[0].item())
-                cname = model.names.get(cid, f"class_{cid}")
+                cid, cname, incident_type = decode_model_class(cid, model.names)
                 is_acc = cname.lower().strip() in acc_cls
                 xyxy = box.xyxy[0].tolist()
                 # Map crop-local → frame coords
@@ -350,6 +352,7 @@ class ROICropReDetector:
                     class_name=cname,
                     is_accident=is_acc,
                     track_id=None,
+                    incident_type=incident_type,
                 ))
                 if is_acc:
                     accident_confirmed = True

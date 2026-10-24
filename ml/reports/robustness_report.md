@@ -1,6 +1,8 @@
 # Operational Robustness Benchmark & Stress Test Report
 
-**Date Generated**: 2026-10-20 20:11:27 UTC  
+> **UNVERIFIED:** Clean and corrupted recall/false-alarm values conflict with other reports; the checkpoint, source samples, and raw evaluation outputs are unavailable.
+
+**Date Generated**: 2026-10-20 20:11:27 UTC
 **Base Model Checkpoint**: `best.pt`  
 **Corruptions Evaluated**: 11 environmental & streaming degradations (Severities 1 to 3)  
 **Clean Baseline Performance**: Recall = `100.0%`, False Alarms = `0.0 FA/hr`  

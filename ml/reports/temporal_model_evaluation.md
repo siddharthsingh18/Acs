@@ -1,6 +1,8 @@
 # Temporal Second-Stage Gate: Incident Recall and False Alarm Rate Evaluation
 
-**Evaluation Date**: 2026-10-19 17:35:07 UTC  
+> **UNVERIFIED:** Incident recall, latency, and false-alarm figures conflict with other reports; source clips and raw run artifacts are unavailable.
+
+**Evaluation Date**: 2026-10-19 17:35:07 UTC
 **Architecture**: YOLO Primary Proposal Detector + Second-Stage Temporal Gate (`TemporalGate`)  
 **Gate Model Checkpoint**: [`models/temporal_gate.pt`](file:////Users/shidharthkushwaha/Desktop/Acs/models/temporal_gate.pt)  
 **Gate Probability Threshold**: `0.50`  

@@ -1,7 +1,9 @@
 # Automated CCTV Accident Detection System (ACS)
 ## Real Hardware Optimization & Multi-Runtime Benchmark Report
 
-**Date:** 2026-10-19 04:10:48 UTC  
+> **UNVERIFIED:** Latency, throughput, and accuracy-drift figures lack reproducible benchmark artifacts in this checkout and conflict with other reported performance claims.
+
+**Date:** 2026-10-19 04:10:48 UTC
 **Host Architecture:** arm64 (arm)  
 **Operating System:** Darwin 27.0.0  
 **Host Accelerator:** Apple Silicon Metal (MPS / Neural Engine)  

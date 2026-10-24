@@ -61,6 +61,7 @@ export interface StreamIncidentMessage {
   type: 'incident'
   incident_id: string
   class_name: string
+  incident_type?: string | null
   max_confidence: number
   start_timestamp: string
   end_timestamp: string
@@ -149,6 +150,7 @@ export interface CameraStreamIncidentMessage {
   camera_name: string
   incident_id: string
   class_name: string
+  incident_type?: string | null
   confidence: number
   start_timestamp: string
   end_timestamp: string
@@ -735,5 +737,4 @@ export interface UserItem {
   created_at: number
   last_login_at?: number | null
 }
-
 

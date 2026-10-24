@@ -1,0 +1,19 @@
+{
+  "data_manifest_sha256": "463e43161280b853bf49bee59ed1731077b3be78e02cd13ee0933a5c1f2d890f",
+  "gate_results": {
+    "accident_macro_map50_lcb": false,
+    "evaluation_metrics_present": false,
+    "every_accident_class_evaluable": false,
+    "false_alarm_upper_bound": false,
+    "incident_recall_lcb": false,
+    "minimum_accident_free_camera_hours": false,
+    "minimum_test_camera_scene_diversity": false,
+    "minimum_test_events": false,
+    "no_leakage_failures": false,
+    "no_unverified_claims": false,
+    "robustness_limits": false
+  },
+  "model_sha256": "5e1a582110d1f16ebc3b67c2a2348873af30a14c55297c06e5c377ce17a21a68",
+  "run_id": "a40ddaf9-75ef-4ddc-aa37-625d77c9d376",
+  "status": "research prototype"
+}

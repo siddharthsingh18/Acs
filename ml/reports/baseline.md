@@ -1,6 +1,8 @@
 # ACS Machine Learning Baseline Report (`best_v0.pt`)
 
-> **Report Timestamp**: 2026-10-16 20:34:01 UTC  
+> **UNVERIFIED:** Metrics and class-level results are historical claims. The source dataset, raw predictions, and run artifacts are absent; this report's figures conflict with other repository reports.
+
+> **Report Timestamp**: 2026-10-16 20:34:01 UTC
 > **Baseline Checkpoint**: `ml/baseline/best_v0.pt` (copied from original `best.pt`, MD5: `7828ef5eb302408cf84f2dfefd41281e`)  
 > **Architecture**: YOLO11n (`yolo11n.pt`, 2.58M parameters, 6.4 GFLOPs)  
 > **Training Date in Checkpoint**: `2024-10-12T14:41:12.327713`  

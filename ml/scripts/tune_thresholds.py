@@ -41,12 +41,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
+from acs.taxonomy import decode_model_class
 from acs.detector import (
     AccidentDetector,
     AccidentEventManager,
     compute_box_iou,
     compute_intersection_ratio,
 )
+from ml.eval.metrics import poisson_false_alarm_upper_rate
 
 
 def resolve_accelerator() -> Tuple[str, str]:
@@ -98,7 +100,7 @@ def extract_video_features(
         if res.boxes is not None and len(res.boxes) > 0:
             for box in res.boxes:
                 cls_id = int(box.cls[0].item())
-                cls_name = model.names[cls_id]
+                _, cls_name, _ = decode_model_class(cls_id, model.names)
                 conf = float(box.conf[0].item())
                 xyxy = box.xyxy[0].cpu().numpy().tolist()
                 boxes_list.append({
@@ -306,7 +308,7 @@ def evaluate_val_images(
         if results.boxes is not None and len(results.boxes) > 0:
             for b in results.boxes:
                 cid = int(b.cls[0].item())
-                cname = model.names[cid]
+                _, cname, _ = decode_model_class(cid, model.names)
                 conf = float(b.conf[0].item())
                 xyxy = tuple(b.xyxy[0].cpu().numpy().tolist())
 
@@ -411,6 +413,8 @@ def run_grid_search(
         print(f"  Loaded {clip_name}: {len(feats)} frames ({dur:.2f}s)")
 
     total_neg_hours = total_neg_duration_sec / 3600.0
+    if total_neg_hours <= 0:
+        raise ValueError("Tuning negatives contain no measurable camera-hours.")
     print(f"Total Negative Video Stream Duration: {total_neg_duration_sec:.1f}s ({total_neg_hours:.5f} hrs)")
 
     # 2. Define Parameter Grid
@@ -489,7 +493,10 @@ def run_grid_search(
                                 neg_details[neg_clip] = count
                                 neg_fa_count += count
 
-                            fa_per_hour = neg_fa_count / total_neg_hours if total_neg_hours > 0 else 0.0
+                            fa_point_per_hour = neg_fa_count / total_neg_hours
+                            fa_upper95_per_hour = poisson_false_alarm_upper_rate(
+                                neg_fa_count, total_neg_hours
+                            )
                             # Map pos recall: CADP crash is genuine crash
                             # Incident Recall on true positive crashes
                             incident_recall = (1.0 if pos_incidents.get("tuning_pos_cadp_crash.mp4", 0) >= 1 else 0.0)
@@ -509,7 +516,8 @@ def run_grid_search(
                                 "pos_cctv": pos_incidents.get("tuning_pos_cctv_crash.mp4", 0),
                                 "incident_recall": incident_recall,
                                 "neg_fa_count": neg_fa_count,
-                                "fa_per_hour": fa_per_hour,
+                                "fa_point_per_hour": fa_point_per_hour,
+                                "fa_upper95_per_hour": fa_upper95_per_hour,
                                 "neg_details": neg_details,
                                 "val_f1": val_m["f1"],
                                 "val_recall": val_m["recall"],
@@ -522,10 +530,10 @@ def run_grid_search(
     # Target: FA/hr <= target_fa_per_hour (meaning 0 FA on the tuning negative stream)
     valid_candidates = [
         r for r in grid_results
-        if r["fa_per_hour"] <= target_fa_per_hour and r["incident_recall"] >= 1.0
+        if r["fa_upper95_per_hour"] <= target_fa_per_hour and r["incident_recall"] >= 1.0
     ]
 
-    print(f"\n[Step 3/5] Candidates satisfying FA/hr <= {target_fa_per_hour:.2f} and Incident Recall = 100%: {len(valid_candidates)}")
+    print(f"\n[Step 3/5] Candidates satisfying the 95% FA upper bound <= {target_fa_per_hour:.2f}/hr and Incident Recall = 100%: {len(valid_candidates)}")
 
     # Sort valid candidates:
     # 1. Incident Recall desc (must be 100%)
@@ -548,7 +556,10 @@ def run_grid_search(
         best_cfg = valid_candidates[0]
     else:
         # Fallback to minimum FA
-        best_cfg = sorted(grid_results, key=lambda x: (x["neg_fa_count"], -x["incident_recall"]))[0]
+        best_cfg = sorted(
+            grid_results,
+            key=lambda x: (x["fa_upper95_per_hour"], -x["incident_recall"]),
+        )[0]
 
     print("\n" + "=" * 60)
     print("WINNING CONFIGURATION IDENTIFIED:")
@@ -560,7 +571,11 @@ def run_grid_search(
     print(f"  Require Overlapping Entities:  {best_cfg['require_overlap']}")
     print(f"  Overlap Ratio Threshold:       {best_cfg['overlap_ratio']:.2f}")
     print(f"  Incident Recall:               {best_cfg['incident_recall'] * 100:.1f}%")
-    print(f"  False Alarms:                  {best_cfg['neg_fa_count']} ({best_cfg['fa_per_hour']:.2f} FA/hr)")
+    print(
+        f"  False incidents:               {best_cfg['neg_fa_count']} "
+        f"(point={best_cfg['fa_point_per_hour']:.2f}/hr, "
+        f"one-sided 95% upper={best_cfg['fa_upper95_per_hour']:.2f}/hr)"
+    )
     print(f"  Validation F1 Score:           {best_cfg['val_f1']:.4f}")
     print("=" * 60)
 
@@ -629,7 +644,11 @@ def update_config_defaults(chosen: Dict[str, Any]) -> None:
     print("  Successfully saved optimal defaults to acs/config.py.")
 
 
-def generate_tradeoff_plot(grid_results: List[Dict[str, Any]], output_plot_path: Path) -> None:
+def generate_tradeoff_plot(
+    grid_results: List[Dict[str, Any]],
+    output_plot_path: Path,
+    best_cfg: Dict[str, Any],
+) -> None:
     """Renders a 3-panel Pareto tradeoff analysis figure."""
     output_plot_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -687,16 +706,16 @@ def generate_tradeoff_plot(grid_results: List[Dict[str, Any]], output_plot_path:
     # Scatter plot of all configurations
     for r in grid_results:
         c = "blue" if r["require_overlap"] else "orange"
-        ax3.scatter(r["fa_per_hour"], r["incident_recall"] * 100, color=c, alpha=0.25, s=25)
+        ax3.scatter(r["fa_upper95_per_hour"], r["incident_recall"] * 100, color=c, alpha=0.25, s=25)
 
-    # Highlight optimal operating point
+    # The horizontal axis is the confidence bound, never the point estimate.
     ax3.axvline(0.25, color="red", linestyle=":", label="Target Limit (0.25 FA/hr = 1/4hr)")
     ax3.scatter(
-        [0.0], [100.0],
+        [best_cfg["fa_upper95_per_hour"]], [best_cfg["incident_recall"] * 100],
         color="green", s=180, edgecolors="black", linewidth=2, zorder=5,
-        label="Optimal Point (0.0 FA/hr, 100% Recall)"
+        label="Selected tuning point (95% upper bound)"
     )
-    ax3.set_xlabel("False Alarms per Hour (FA/hr)", fontweight="bold")
+    ax3.set_xlabel("One-sided 95% upper bound: false incidents/hour", fontweight="bold")
     ax3.set_ylabel("Incident Recall (%)", fontweight="bold")
     ax3.set_title("Pareto Tradeoff: FA/hr vs Incident Recall", fontweight="bold")
     ax3.set_ylim(-5, 110)
@@ -714,7 +733,13 @@ def evaluate_once_on_untouched_test_clips(
     test_video_dir: Path,
     device: str = "cpu",
 ) -> Dict[str, Any]:
-    """Evaluates ONCE on the untouched holdout test clips."""
+    """Reject legacy fixed-file test evaluation; use the shared run manifest."""
+    raise RuntimeError(
+        "Legacy fixed-file test evaluation is disabled; use ml.eval.run_all "
+        "after metrics and frozen-test validation are implemented."
+    )
+
+    """Legacy implementation retained temporarily for reference."""
     print("\n" + "=" * 80)
     print("[Step 5/5] SINGLE FINAL EVALUATION ON UNTOUCHED TEST CLIPS (NEVER USED IN TUNING)")
     print("=" * 80)
@@ -832,10 +857,18 @@ def evaluate_once_on_untouched_test_clips(
 
     cap_neg.release()
     neg_duration_hrs = neg_duration_sec / 3600.0
-    test_fa_per_hour = len(neg_detected_incidents) / neg_duration_hrs if neg_duration_hrs > 0 else 0.0
+    if neg_duration_hrs <= 0:
+        raise ValueError("Frozen-test negative clips contain no measurable camera-hours.")
+    test_fa_point_per_hour = len(neg_detected_incidents) / neg_duration_hrs
+    test_fa_upper95_per_hour = poisson_false_alarm_upper_rate(
+        len(neg_detected_incidents), neg_duration_hrs
+    )
 
     print(f"  Holdout Negative Traffic: {len(neg_detected_incidents)} false alarms across {total_neg_frames} frames ({neg_duration_sec:.2f}s).")
-    print(f"  Test FA Rate: {test_fa_per_hour:.2f} FA/hr.")
+    print(
+        f"  Test FA Rate: point={test_fa_point_per_hour:.2f}/hr, "
+        f"one-sided 95% upper={test_fa_upper95_per_hour:.2f}/hr."
+    )
 
     test_results["neg_holdout"] = {
         "clip_name": test_neg_clip.name,
@@ -843,7 +876,8 @@ def evaluate_once_on_untouched_test_clips(
         "duration_sec": neg_duration_sec,
         "duration_hrs": neg_duration_hrs,
         "incidents_count": len(neg_detected_incidents),
-        "fa_per_hour": test_fa_per_hour,
+        "fa_point_per_hour": test_fa_point_per_hour,
+        "fa_upper95_per_hour": test_fa_upper95_per_hour,
     }
 
     return test_results
@@ -889,6 +923,8 @@ def write_tuning_report(
     md_content = rf"""# Automated CCTV Accident Detection System (ACS)
 # Threshold & Event Manager Optimization Report
 
+> **PRELIMINARY / UNVERIFIED:** This legacy report is not the authoritative same-run evaluation. Use `python -m ml.eval.run_all`; no results below establish production readiness.
+
 **Date of Execution**: {timestamp}  
 **Hardware Accelerator**: {resolve_accelerator()[1]}  
 **Evaluation Scope**: Strict separation between VALIDATION / Tuning Clips and Untouched Holdout TEST Clips.  
@@ -906,7 +942,7 @@ In real-world continuous CCTV operation, raw per-frame object detection produces
 3. **Overlapping road entity validation rule** (accident box must overlap a detected car, bike, or pedestrian box by $\ge 5\%$ IoU/area ratio), and
 4. **Lifecycle gap / cooldown timing** (timeout gap = $3.0$s, cooldown = $10.0$s),
 
-the system achieves **0.00 False Alarms per hour** ($\le 0.25$ FA/hr target met) across challenging negative streams (rain, night glare, traffic jams, and day CCTV) while preserving **100.0% incident recall** on genuine crashes.
+historical headline rates and recall values remain unverified unless reproduced by the shared runner from the frozen data manifest.
 
 ---
 
@@ -929,21 +965,9 @@ The optimal parameter vector identified through grid-search has been written to 
 
 ---
 
-## 3. Dataset Segregation & Tuning Suite
+## 3. Dataset Segregation
 
-To ensure unbiased evaluation, the tuning process strictly adhered to data isolation:
-- **Validation Split**: `ml/data/merged/images/val` (417 validation images with annotated accident labels).
-- **Tuning Video Suite** (`ml/data/video_eval/tuning/`):
-  - `tuning_pos_cadp_crash.mp4` (49 frames, 2.45s): Ground-truth CADP crash sequence.
-  - `tuning_pos_cctv_crash.mp4` (60 frames, 3.00s): Real-world CCTV intersection collision sequence.
-  - `tuning_neg_cctv_day.mp4` (120 frames, 6.00s): Daytime arterial CCTV traffic (0 accidents).
-  - `tuning_neg_rain_traffic.mp4` (90 frames, 4.50s): Heavy rain and wet asphalt reflection traffic (0 accidents).
-  - `tuning_neg_traffic_jam.mp4` (90 frames, 4.50s): Congestion, vehicle bumper-to-bumper queues (0 accidents).
-  - `tuning_neg_traffic_night.mp4` (120 frames, 6.00s): Night arterial CCTV with high-beam headlights and glare (0 accidents).
-- **Untouched Test Clips** (`ml/data/video_eval/test/`):
-  - `test_holdout_acc_ex.mp4` (192 frames, 6.41s): Real multi-vehicle highway crash clip.
-  - `test_holdout_neg_traffic.mp4` (120 frames, 6.00s): Negative traffic test clip.
-  *(These holdout test clips were strictly excluded from grid-search and evaluated only ONCE at the conclusion).*
+This legacy script's fixed clip names and assumed split cannot establish a leakage-safe tuning/test separation. Only the shared runner and its validated manifest can define the authoritative data scope.
 
 ---
 
@@ -953,58 +977,32 @@ To ensure unbiased evaluation, the tuning process strictly adhered to data isola
 
 ### 4.1. The Hallucination Suppression Rule (Overlapping Entity Validation)
 Raw YOLO accident detection models trained on accident datasets frequently trigger spurious detections on empty asphalt reflections (rain puddles reflecting sky or brake lights) or headlight flare at night.
-- In `tuning_neg_rain_traffic.mp4`, raw unconstrained detection produced **50 false alarm frames** at confidence $> 0.15$ and 8 false alarm frames at confidence $> 0.70$.
-- By enforcing `require_overlapping_entities=True` (requiring the accident bounding box to intersect with a detected `car`, `person`, or `bike` with IoU $\ge 0.05$), false alarm incidents dropped to **0** because reflection artifacts occur on bare road where no vehicles exist.
-- Crucially, genuine accidents involve colliding vehicles, bikes, or pedestrians; therefore, the overlap rule preserves **100% incident recall**.
+Historical per-frame counts and incident recall claims are unverified. The overlap rule requires independent validation and must not be assumed to preserve recall.
 
 ### 4.2. Debounce Window ($N$) Sensitivity
-- **$N = 1$ or $N = 2$**: Extremely sensitive to transient 1-frame misclassifications, leading to high false alarm rates ($> 170$ FA/hr on negative video).
-- **$N = 4$**: Optimal balance. Completely eliminates transient frame spikes while capturing brief collision events within 200ms.
-- **$N \ge 6$**: Overly conservative; risks missing fast collisions where the impact phase is brief (e.g. CADP high-speed collision had 4 consecutive frames).
+Debounce tradeoffs require tuning-set measurements. No debounce value is established by this legacy report.
 
 ### 4.3. Tradeoff Table Across Parameter Combinations
 
-| Accident Conf | Normal Conf | Debounce $N$ | Overlap Rule | Positive Crash Recall | Negative False Alarms | FA Rate (FA/hr) | Target Met ($\le 0.25$ FA/hr)? |
+| Accident Conf | Normal Conf | Debounce $N$ | Overlap Rule | Positive Crash Recall | Negative False Incidents | Point Rate (per hour) | One-sided 95% Upper Rate | Target Met? |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 """
 
     for r in table_rows:
-        target_met = "YES (PASS)" if r["fa_per_hour"] <= 0.25 else "NO (FAIL)"
+        target_met = "YES (PASS)" if r["fa_upper95_per_hour"] <= 0.25 else "NO (FAIL)"
         ol_str = f"Yes (IoU>={r['overlap_ratio']:.2f})" if r["require_overlap"] else "No"
-        md_content += f"| {r['accident_conf']:.2f} | {r['normal_conf']:.2f} | {r['debounce_n']} | {ol_str} | {r['incident_recall']*100:.1f}% | {r['neg_fa_count']} | {r['fa_per_hour']:.2f} | {target_met} |\n"
+        md_content += f"| {r['accident_conf']:.2f} | {r['normal_conf']:.2f} | {r['debounce_n']} | {ol_str} | {r['incident_recall']*100:.1f}% | {r['neg_fa_count']} | {r['fa_point_per_hour']:.2f} | {r['fa_upper95_per_hour']:.2f} | {target_met} |\n"
 
-    md_content += f"""
+    md_content += """
 ---
 
-## 5. Single Final Evaluation on Untouched Test Clips
+## 5. Test Evaluation
 
-After freezing the winning configuration (`accident_conf={best_cfg['accident_conf']:.2f}`, `normal_conf={best_cfg['normal_conf']:.2f}`, `debounce_n={best_cfg['debounce_n']}`, `require_overlap={best_cfg['require_overlap']}`, `overlap_ratio={best_cfg['overlap_ratio']:.2f}`), the detector and event manager were evaluated **ONCE** on the untouched holdout test clips:
-
-### 5.1. Holdout Positive Crash Video (`test_holdout_acc_ex.mp4`)
-- **Clip Properties**: {test_results['pos_holdout']['frames']} frames, {test_results['pos_holdout']['duration_sec']:.2f} seconds.
-- **True Ground Truth Incident**: Highway vehicle collision.
-- **Incidents Detected**: **{test_results['pos_holdout']['incidents_count']} incident**
-- **Incident Recall**: **100.0%**
-- **Inference Speed**: **{test_results['pos_holdout']['eval_fps']:.1f} FPS** on {resolve_accelerator()[0].upper()}
-- **Incident Log**:
-"""
-
-    for inc in test_results["pos_holdout"]["incidents"]:
-        md_content += f"  - **ID**: `{inc['id']}` | **Class**: `{inc['class']}` | **Max Confidence**: `{inc['confidence']:.4f}` | **Window**: `{inc['start']}` to `{inc['end']}`\n"
-
-    md_content += rf"""
-### 5.2. Holdout Negative Traffic Video (`test_holdout_neg_traffic.mp4`)
-- **Clip Properties**: {test_results['neg_holdout']['frames']} frames, {test_results['neg_holdout']['duration_sec']:.2f} seconds ({test_results['neg_holdout']['duration_hrs']:.4f} hours).
-- **False Alarms Triggered**: **{test_results['neg_holdout']['incidents_count']} incidents**
-- **False Alarm Rate**: **{test_results['neg_holdout']['fa_per_hour']:.2f} FA/hr** ($\le 0.25$ FA/hr target achieved!)
-
----
+This legacy report does not evaluate frozen test clips. Testing belongs to the shared runner after thresholds are frozen; do not use this report to tune against or claim results from test data.
 
 ## 6. Verification and Deployment Readiness
 
-1. **Config Persistence**: Environment defaults in `acs/config.py` have been aligned with the optimal values.
-2. **Backwards Compatibility**: All legacy callers and unit tests remain fully supported without regressions.
-3. **Reproducibility**: The evaluation script `ml/scripts/tune_thresholds.py` can be re-run at any time with arbitrary FA targets (e.g., `--target-fa-per-hour 0.10`).
+This legacy report does not establish deployment readiness. The shared, hash-stamped run artifacts are authoritative.
 """
 
     with open(output_report_path, "w", encoding="utf-8") as f:
@@ -1012,7 +1010,7 @@ After freezing the winning configuration (`accident_conf={best_cfg['accident_con
     print(f"\n[Done] Successfully saved report to {output_report_path}")
 
 
-def main() -> None:
+def _legacy_main() -> None:
     parser = argparse.ArgumentParser(description="Grid-search tuning for AccidentEventManager and Detector.")
     parser.add_argument("--target-fa-per-hour", type=float, default=0.25, help="Target maximum false alarms per hour (default 0.25 = 1 per 4 hours)")
     parser.add_argument("--model-path", type=str, default="best.pt", help="Path to YOLO model weights")
@@ -1052,7 +1050,7 @@ def main() -> None:
     update_config_defaults(best_cfg)
 
     # Generate Tradeoff Figure
-    generate_tradeoff_plot(grid_results, output_plot)
+    generate_tradeoff_plot(grid_results, output_plot, best_cfg)
 
     # Evaluate ONCE on Untouched Test Clips
     test_results = evaluate_once_on_untouched_test_clips(best_cfg, test_video_dir, device=device)
@@ -1063,6 +1061,18 @@ def main() -> None:
     print("\n" + "=" * 80)
     print("ALL GRID-SEARCH TUNING & EVALUATION TASKS COMPLETED SUCCESSFULLY.")
     print("=" * 80)
+
+
+def _legacy_main() -> None:
+    from ml.eval.run_all import main as run_shared_evaluation
+
+    run_shared_evaluation()
+
+
+def main() -> None:
+    from ml.eval.run_all import main as run_shared_evaluation
+
+    run_shared_evaluation()
 
 
 if __name__ == "__main__":

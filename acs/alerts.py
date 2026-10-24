@@ -35,8 +35,30 @@ load_dotenv()
 logger = logging.getLogger("acs.alerts")
 
 DISCLAIMER_TEXT = (
-    "⚠️ DISCLAIMER: Alerts support human decisions and must not trigger emergency dispatch automatically."
+    "UNVERIFIED MACHINE DETECTION. Decision support only; a human must verify this alert. "
+    "It must not contact emergency services automatically."
 )
+OPERATOR_CHANNELS = {"console", "webpush", "telegram", "email"}
+
+
+def confidence_label(confidence: float) -> str:
+    """Return a readable, explicitly non-probabilistic confidence label."""
+    if confidence >= 0.80:
+        return "HIGH"
+    if confidence >= 0.50:
+        return "MEDIUM"
+    return "LOW"
+
+
+def configured_operator_channels() -> list[str]:
+    configured = os.getenv("OPERATOR_ALERT_CHANNELS")
+    if configured is None:
+        return ["console"]
+    channels = [channel.strip().lower() for channel in configured.split(",") if channel.strip()]
+    invalid = set(channels) - OPERATOR_CHANNELS
+    if invalid:
+        raise ValueError(f"Unsupported operator alert channels: {', '.join(sorted(invalid))}")
+    return list(dict.fromkeys(channels))
 
 
 def is_demo_incident(incident_id: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
@@ -227,6 +249,7 @@ class AlertPayload:
     location_lng: Optional[float] = None
     ack_token: Optional[str] = None
     ack_url: Optional[str] = None
+    review_url: Optional[str] = None
     map_url: Optional[str] = None
     keyframe_url: Optional[str] = None
     tier: int = 1
@@ -318,6 +341,8 @@ class WebPushNotifier(BaseNotifier):
         tier_prefix = f"[TIER {payload.tier} ESCALATION] " if payload.is_escalation else ""
         notification_title = f"🚨 {tier_prefix}{payload.class_name.upper()} Detected"
         notification_body = (
+            f"UNVERIFIED MACHINE DETECTION — confidence label {confidence_label(payload.confidence)} "
+            f"({payload.confidence:.0%}).\n"
             f"Severity: {payload.severity.upper()} ({payload.severity_score}/100)\n"
             f"{payload.report_text[:120]}...\n\n"
             f"{DISCLAIMER_TEXT}"
@@ -333,6 +358,7 @@ class WebPushNotifier(BaseNotifier):
             "data": {
                 "incident_id": payload.incident_id,
                 "ack_url": payload.ack_url,
+                "review_url": payload.review_url,
                 "map_url": payload.map_url,
                 "severity": payload.severity,
                 "severity_score": payload.severity_score,
@@ -437,6 +463,12 @@ class TelegramNotifier(BaseNotifier):
             caption_lines.append(f"🗺️ [Open Google Maps]({payload.map_url})")
         if payload.ack_url:
             caption_lines.append(f"✅ [Acknowledge Incident (One-Click)]({payload.ack_url})")
+        if payload.review_url:
+            caption_lines.append(f"↩️ [Review / reject alert]({payload.review_url})")
+        caption_lines.append(
+            f"UNVERIFIED MACHINE DETECTION — confidence label {confidence_label(payload.confidence)} "
+            f"({payload.confidence:.0%})."
+        )
 
         caption_lines.append(f"\n{payload.report_text[:400]}")
         caption_lines.append(f"\n{DISCLAIMER_TEXT}")
@@ -539,7 +571,7 @@ class SMTPNotifier(BaseNotifier):
         try:
             msg = MIMEMultipart("alternative")
             esc_prefix = "[ESCALATION TIER 2] " if payload.is_escalation else ""
-            msg["Subject"] = f"{esc_prefix}[ACS DISPATCH ALERT] {payload.class_name.upper()} - {payload.incident_id} ({payload.severity.upper()})"
+            msg["Subject"] = f"{esc_prefix}[ACS OPERATOR ALERT] {payload.class_name.upper()} - {payload.incident_id} ({payload.severity.upper()})"
             msg["From"] = self.sender
             msg["To"] = ", ".join(self.recipients)
 
@@ -547,6 +579,7 @@ class SMTPNotifier(BaseNotifier):
             text_lines = [
                 f"ACS Automated Surveillance Alert - {payload.incident_id}",
                 f"Class: {payload.class_name.upper()}",
+                f"UNVERIFIED MACHINE DETECTION — confidence label {confidence_label(payload.confidence)} ({payload.confidence:.0%}).",
                 f"Severity: {payload.severity.upper()} ({payload.severity_score}/100)",
                 f"Timestamp: {payload.timestamp}",
             ]
@@ -556,6 +589,8 @@ class SMTPNotifier(BaseNotifier):
                 text_lines.append(f"Map: {payload.map_url}")
             if payload.ack_url:
                 text_lines.append(f"Acknowledge Incident: {payload.ack_url}")
+            if payload.review_url:
+                text_lines.append(f"Review or reject alert: {payload.review_url}")
             text_lines.append("\nReport Summary:")
             text_lines.append(payload.report_text)
             text_lines.append(f"\n{DISCLAIMER_TEXT}")
@@ -564,13 +599,14 @@ class SMTPNotifier(BaseNotifier):
             # Rich HTML body
             map_button = f'<a href="{payload.map_url}" style="display:inline-block;padding:10px 18px;background:#1e293b;color:#38bdf8;text-decoration:none;border-radius:6px;font-weight:bold;margin-right:10px;">🗺️ View Location on Map</a>' if payload.map_url else ""
             ack_button = f'<a href="{payload.ack_url}" style="display:inline-block;padding:10px 18px;background:#059669;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">✅ Acknowledge Incident</a>' if payload.ack_url else ""
+            review_button = f'<a href="{payload.review_url}" style="display:inline-block;padding:10px 18px;background:#b45309;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;">↩️ Review / Reject</a>' if payload.review_url else ""
 
             html_body = f"""<!DOCTYPE html>
 <html>
 <body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background-color:#0f172a;color:#f8fafc;padding:24px;margin:0;">
   <div style="max-width:620px;margin:0 auto;background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid #334155;">
     <div style="background:#dc2626;padding:16px 20px;">
-      <h2 style="margin:0;color:#ffffff;font-size:18px;">🚨 ACS EMERGENCY DISPATCH ALERT</h2>
+      <h2 style="margin:0;color:#ffffff;font-size:18px;">ACS OPERATOR REVIEW ALERT</h2>
       <p style="margin:4px 0 0;color:#fee2e2;font-size:13px;">Incident: {payload.incident_id} | Class: {payload.class_name.upper()}</p>
     </div>
     <div style="padding:20px;">
@@ -584,6 +620,7 @@ class SMTPNotifier(BaseNotifier):
       <div style="margin:20px 0;">
         {map_button}
         {ack_button}
+        {review_button}
       </div>
       <div style="background:#451a03;border:1px solid #b45309;padding:12px;border-radius:8px;margin-top:20px;">
         <p style="margin:0;color:#fef3c7;font-size:12px;line-height:1.4;">{DISCLAIMER_TEXT}</p>
@@ -636,15 +673,18 @@ class ConsoleNotifier(BaseNotifier):
     def send(self, payload: AlertPayload) -> bool:
         dry_prefix = "[DRY RUN] " if payload.dry_run else ""
         logger.warning(
-            "%s[EMERGENCY DISPATCH ALERT] Incident %s: %s (Severity: %s, Score: %s) at %s | Map: %s | Ack: %s | Image: %s\n%s",
+            "%s[UNVERIFIED OPERATOR ALERT] Incident %s: %s (Confidence: %s %0.0f%%; Severity: %s, Score: %s) at %s | Map: %s | Ack: %s | Review: %s | Image: %s\n%s",
             dry_prefix,
             payload.incident_id,
             payload.class_name,
+            confidence_label(payload.confidence),
+            payload.confidence * 100,
             payload.severity,
             payload.severity_score,
             payload.timestamp,
             payload.map_url or "N/A",
             payload.ack_url or "N/A",
+            payload.review_url or "N/A",
             payload.image_path or "N/A",
             DISCLAIMER_TEXT,
         )
@@ -674,8 +714,13 @@ class AlertManager:
         channels: Optional[List[str]] = None,
     ) -> Dict[str, bool]:
         """Dispatches an alert payload across selected channels with safety guarantees."""
-        selected_channels = channels or list(self.notifiers.keys())
+        configured = configured_operator_channels()
+        requested_channels = channels if channels is not None else configured
+        selected_channels = [channel for channel in requested_channels if channel in configured]
         results: Dict[str, bool] = {}
+        for channel_name in set(requested_channels) - set(selected_channels):
+            logger.error("Alert channel %r is not configured as an operator channel; delivery blocked.", channel_name)
+            results[channel_name] = False
 
         # 1. HARD DEMO & DRY-RUN SAFETY INTERLOCK:
         # DEMO incidents are mathematically barred from real external channels
@@ -686,18 +731,27 @@ class AlertManager:
         app_url = getattr(config, "app_base_url", "http://localhost:8000")
         ack_token = payload.ack_token or secrets.token_urlsafe(24)
         ack_url = payload.ack_url or f"{app_url}/api/alerts/ack/{ack_token}"
+        review_url = payload.review_url or f"{app_url}/incidents/{quote_plus(payload.incident_id)}"
         map_url = payload.map_url
         if not map_url and payload.location_lat is not None and payload.location_lng is not None:
             map_url = f"https://maps.google.com/?q={payload.location_lat},{payload.location_lng}"
         elif not map_url and payload.location_name:
             map_url = f"https://maps.google.com/?q={quote_plus(payload.location_name)}"
 
+        confidence_notice = (
+            f"UNVERIFIED MACHINE DETECTION — confidence label "
+            f"{confidence_label(payload.confidence)} ({payload.confidence:.0%}).\n"
+            f"Review or reject: {review_url}\n{DISCLAIMER_TEXT}"
+        )
+        effective_report = payload.report_text
+        if confidence_notice not in effective_report:
+            effective_report = f"{confidence_notice}\n\n{effective_report}"
         effective_payload = AlertPayload(
             incident_id=payload.incident_id,
             class_name=payload.class_name,
             timestamp=payload.timestamp,
             confidence=payload.confidence,
-            report_text=payload.report_text,
+            report_text=effective_report,
             image_path=payload.image_path,
             report_filename=payload.report_filename,
             dry_run=effective_dry_run,
@@ -709,6 +763,7 @@ class AlertManager:
             location_lng=payload.location_lng,
             ack_token=ack_token,
             ack_url=ack_url,
+            review_url=review_url,
             map_url=map_url,
             keyframe_url=payload.keyframe_url,
             tier=payload.tier,

@@ -19,19 +19,6 @@ import { api, ReviewQueueItem, ReviewStatsResponse } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
-const CANONICAL_CLASSES = [
-  'car_car_accident',
-  'car_bike_accident',
-  'car_person_accident',
-  'car_object_accident',
-  'bike_bike_accident',
-  'bike_person_accident',
-  'bike_object_accident',
-  'car',
-  'bike',
-  'person',
-]
-
 export const ReviewQueuePage: React.FC = () => {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -57,6 +44,11 @@ export const ReviewQueuePage: React.FC = () => {
   } = useQuery({
     queryKey: ['review-queue', includeReviewed],
     queryFn: () => api.getReviewQueue(includeReviewed),
+  })
+
+  const { data: systemConfig } = useQuery({
+    queryKey: ['config'],
+    queryFn: () => api.getConfig(),
   })
 
   // Fetch Review Analytics & Staging Telemetry
@@ -692,19 +684,19 @@ export const ReviewQueuePage: React.FC = () => {
             </p>
 
             <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-1">
-              {CANONICAL_CLASSES.map((cls) => (
+              {(systemConfig?.classes ?? []).map((classInfo) => (
                 <button
-                  key={cls}
-                  onClick={() => setSelectedWrongClass(cls)}
+                  key={classInfo.name}
+                  onClick={() => setSelectedWrongClass(classInfo.name)}
                   className={cn(
                     'w-full text-left px-3 py-2.5 rounded-xl border text-xs font-mono font-medium transition-all flex items-center justify-between',
-                    selectedWrongClass === cls
+                    selectedWrongClass === classInfo.name
                       ? 'border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.2)]'
                       : 'border-border bg-card hover:bg-muted/60 text-foreground'
                   )}
                 >
-                  <span>{cls}</span>
-                  {selectedWrongClass === cls && <Check className="h-4 w-4 text-primary" />}
+                  <span>{classInfo.name}</span>
+                  {selectedWrongClass === classInfo.name && <Check className="h-4 w-4 text-primary" />}
                 </button>
               ))}
             </div>

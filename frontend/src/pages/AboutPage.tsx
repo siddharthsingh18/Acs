@@ -99,7 +99,7 @@ export const AboutPage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            c.is_accident ? 'bg-[var(--status-alert)]' : 'bg-[var(--status-ok)]'
+                            c.group === 'accident' ? 'bg-[var(--status-alert)]' : 'bg-[var(--status-ok)]'
                           }`}
                         />
                         <span className="font-mono font-medium text-foreground">
@@ -107,10 +107,10 @@ export const AboutPage: React.FC = () => {
                         </span>
                       </div>
                       <Badge
-                        variant={c.is_accident ? 'destructive' : 'outline'}
+                        variant={c.group === 'accident' ? 'destructive' : 'outline'}
                         className="text-[10px] font-mono"
                       >
-                        {c.is_accident ? 'Collision' : 'Normal'}
+                        {c.group === 'accident' ? 'Accident' : 'Normal'}
                       </Badge>
                     </div>
                   ))

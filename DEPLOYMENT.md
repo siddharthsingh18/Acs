@@ -1,4 +1,6 @@
-# ACS Production Hardening & Deployment Guide
+# ACS Research Prototype Deployment Guide
+
+> **Not a production-readiness statement.** This guide describes configuration examples only. The model and its reported performance have not passed reproducible promotion gates. Use only in isolated demos or research; a human must verify every alert.
 
 This document specifies the deployment architecture, HTTPS reverse-proxy configuration, secrets management, and role-based operational controls for the **Automated CCTV Accident Detection & Emergency Dispatch System (ACS)**.
 
@@ -333,4 +335,3 @@ In addition to runtime retention checks, configure a daily systemd timer or cron
 
 ### Legal & Regulatory Compliance
 CCTV operations recording individuals and vehicles require strict adherence to local surveillance legislation (e.g. GDPR, CCPA, UAE Personal Data Protection Law) and the physical premises owner's policy. Ensure public disclosure signage is installed and that unredacted vault footage is accessed exclusively for formal law enforcement or judicial inquiries.
-

@@ -2,48 +2,25 @@
 # Automated CCTV Accident Detection System (ACS)
 # Dataset Class Mapping Configuration
 # ==============================================================================
-# Single Source of Truth Target Classes (10 classes):
-#   0: bike
-#   1: bike_bike_accident
-#   2: bike_object_accident
-#   3: bike_person_accident
-#   4: car
-#   5: car_bike_accident
-#   6: car_car_accident
-#   7: car_object_accident
-#   8: car_person_accident
-#   9: person
+# Target class IDs are defined only in ml/configs/classes.yaml.
 #
 # Rule Protocol:
 # 1. Semantic Purity:
 #    - Only map when the meaning truly matches the target taxonomy.
-#    - Generic "accident" classes map to car_car_accident ONLY if images show pure car-car crashes.
-#    - If visual inspection (20-image sample per generic class) reveals mixed crash modalities
-#      (e.g., rollovers, car-bike, bike-bike, pedestrian collisions, barrier impacts), the generic
-#      class MUST be mapped to "drop" to prevent corrupting fine-grained accident classifiers.
+#    - Mixed accident modalities map to the generic "accident" class only when labels
+#      localize an actual collision/impact event; uncertain aftermath labels are dropped.
 # 2. Normal-traffic mapping:
-#    - vehicle, car, truck, pickup-truck, bus, van, trailer -> car (ID: 4)
+#    - vehicle, car, truck, pickup-truck, bus, van, trailer -> car (ID: 1)
 #    - motorcycle, bike, bicycle -> bike (ID: 0)
-#    - pedestrian, person -> person (ID: 9)
+#    - pedestrian, person -> person (ID: 2)
 # 3. Label quality & data integrity:
 #    - Datasets with severe duplication (>15%), cross-split leakage, or corrupted/anomalous boxes
 #      are flagged and rejected from direct merging.
 #    - Supplemental candidate datasets are designated for teacher-model pre-labeling or negative injection.
 # ==============================================================================
 
-version: "1.1.0"
-target_classes:
-  0: bike
-  1: bike_bike_accident
-  2: bike_object_accident
-  3: bike_person_accident
-  4: car
-  5: car_bike_accident
-  6: car_car_accident
-  7: car_object_accident
-  8: car_person_accident
-  9: person
-
+version: "2.0.0"
+label_review_decisions: []
 datasets:
   # ----------------------------------------------------------------------------
   # 1. aitc2025_traffic_object_detection
@@ -64,31 +41,31 @@ datasets:
       1:
         source_name: "bus"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Normal traffic passenger vehicle mapped to 'car' per normal-traffic rules."
       2:
         source_name: "car"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Direct semantic match to normal traffic 'car'."
       3:
         source_name: "pickup-truck"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Truck variant mapped to normal traffic 'car' per normal-traffic rules."
       4:
         source_name: "trailer"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Heavy motor vehicle mapped to normal traffic 'car' per normal-traffic rules."
       5:
         source_name: "van"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Utility motor vehicle mapped to normal traffic 'car' per normal-traffic rules."
 
@@ -104,19 +81,17 @@ datasets:
     class_mapping:
       0:
         source_name: "accident"
-        target_name: "drop"
-        target_id: null
-        action: "drop"
+        target_name: "accident"
+        target_id: 3
+        action: "map"
         rationale: >
-          Empirical 20-sample visual audit revealed a heterogeneous mixture: only ~25%
-          represent car-car collisions; ~15% are car-bike collisions (e.g. accidentFrame1851),
-          ~10% are single-car rollovers/barrier impacts (FLIP_CAR series, car_object_accident),
-          and the remainder are ambiguous aftermath. Per ACS rules, generic accident cannot be
-          mapped to car_car_accident unless purely car-car crashes. Dropped to preserve taxonomy purity.
+          The label is heterogeneous by subtype, so it maps only to the generic accident class.
+          The prior 20-sample audit reported ambiguous aftermath; keep this source excluded from
+          training until its annotation quality is re-audited against the generic event definition.
       1:
         source_name: "vehicle"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Normal-traffic passenger vehicle mapped to 'car' per normal-traffic rules (2,779 valid boxes)."
 
@@ -182,13 +157,13 @@ datasets:
       0:
         source_name: "car"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Normal traffic car mapped to target 'car' class per normal-traffic rules."
       1:
         source_name: "van"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Normal traffic van mapped to target 'car' class per normal-traffic rules."
 
@@ -203,11 +178,11 @@ datasets:
     class_mapping:
       0:
         source_name: "Car Flip"
-        target_name: "car_object_accident"
-        target_id: 7
+        target_name: "accident"
+        target_id: 3
         action: "map"
         rationale: >
-          Single-vehicle rollover / barrier strike accurately matches target 'car_object_accident'.
+          Single-vehicle rollover / barrier strike maps to generic target 'accident'; subtype remains unknown.
       1:
         source_name: "car Accident"
         target_name: "drop"
@@ -217,11 +192,11 @@ datasets:
           Generic car accident label with mixed collision types. Dropped per taxonomy purity rules.
       2:
         source_name: "car Accident hiting a tree"
-        target_name: "car_object_accident"
-        target_id: 7
+        target_name: "accident"
+        target_id: 3
         action: "map"
         rationale: >
-          Vehicle impacting a stationary tree/pole is a direct semantic match for target 'car_object_accident'.
+          Vehicle impacting a stationary tree/pole maps to generic target 'accident'.
 
   # ----------------------------------------------------------------------------
   # 7. accident_candidates/cctv_accident_frames
@@ -293,7 +268,7 @@ datasets:
       1:
         source_name: "vehicle"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Normal traffic vehicle mapped to 'car' per normal-traffic rules."
 
@@ -309,13 +284,13 @@ datasets:
       0:
         source_name: "bus"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Normal passenger bus mapped to 'car' per normal-traffic rules."
       1:
         source_name: "car"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Direct semantic match to normal traffic 'car'."
       2:
@@ -327,7 +302,7 @@ datasets:
       3:
         source_name: "truck"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Commercial transport truck mapped to 'car' per normal-traffic rules."
 
@@ -343,7 +318,7 @@ datasets:
       0:
         source_name: "car"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Normal traffic cars in congestion queues mapped to 'car' per normal-traffic rules."
 
@@ -359,7 +334,7 @@ datasets:
       0:
         source_name: "Wrong-parked"
         target_name: "car"
-        target_id: 4
+        target_id: 1
         action: "map"
         rationale: "Stationary parked vehicles mapped to 'car' to suppress false alarm accident predictions."
 

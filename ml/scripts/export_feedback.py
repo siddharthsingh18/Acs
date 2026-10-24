@@ -43,46 +43,20 @@ DEFAULT_DB_PATH = Path(
     os.getenv("SQLITE_DB_PATH", str(PROJECT_ROOT / "reports" / "acs.db"))
 )
 
-FALLBACK_CLASS_MAP = {
-    "bike": 0,
-    "bike_bike_accident": 1,
-    "bike_object_accident": 2,
-    "bike_person_accident": 3,
-    "car": 4,
-    "car_bike_accident": 5,
-    "car_car_accident": 6,
-    "car_object_accident": 7,
-    "car_person_accident": 8,
-    "person": 9,
-    "accident": 6,  # Default to car_car_accident for generic accident
-}
-
-
 def load_class_to_id_mapping(classes_yaml_path: Path) -> Dict[str, int]:
     """Loads class-name to 0-indexed ID mapping from classes.yaml."""
     if not classes_yaml_path.exists():
-        logger.warning("Classes config not found at %s. Using fallback map.", classes_yaml_path)
-        return dict(FALLBACK_CLASS_MAP)
+        raise FileNotFoundError(f"Canonical classes configuration not found: {classes_yaml_path}")
 
-    try:
-        with open(classes_yaml_path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        names = data.get("names", {})
-        if isinstance(names, dict):
-            mapping = {name: int(cid) for cid, name in names.items()}
-            # Generic alias mapping
-            if "accident" not in mapping:
-                mapping["accident"] = mapping.get("car_car_accident", 6)
-            return mapping
-        elif isinstance(names, list):
-            mapping = {name: idx for idx, name in enumerate(names)}
-            if "accident" not in mapping:
-                mapping["accident"] = mapping.get("car_car_accident", 6)
-            return mapping
-    except Exception as err:
-        logger.warning("Failed parsing %s: %s. Using fallback map.", classes_yaml_path, err)
-
-    return dict(FALLBACK_CLASS_MAP)
+    with classes_yaml_path.open("r", encoding="utf-8") as stream:
+        data = yaml.safe_load(stream)
+    records = data.get("classes") if isinstance(data, dict) else None
+    if not isinstance(records, list) or not records:
+        raise ValueError(f"Expected canonical class records in {classes_yaml_path}")
+    mapping = {str(record["name"]): int(record["id"]) for record in records}
+    if len(mapping) != len(records) or set(mapping.values()) != set(range(len(records))):
+        raise ValueError(f"Canonical class names and IDs are invalid in {classes_yaml_path}")
+    return mapping
 
 
 def parse_boxes_to_yolo_lines(
@@ -96,7 +70,9 @@ def parse_boxes_to_yolo_lines(
 
     YOLO line format: <class_id> <x_center> <y_center> <width> <height>
     """
-    class_id = class_map.get(target_class_name, class_map.get("accident", 6))
+    class_id = class_map.get(target_class_name)
+    if class_id is None:
+        raise ValueError(f"Unknown canonical target class: {target_class_name}")
     lines: List[str] = []
 
     if not boxes_raw:
@@ -115,13 +91,20 @@ def parse_boxes_to_yolo_lines(
                 # Array of coordinates [x, y, w, h] or [cls, x, y, w, h]
                 if len(item) == 5:
                     c = int(item[0])
+                    if c not in class_map.values():
+                        raise ValueError(f"Feedback box contains non-canonical class ID: {c}")
                     xc, yc, w, h = float(item[1]), float(item[2]), float(item[3]), float(item[4])
                 else:
                     c = class_id
                     xc, yc, w, h = float(item[0]), float(item[1]), float(item[2]), float(item[3])
             elif isinstance(item, dict):
                 c_name = item.get("class", item.get("class_name", target_class_name))
-                c = class_map.get(c_name, item.get("class_id", class_id))
+                if c_name in class_map:
+                    c = class_map[c_name]
+                elif item.get("class_id") in class_map.values():
+                    c = int(item["class_id"])
+                else:
+                    raise ValueError(f"Feedback box contains an unknown canonical class: {c_name}")
 
                 if "x_center" in item:
                     xc = float(item["x_center"])
@@ -347,8 +330,8 @@ def export_feedback_to_staging(
             "path": str(staging_dir.resolve()),
             "train": "images",
             "val": "images",
-            "nc": 10,
-            "names": {v: k for k, v in class_map.items() if k != "accident"},
+            "nc": len(class_map),
+            "names": {class_id: name for name, class_id in class_map.items()},
         }
         with open(staging_yaml_path, "w", encoding="utf-8") as f:
             yaml.dump(yaml_content, f, sort_keys=False)

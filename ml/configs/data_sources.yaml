@@ -1,0 +1,198 @@
+schema_version: 1
+sources:
+  - id: aitc2025_traffic_object_detection
+    provider: roboflow
+    workspace: aitc2025
+    project: hossein-2
+    version: 4
+    reference_url: https://app.roboflow.com/aitc2025/hossein-2/4
+    status: blocked
+    enabled: false
+    license: Private/custom; terms not verified
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: Obtain written permission, attribution terms, immutable export count, and archive SHA256.
+  - id: hilmantm_traffic_accident_detection
+    provider: roboflow
+    workspace: hilmantm
+    project: traffic-accident-detection
+    version: 1
+    reference_url: https://universe.roboflow.com/hilmantm/traffic-accident-detection/dataset/1
+    status: blocked
+    enabled: false
+    license: CC BY 4.0 reported in prior repository notes; not independently verified
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: Verify the exact version's license and attribution, re-audit labels, and pin file count and archive SHA256.
+  - id: justjuu_cctv_accident_detection
+    provider: huggingface
+    repo_id: justjuu/traffic-accident-cctv-object-detection
+    revision: null
+    filename: null
+    reference_url: https://huggingface.co/datasets/justjuu/traffic-accident-cctv-object-detection
+    status: excluded
+    enabled: false
+    license: CC0 1.0 reported in prior repository notes; not independently verified
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: Excluded for duplicate images, split leakage, and heterogeneous/incorrect labels.
+  - id: on_the_roads_traffic_accident
+    provider: roboflow
+    workspace: on-the-roads
+    project: traffic-accident-vrvx6
+    version: 2
+    reference_url: https://universe.roboflow.com/on-the-roads/traffic-accident-vrvx6/dataset/2
+    status: excluded
+    enabled: false
+    license: Public domain reported in prior repository notes; not independently verified
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: Excluded for low volume, coarse localization, and mixed crash modalities.
+  - id: cadp_cctv_frames
+    provider: roboflow
+    workspace: yassine-pzpt7
+    project: cadp
+    version: 1
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Academic/non-commercial reported in prior repository notes; exact terms not verified
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: Verify source identity, licensing, attribution, and extraction method; pin an immutable export before use.
+  - id: cctv_accident_frames
+    provider: roboflow
+    workspace: vehicle-accident-frame-by-frame
+    project: traffic-accident-nwmqo
+    version: 5
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.
+  - id: car_flip_object
+    provider: roboflow
+    workspace: latifa-fuirj
+    project: car-accident-jp29y
+    version: 1
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.
+  - id: moto_accident
+    provider: roboflow
+    workspace: deep-learning-xnbnl
+    project: accident-vcudo
+    version: 17
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.
+  - id: pedestrian_accident
+    provider: roboflow
+    workspace: sliit-kpo3y
+    project: pedestrian-accident-detection
+    version: 3
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.
+  - id: cctv_non_accident
+    provider: roboflow
+    workspace: tammy
+    project: cctv-non-accident
+    version: 2
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.
+  - id: rain_traffic
+    provider: roboflow
+    workspace: weather-xduis
+    project: rain-kdcqi
+    version: 1
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.
+  - id: traffic_night
+    provider: roboflow
+    workspace: univ-kqors
+    project: traffic-night
+    version: 1
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.
+  - id: traffic_jam
+    provider: roboflow
+    workspace: ballplayground
+    project: traffic-jam-ksie2
+    version: 3
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.
+  - id: parked_cars
+    provider: roboflow
+    workspace: jonathans-workspace-7jpdf
+    project: wrong-parked
+    version: 2
+    reference_url: null
+    status: blocked
+    enabled: false
+    license: Unknown
+    redistribution_allowed: unknown
+    model_training_allowed: unknown
+    expected_file_count: null
+    archive_sha256: null
+    note: No source license, attribution, archive count, or archive SHA256 verified.

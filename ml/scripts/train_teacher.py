@@ -29,6 +29,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
+from acs.taxonomy import validate_model_taxonomy
 
 
 def resolve_device() -> str:
@@ -97,6 +98,7 @@ def train_teacher(
     # Evaluate Teacher on FROZEN TEST split
     print("\n🔍 Evaluating Teacher on FROZEN TEST Split...")
     teacher_eval_model = YOLO(str(final_model_path))
+    validate_model_taxonomy(teacher_eval_model.names)
     val_res = teacher_eval_model.val(
         data=str(data_yaml),
         split="test",

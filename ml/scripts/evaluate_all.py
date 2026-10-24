@@ -39,7 +39,8 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from acs.config import ACCIDENT_CLASSES
+from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
+from acs.taxonomy import decode_model_class, validate_model_taxonomy
 from acs.detector import AccidentDetector, AccidentEventManager
 
 
@@ -492,9 +493,10 @@ def cache_model_predictions_on_test(
 
             if res.boxes is not None and len(res.boxes) > 0:
                 for box in res.boxes:
-                    cid = int(box.cls[0].item())
+                    source_cid = int(box.cls[0].item())
                     conf = float(box.conf[0].item())
                     xyxy = box.xyxy[0].cpu().numpy()
+                    cid, _canonical_name, _incident_type = decode_model_class(source_cid, model.names)
                     if 0 <= cid < nc:
                         img_preds[cid].append([xyxy[0], xyxy[1], xyxy[2], xyxy[3], conf])
 
@@ -641,6 +643,7 @@ def evaluate_single_model(
     print(f"Data: {data_yaml_path} (Split: TEST)")
 
     model = YOLO(str(model_path))
+    validate_model_taxonomy(model.names)
 
     # 1. Ultralytics model.val() on TEST split (STRICTLY 'test', never 'val')
     val_res = model.val(
@@ -943,7 +946,7 @@ def main():
     video_path = (PROJECT_ROOT / args.video).resolve()
     report_path = (PROJECT_ROOT / args.report).resolve()
     classes_cfg = load_yaml(PROJECT_ROOT / "ml" / "configs" / "classes.yaml")
-    target_classes = classes_cfg.get("classes", [])
+    target_classes = CLASS_NAMES
 
     if args.device == "auto":
         accel_dev, accel_label = resolve_accelerator()

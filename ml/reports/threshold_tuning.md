@@ -1,7 +1,11 @@
 # Automated CCTV Accident Detection System (ACS)
 # Threshold & Event Manager Optimization Report
 
-**Date of Execution**: 2026-10-18 10:37:55 UTC  
+> **UNVERIFIED:** Clip counts, recall, and false-alarm rates cannot be reproduced because the source clips and raw tuning outputs are absent; other reports publish conflicting rates.
+>
+> Any historical 0.00 false-alarms/hour point estimate is not a zero-rate guarantee. With zero observed incidents over `T` verified camera-hours, the one-sided 95% upper bound is approximately `2.996 / T`; the exposure `T` cannot be validated for this report.
+
+**Date of Execution**: 2026-10-18 10:37:55 UTC
 **Hardware Accelerator**: Apple Silicon Metal (MPS)  
 **Evaluation Scope**: Strict separation between VALIDATION / Tuning Clips and Untouched Holdout TEST Clips.  
 **Optimization Objective**: False Alarms per hour $\le 0.25$ (1 per 4 hours) while maximizing incident recall.
