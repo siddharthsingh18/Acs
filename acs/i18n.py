@@ -83,7 +83,7 @@ UI_STRINGS: Dict[str, Dict[str, str]] = {
         "feature_2": "• **ByteTrack Multi-Object Tracking**: Trajectory tracking with persist=True preventing duplicate counts.",
         "feature_3": "• **Accident Event Manager**: Temporal state machine requiring 5 consecutive frames, peak keyframe retention, 3s inactivity timeout, and 10s cooldown.",
         "feature_4": "• **Multimodal Gemini Dispatch**: Generates structured emergency response reports with vehicle identification, severity rating, and recommended units (EMS, police, fire, tow).",
-        "feature_5": "• **Bilingual UI (English / Arabic RTL)**: Full internationalization with dynamic right-to-left layout support.",
+        "feature_5": "• **Intuitive Operator Dashboard**: Clean, streamlined layout for real-time monitoring and incident review.",
         "classes_title": "Supported Vision Classes",
         "tech_stack_title": "Technology Stack",
     },

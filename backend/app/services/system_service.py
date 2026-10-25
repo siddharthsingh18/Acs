@@ -67,7 +67,6 @@ def get_supported_languages() -> List[LanguageItem]:
     """Returns supported languages for internationalization."""
     return [
         LanguageItem(code="en", name="English", dir="ltr"),
-        LanguageItem(code="ar", name="العربية", dir="rtl"),
     ]
 
 

@@ -183,17 +183,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
           onClose()
         },
       },
-      {
-        id: 'pref-lang',
-        title: isArabic ? 'Switch Language to English' : 'تغيير اللغة إلى العربية',
-        subtitle: isArabic ? 'Change UI language to English' : 'التبديل إلى واجهة اللغة العربية',
-        icon: Globe,
-        category: 'preferences',
-        action: () => {
-          i18n.changeLanguage(isArabic ? 'en' : 'ar')
-          onClose()
-        },
-      },
+
     ]
   }, [t, i18n, navigate, onClose, isDemoMode, toggleDemoMode, theme, toggleTheme])
 

@@ -2,9 +2,7 @@
 app.py
 Unified Streamlit entry point for the Automated CCTV Accident Detection System (ACS).
 Features:
-- Sidebar controls: Language switcher (English / Arabic), dynamic model scanner (.pt),
-  confidence slider, and disabled injury model toggle when injury.pt is absent.
-- Conditional RTL CSS applied strictly when Arabic is active.
+- Sidebar controls: Dynamic model scanner (.pt), confidence slider, and disabled injury model toggle when injury.pt is absent.
 - Pages/Tabs: Live Analysis (with ByteTrack tracking & progress bar),
   Reports (CSV table, keyframe thumbnails, Gemini dispatch assessment, PDF/CSV download),
   and About.
@@ -88,19 +86,10 @@ def render_sidebar() -> str:
     Returns:
         str: Active language identifier ('en' or 'ar').
     """
-    st.sidebar.title(t("sidebar_title", st.session_state.get("lang", "en")))
+    st.sidebar.title(t("sidebar_title", "en"))
+    lang = "en"
+    st.session_state["lang"] = "en"
 
-    # Language Switcher
-    current_lang = st.session_state.get("lang", "en")
-    lang_choice = st.sidebar.radio(
-        label=t("lang_select", current_lang),
-        options=["English", "العربية"],
-        index=0 if current_lang == "en" else 1,
-    )
-    lang = "en" if lang_choice == "English" else "ar"
-    st.session_state["lang"] = lang
-
-    st.sidebar.markdown("---")
     st.sidebar.subheader(t("active_settings_header", lang))
 
     # Model Selector (dynamically scans for .pt files)
@@ -169,34 +158,9 @@ def render_sidebar() -> str:
 # -----------------------------------------------------------------------------
 # 4. RTL Layout Handler
 # -----------------------------------------------------------------------------
-def apply_rtl_css_if_arabic(lang: str) -> None:
-    """Injects right-to-left layout CSS strictly when Arabic is selected.
-
-    Args:
-        lang: Current active language code.
-    """
-    if lang == "ar":
-        st.markdown(
-            """
-            <style>
-            .stApp, .element-container, .stMarkdown, .stText, .stButton, div[data-testid="stSidebar"],
-            div[data-testid="stRadio"], div[data-testid="stSelectbox"], div[data-testid="stSlider"],
-            div[data-testid="stCheckbox"], div[data-testid="stFileUploader"], .stTabs,
-            div[data-testid="stMetricValue"], div[data-testid="stMetricLabel"] {
-                direction: rtl !important;
-                text-align: right !important;
-            }
-            .stTabs [data-baseweb="tab-list"] {
-                direction: rtl !important;
-                justify-content: flex-start !important;
-            }
-            div[data-testid="stVideo"] {
-                direction: ltr !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
+def apply_rtl_css_if_arabic(lang: str = "en") -> None:
+    """No-op retained for backwards compatibility."""
+    pass
 
 
 # -----------------------------------------------------------------------------
@@ -470,6 +434,8 @@ def render_reports_tab(lang: str) -> None:
     selected_class = st.selectbox(t("filter_by_class", lang), options=classes)
 
     filtered_df = df if selected_class == t("all_classes", lang) else df[df["class"] == selected_class]
+    if "incident_id" in filtered_df.columns:
+        filtered_df = filtered_df.drop_duplicates(subset=["incident_id"], keep="last")
 
     # Display Master Table
     st.subheader(t("reports_table_header", lang))
@@ -487,7 +453,7 @@ def render_reports_tab(lang: str) -> None:
     st.markdown("---")
 
     # Detailed Incident Cards & Keyframe Thumbnails
-    for _, row in filtered_df.iterrows():
+    for idx, (_, row) in enumerate(filtered_df.iterrows()):
         inc_id = str(row["incident_id"])
         cls_raw = str(row["class"])
         cls_localized = translate_class_name(cls_raw, lang=lang)
@@ -514,11 +480,11 @@ def render_reports_tab(lang: str) -> None:
                 st.write(f"**End Time:** {end_ts}")
 
                 # AI Multimodal Dispatch Report Generation with Gemini
-                dispatch_key = f"dispatch_{inc_id}"
+                dispatch_key = f"dispatch_{inc_id}_{idx}"
                 if dispatch_key not in st.session_state:
                     st.session_state[dispatch_key] = None
 
-                btn_key = f"btn_gen_{inc_id}"
+                btn_key = f"btn_gen_{inc_id}_{idx}"
                 if st.button(t("generate_dispatch_btn", lang), key=btn_key):
                     with st.spinner(t("dispatch_loading", lang)):
                         report_data = generate_dispatch_report(
@@ -556,11 +522,11 @@ def render_reports_tab(lang: str) -> None:
                         data=pdf_bytes,
                         file_name=f"{inc_id}_report.pdf",
                         mime="application/pdf",
-                        key=f"dl_pdf_{inc_id}",
+                        key=f"dl_pdf_{inc_id}_{idx}",
                         use_container_width=True,
                     )
                 with col_alert:
-                    if st.button(t("send_alert_btn", lang), key=f"alert_btn_{inc_id}", use_container_width=True):
+                    if st.button(t("send_alert_btn", lang), key=f"alert_btn_{inc_id}_{idx}", use_container_width=True):
                         disp_txt = dispatch_rendered_text or f"Incident: {cls_localized} ({inc_id})\nTime: {start_ts}"
                         res = send_incident_alert(
                             incident=row,
@@ -618,7 +584,7 @@ def render_about_tab(lang: str) -> None:
         """
         - **Computer Vision**: Ultralytics YOLOv8 / YOLO11 (`best.pt`) & ByteTrack Tracking
         - **Multimodal AI**: Google GenAI SDK (`google-genai`, `gemini-2.5-flash`)
-        - **Web Application**: Streamlit, Python-Bidi, Arabic-Reshaper
+        - **Web Application**: Streamlit
         - **Document Generation**: FPDF2 PDF & Pandas CSV Engine
         - **Compute Runtime**: Apple Silicon MPS / NVIDIA CUDA / CPU Auto-Detection
         """
@@ -633,8 +599,7 @@ def main() -> None:
     # Render sidebar controls
     lang = render_sidebar()
 
-    # Apply RTL CSS conditionally strictly when Arabic is active
-    apply_rtl_css_if_arabic(lang)
+
 
     # Title Banner
     st.title(t("app_title", lang))

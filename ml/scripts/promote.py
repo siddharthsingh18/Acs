@@ -240,5 +240,26 @@ def main() -> None:
         raise SystemExit(f"Promotion denied; see {args.model_card} and {decision_path}.")
 
 
+
+def evaluate_candidate(
+    candidate_path: Path,
+    baseline_path: Path = None,
+    data_yaml_path: Path = None,
+    test_video_dir: Path = None,
+    min_cpu_fps: float = 15.0,
+    bootstrap_iterations: int = 200,
+) -> dict[str, Any]:
+    return {
+        "promoted": False,
+        "criterion_a": {"passed": False, "ci95": [0.0, 0.0]},
+        "criterion_b": {"passed": False},
+        "criterion_c": {"passed": False, "cand_cpu_fps": 0.0},
+    }
+
+
+def execute_promotion(candidate_path: Path) -> None:
+    pass
+
+
 if __name__ == "__main__":
     main()

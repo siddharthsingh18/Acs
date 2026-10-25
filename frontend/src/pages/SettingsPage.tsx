@@ -1455,58 +1455,17 @@ export const SettingsPage: React.FC = () => {
             {/* Language Preference */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-foreground block">
-                {t('settings.language_select', 'Display Language & Layout')}
+                {t('settings.language_select', 'Display Language')}
               </label>
-
-              <Controller
-                control={control}
-                name="language"
-                render={({ field }) => (
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        field.onChange('en')
-                        i18n.changeLanguage('en')
-                      }}
-                      className={cn(
-                        'p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between',
-                        field.value === 'en'
-                          ? 'border-primary bg-primary/10 shadow-xs'
-                          : 'border-border bg-card hover:bg-muted/40'
-                      )}
-                    >
-                      <div>
-                        <div className="text-xs font-bold text-foreground">English</div>
-                        <div className="text-[10px] text-muted-foreground">LTR Layout</div>
-                      </div>
-                      {field.value === 'en' && <Check className="h-4 w-4 text-primary" />}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        field.onChange('ar')
-                        i18n.changeLanguage('ar')
-                      }}
-                      className={cn(
-                        'p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between',
-                        field.value === 'ar'
-                          ? 'border-primary bg-primary/10 shadow-xs'
-                          : 'border-border bg-card hover:bg-muted/40'
-                      )}
-                    >
-                      {field.value === 'ar' && <Check className="h-4 w-4 text-primary" />}
-                      <div>
-                        <div className="text-xs font-bold text-foreground font-arabic">العربية</div>
-                        <div className="text-[10px] text-muted-foreground">RTL Layout</div>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              />
+              <div className="p-3.5 rounded-xl border border-primary bg-primary/10 shadow-xs flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-foreground">English</div>
+                  <div className="text-[10px] text-muted-foreground">System Language</div>
+                </div>
+                <Check className="h-4 w-4 text-primary" />
+              </div>
               <p className="text-[11px] text-muted-foreground">
-                Instantly toggles UI strings and mirrors typography for Right-to-Left (RTL) reading.
+                System language is locked to English.
               </p>
             </div>
 

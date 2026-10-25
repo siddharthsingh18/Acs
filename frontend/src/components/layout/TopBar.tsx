@@ -223,18 +223,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenCommandPalette }) => {
             )}
           </div>
 
-          {/* Language Switch */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleLanguage}
-            className="h-8 px-2.5 gap-1.5 text-xs font-medium border-border hover:border-primary/50"
-          >
-            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-sans font-semibold">
-              {isArabic ? 'English' : 'العربية'}
-            </span>
-          </Button>
+
 
           {/* Theme Toggle */}
           <Button
