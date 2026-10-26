@@ -253,10 +253,13 @@ def render_live_analysis_tab(detector: AccidentDetector, lang: str) -> None:
     frame_idx = 0
     start_wall_time = time.time()
 
-    def update_feed_display():
+    def update_feed_display(active_notice: Optional[str] = None):
         with feed_placeholder.container():
+            if active_notice:
+                st.warning(active_notice)
             if not detected_incidents:
-                st.info(t("no_incidents_yet", lang))
+                if not active_notice:
+                    st.info(t("no_incidents_yet", lang))
             else:
                 for idx, inc in enumerate(reversed(detected_incidents)):
                     card_title = translate_class_name(inc.class_name, lang=lang)
@@ -269,22 +272,6 @@ def render_live_analysis_tab(detector: AccidentDetector, lang: str) -> None:
                         st.write(f"**{t('duration_label', lang, duration=duration)}**")
 
     update_feed_display()
-
-    # Video processing loop
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        timestamp = frame_idx / fps
-        frame_idx += 1
-
-        # Run ByteTrack tracking inference
-        result = detector.track_frame(frame)
-
-        # Update video placeholder with annotated frame
-        rgb_frame = cv2.cvtColor(result.annotated_frame, cv2.COLOR_BGR2RGB)
-        frame_placeholder.image(rgb_frame, channels="RGB", use_container_width=True)
 
     def handle_incident_closure(incident: AccidentIncident):
         """Processes closed incident: updates feed, generates dispatch report, and sends alerts."""
@@ -364,6 +351,8 @@ def render_live_analysis_tab(detector: AccidentDetector, lang: str) -> None:
                 # Alerts must never crash the pipeline
                 pass
 
+    was_incident_active = False
+
     # Video processing loop
     while cap.isOpened():
         ret, frame = cap.read()
@@ -384,6 +373,14 @@ def render_live_analysis_tab(detector: AccidentDetector, lang: str) -> None:
         completed_incident = event_manager.update(result, frame=frame, timestamp=timestamp)
         if completed_incident:
             handle_incident_closure(completed_incident)
+            was_incident_active = False
+        elif event_manager.is_incident_active and not was_incident_active:
+            was_incident_active = True
+            inc_id = event_manager.current_incident_id or "Aggregating"
+            update_feed_display(active_notice=f"🚨 **ACCIDENT IN PROGRESS** ({inc_id})\n\nTracking collision & recording telemetry...")
+        elif not event_manager.is_incident_active and was_incident_active:
+            was_incident_active = False
+            update_feed_display()
 
         # Update progress bar
         pct = min(1.0, frame_idx / total_frames)
