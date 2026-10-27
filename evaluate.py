@@ -411,8 +411,8 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=str,
-        default="evaluation_results.md",
-        help="Output markdown file path (default: evaluation_results.md).",
+        default=os.path.join("reports", "evaluation_results.md"),
+        help="Output markdown file path (default: reports/evaluation_results.md).",
     )
     parser.add_argument(
         "--track-mlflow",

@@ -43,7 +43,9 @@ def test_dataset_mapping_targets_match_canonical_class_names():
 
 
 def test_legacy_mapping_matches_exported_checkpoint_metadata():
-    metadata_path = PROJECT_ROOT / "best_openvino_model" / "metadata.yaml"
+    metadata_path = PROJECT_ROOT / "models" / "best_openvino_model" / "metadata.yaml"
+    if not metadata_path.exists():
+        metadata_path = PROJECT_ROOT / "best_openvino_model" / "metadata.yaml"
     if not metadata_path.exists():
         pytest.skip("Legacy OpenVINO checkpoint metadata is not present in this checkout.")
 

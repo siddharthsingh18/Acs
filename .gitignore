@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
 
 # Environment files
 .env
@@ -13,6 +15,8 @@ __pycache__/
 /reports/*
 !/reports/HARDWARE_OPTIMIZATION.md
 !/reports/hardware_benchmark.json
+!/reports/evaluation_results.md
+!/reports/false_alarm_results.md
 /runs/
 /temp/
 /media/

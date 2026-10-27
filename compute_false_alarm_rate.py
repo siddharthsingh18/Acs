@@ -258,8 +258,8 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=str,
-        default="false_alarm_results.md",
-        help="Output markdown file path (default: false_alarm_results.md).",
+        default=os.path.join("reports", "false_alarm_results.md"),
+        help="Output markdown file path (default: reports/false_alarm_results.md).",
     )
 
     args = parser.parse_args()
