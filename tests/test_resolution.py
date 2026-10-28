@@ -5,10 +5,8 @@ All tests use synthetic frames and a mock YOLO model so no GPU or real weights a
 """
 from __future__ import annotations
 
-import math
-from unittest.mock import MagicMock, patch
-from types import SimpleNamespace
-from typing import List, Optional, Tuple
+from unittest.mock import MagicMock
+from typing import List, Tuple
 
 import numpy as np
 import pytest

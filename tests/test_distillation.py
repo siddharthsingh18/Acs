@@ -9,7 +9,6 @@ Tests:
 5. Contact sheet rendering and visual layout.
 """
 
-import json
 from pathlib import Path
 import numpy as np
 import pytest
@@ -20,8 +19,6 @@ from ml.scripts.pseudo_label import (
     zero_shot_collision_check,
     generate_contact_sheet
 )
-from ml.scripts.collect_unlabeled_cctv import get_image_hash
-from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
 
 
 class TestGeometricConsistency:

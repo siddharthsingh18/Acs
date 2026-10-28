@@ -8,9 +8,6 @@ Unit tests for ml/scripts/robustness_test.py:
 - Tests markdown report generation with explicit non-claim of untested conditions
 """
 
-import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest

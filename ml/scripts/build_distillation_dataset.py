@@ -10,15 +10,13 @@ Combines real training dataset with teacher pseudo-labels under strict constrain
 3. Generates dataset descriptor: ml/data/distillation/data.yaml.
 """
 
-import argparse
 import json
-import os
 import random
 import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent

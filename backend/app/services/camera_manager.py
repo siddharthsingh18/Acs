@@ -391,7 +391,6 @@ class CameraWorker:
                             "incident_id": completed_incident.incident_id,
                             "class_name": completed_incident.class_name,
                             "incident_type": completed_incident.incident_type,
-                            "incident_type": completed_incident.incident_type,
                             "confidence": completed_incident.max_confidence,
                             "start_timestamp": completed_incident.start_timestamp,
                             "end_timestamp": completed_incident.end_timestamp,

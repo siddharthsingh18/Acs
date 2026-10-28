@@ -14,12 +14,11 @@ Reports:
 
 import argparse
 import json
-import os
 import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import numpy as np
 import torch
@@ -28,7 +27,7 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from acs.config import ACCIDENT_CLASSES, CLASS_NAMES
+from acs.config import ACCIDENT_CLASSES
 from acs.taxonomy import validate_model_taxonomy
 
 

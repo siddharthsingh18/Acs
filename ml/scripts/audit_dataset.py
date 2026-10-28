@@ -521,9 +521,16 @@ def generate_markdown_report(audit_results: List[Dict[str, Any]], report_path: P
 
     # 2. Class Mapping & Decision Rationale
     lines.append("### 2. Class Mapping Matrix (`ml/configs/class_map.yaml`)\n")
+    canonical_class_names = sorted(
+        {
+            class_name
+            for result in audit_results
+            for class_name in result.get("class_names", {}).values()
+        }
+    )
     lines.append(
         "Every source class was mapped to one of the canonical target classes "
-        f"({', '.join(f'`{name}`' for name in class_names.values())}) or explicitly marked as `\"drop\"` "
+        f"({', '.join(f'`{name}`' for name in canonical_class_names)}) or explicitly marked as `\"drop\"` "
         "following source-specific label review:\n"
     )
 
