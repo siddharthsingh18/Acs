@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Cpu,
-  Globe,
   Moon,
   Sun,
   Menu,
@@ -26,7 +25,7 @@ interface TopBarProps {
 }
 
 export const TopBar: React.FC<TopBarProps> = ({ onOpenCommandPalette }) => {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const {
     theme,
     toggleTheme,
@@ -41,14 +40,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenCommandPalette }) => {
   const { user, isAuthenticated, logout } = useAuthStore()
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-
-  const currentLang = i18n.language || 'en'
-  const isArabic = currentLang === 'ar'
-
-  const toggleLanguage = () => {
-    const nextLang = isArabic ? 'en' : 'ar'
-    i18n.changeLanguage(nextLang)
-  }
 
   const getRoleBadgeClass = (role?: string) => {
     switch (role?.toLowerCase()) {
@@ -247,4 +238,3 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenCommandPalette }) => {
     </>
   )
 }
-
