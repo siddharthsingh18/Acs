@@ -9,7 +9,6 @@ import {
   Info,
   Moon,
   Sun,
-  Globe,
   Download,
   Bell,
   Sparkles,
@@ -38,7 +37,7 @@ interface CommandPaletteProps {
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -64,8 +63,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
 
   // Build commands list
   const commands = useMemo<CommandItem[]>(() => {
-    const isArabic = i18n.language === 'ar'
-
     return [
       // Navigation
       {
@@ -185,7 +182,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
       },
 
     ]
-  }, [t, i18n, navigate, onClose, isDemoMode, toggleDemoMode, theme, toggleTheme])
+  }, [t, navigate, onClose, isDemoMode, toggleDemoMode, theme, toggleTheme])
 
   // Filter commands by search query
   const filteredCommands = useMemo(() => {
