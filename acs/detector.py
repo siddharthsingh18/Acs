@@ -10,13 +10,16 @@ import datetime
 import logging
 import os
 import time
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Deque, Dict, List, Optional, Set, Tuple
 import cv2
 import numpy as np
 from ultralytics import YOLO
 
 from acs.config import config, ACCIDENT_CLASSES
 from acs.taxonomy import decode_model_class
+
+if TYPE_CHECKING:
+    from acs.resolution import ROIConfig, TileConfig
 
 @dataclass
 class DetectionBox:

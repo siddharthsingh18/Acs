@@ -34,10 +34,9 @@ Usage example (inside predict_frame):
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
+from dataclasses import dataclass
+from typing import List, Optional, Sequence, Tuple
 
-import cv2
 import numpy as np
 
 from acs.config import ACCIDENT_CLASSES  # lightweight, no circular dep

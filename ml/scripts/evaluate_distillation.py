@@ -13,13 +13,11 @@ Generates:
 - ml/reports/distillation_benchmark.json
 """
 
-import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 import cv2
 import numpy as np
@@ -292,21 +290,21 @@ def compare_models(
         f.write("# Knowledge Distillation Evaluation Report\n\n")
         f.write("## Student (YOLO11n + Pseudo-Labels) vs Current Production Model\n\n")
         f.write(f"**Generated**: {results['timestamp']}  \n")
-        f.write(f"**Test Split**: Frozen `ml/data/merged/images/test` (417 images, 0 contamination)  \n\n")
+        f.write("**Test Split**: Frozen `ml/data/merged/images/test` (417 images, 0 contamination)  \n\n")
         f.write("### 1. Test Split Detection Performance Matrix\n\n")
         f.write("| Model | Parameters | Precision (%) | Recall (%) | mAP50 (%) | mAP50-95 (%) |\n")
         f.write("| :--- | :---: | :---: | :---: | :---: | :---: |\n")
         f.write(f"| **Current Production (best.pt)** | {results['baseline_model']['parameters']:,} | {results['baseline_model']['precision']*100:.2f}% | {results['baseline_model']['recall']*100:.2f}% | {results['baseline_model']['map50']*100:.2f}% | {results['baseline_model']['map50_95']*100:.2f}% |\n")
         f.write(f"| **Distilled Student (YOLO11n)** | {results['student_model']['parameters']:,} | {results['student_model']['precision']*100:.2f}% | {results['student_model']['recall']*100:.2f}% | **{results['student_model']['map50']*100:.2f}%** | {results['student_model']['map50_95']*100:.2f}% |\n")
-        f.write(f"| **Net Change ($\Delta$)** | **0** | **{results['delta_metrics']['delta_precision']*100:+.2f}%** | **{results['delta_metrics']['delta_recall']*100:+.2f}%** | **{results['delta_metrics']['delta_map50']*100:+.2f}%** | **{results['delta_metrics']['delta_map50_95']*100:+.2f}%** |\n\n")
+        f.write(f"| **Net Change ($\\Delta$)** | **0** | **{results['delta_metrics']['delta_precision']*100:+.2f}%** | **{results['delta_metrics']['delta_recall']*100:+.2f}%** | **{results['delta_metrics']['delta_map50']*100:+.2f}%** | **{results['delta_metrics']['delta_map50_95']*100:+.2f}%** |\n\n")
 
         f.write("### 2. Paired Bootstrap Confidence Intervals (B=200 resamples)\n\n")
         if bootstrap_res:
             ov = bootstrap_res.get("overall", {})
             ac = bootstrap_res.get("accident_only", {})
             f.write(f"- **Overall Confidence (95% CI)**: Baseline `[{ov['baseline_ci95'][0]:.4f}, {ov['baseline_ci95'][1]:.4f}]` vs Student `[{ov['student_ci95'][0]:.4f}, {ov['student_ci95'][1]:.4f}]`\n")
-            f.write(f"- **$\Delta$ Overall CI**: `[{ov['delta_ci95'][0]:.4f}, {ov['delta_ci95'][1]:.4f}]` (Mean: `{ov['delta_mean']:.4f}`)\n")
-            f.write(f"- **Accident-Only $\Delta$ CI**: `[{ac['delta_ci95'][0]:.4f}, {ac['delta_ci95'][1]:.4f}]` (Mean: `{ac['delta_mean']:.4f}`)\n\n")
+            f.write(f"- **$\\Delta$ Overall CI**: `[{ov['delta_ci95'][0]:.4f}, {ov['delta_ci95'][1]:.4f}]` (Mean: `{ov['delta_mean']:.4f}`)\n")
+            f.write(f"- **Accident-Only $\\Delta$ CI**: `[{ac['delta_ci95'][0]:.4f}, {ac['delta_ci95'][1]:.4f}]` (Mean: `{ac['delta_mean']:.4f}`)\n\n")
 
         f.write("### 3. Holdout Incident-Level Video Metrics\n\n")
         f.write("| Clip Name | Model | Incident Recall | False Alarms / Hour |\n")

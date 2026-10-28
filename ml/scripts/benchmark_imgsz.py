@@ -33,7 +33,6 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from acs.config import CLASS_NAMES
 
 ACCIDENT_CLASS_IDS = {1, 2, 3, 5, 6, 7, 8}  # matches slice_analysis.py
 SMALL_PX_THRESHOLD = 32            # max side in pixels at imgsz=640 to qualify as "small"

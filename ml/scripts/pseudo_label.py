@@ -20,19 +20,16 @@ Processes unlabeled CCTV frames:
 
 import argparse
 import json
-import os
-import random
 import shutil
 import sys
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import cv2
 import numpy as np
 from ultralytics import YOLO
-import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))

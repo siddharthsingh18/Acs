@@ -28,7 +28,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import math
 import os
 import random
 import shutil
@@ -36,9 +35,8 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -50,7 +48,6 @@ from ultralytics import YOLO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from acs.config import config
 from acs.detector import AccidentDetector, AccidentEventManager, AccidentIncident
 
 logging.basicConfig(
@@ -810,7 +807,7 @@ def generate_markdown_report(
         "",
         f"**Date Generated**: {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}  ",
         f"**Base Model Checkpoint**: `{before_benchmark['model_path']}`  ",
-        f"**Corruptions Evaluated**: 11 environmental & streaming degradations (Severities 1 to 3)  ",
+        "**Corruptions Evaluated**: 11 environmental & streaming degradations (Severities 1 to 3)  ",
         f"**Clean Baseline Performance**: Recall = `{clean_b['incident_recall_pct']}%`, False Alarms = `{clean_b['false_alarms_per_hour']} FA/hr`  ",
         "",
         "---",
@@ -860,11 +857,11 @@ def generate_markdown_report(
             "## 3. Targeted Data Augmentation Retraining (Before vs After)",
             "",
             f"**Retrained Model Checkpoint**: `{after_benchmark['model_path']}`  ",
-            f"**Augmentation Transforms Added**: `albumentations` matching the worst failure modes: ",
+            "**Augmentation Transforms Added**: `albumentations` matching the worst failure modes: ",
             "(`RandomRain`, `RandomFog`, `ImageCompression`, `MotionBlur`, `RandomBrightnessContrast`, `Cutout`)  ",
             "",
-            f"| Metric | Before Retraining | After Retraining | Delta |",
-            f"| :--- | :---: | :---: | :---: |",
+            "| Metric | Before Retraining | After Retraining | Delta |",
+            "| :--- | :---: | :---: | :---: |",
             f"| Clean Incident Recall | {clean_b['incident_recall_pct']:.1f}% | {clean_a['incident_recall_pct']:.1f}% | {clean_a['incident_recall_pct'] - clean_b['incident_recall_pct']:+.1f}%p |",
             f"| Clean False Alarms/hr | {clean_b['false_alarms_per_hour']:.1f} | {clean_a['false_alarms_per_hour']:.1f} | {clean_a['false_alarms_per_hour'] - clean_b['false_alarms_per_hour']:+.1f} |",
             "",
